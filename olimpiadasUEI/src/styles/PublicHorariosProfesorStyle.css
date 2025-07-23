@@ -1,0 +1,38 @@
+/* CSS del estilo profesor aplicado a la vista pública de horarios */
+
+/* Responsive estilo profesor con colores públicos */
+@media (max-width: 768px) {
+  .admin-horarios-container {
+    padding: 1rem;
+  }
+  
+  .horarios-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .horarios-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .controls-info {
+    justify-content: center;
+  }
+  
+  .selection-controls {
+    justify-content: center;
+  }
+  
+  .admin-title {
+    font-size: 2rem;
+  }
+  
+  .horario-slot, .time-slot {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .hora-label, .time-label {
+    align-self: flex-start;
+  }
+}

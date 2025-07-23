@@ -1,0 +1,76 @@
+/* src/styles/admin/AdminDashboard.css */
+
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.admin-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1e3a8a;
+  margin-bottom: 2rem;
+}
+
+.discipline-buttons {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.discipline-btn {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: white;
+  min-width: 120px;
+  margin-bottom: 0.5rem;
+}
+
+.futbol {
+  background-color: #15803d;
+}
+
+.voley {
+  background-color: #0369a1;
+}
+
+.basquet {
+  background-color: #b91c1c;
+}
+
+.discipline-btn:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 600px) {
+  .admin-dashboard {
+    padding: 1rem 0.3rem;
+  }
+  .admin-title {
+    font-size: 1.3rem;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+  .discipline-buttons {
+    flex-direction: column;
+    gap: 0.8rem;
+    width: 100%;
+    align-items: center;
+  }
+  .discipline-btn {
+    width: 90vw;
+    max-width: 350px;
+    font-size: 1rem;
+    padding: 0.8rem 0.5rem;
+    margin-bottom: 0.3rem;
+  }
+}

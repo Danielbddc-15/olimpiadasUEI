@@ -1,0 +1,1067 @@
+.public-matches-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.public-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.public-header-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.public-title {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.public-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.public-phase-navigation {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.public-phase-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+
+
+.public-phase-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.public-phase-btn:hover:not(.disabled) {
+  background: #764ba2;
+  transform: scale(1.1);
+}
+
+.public-phase-btn.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.public-current-phase {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f8f9fa;
+  padding: 1rem 2rem;
+  border-radius: 15px;
+  min-width: 300px;
+  justify-content: center;
+}
+
+.public-phase-icon {
+  font-size: 2rem;
+}
+
+.public-phase-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.public-matches-section {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.public-match-group {
+  margin-bottom: 3rem;
+}
+
+.public-group-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.public-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.public-match-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.public-match-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.public-match-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-color: #667eea;
+}
+
+.public-match-card:hover::before {
+  transform: scaleX(1);
+}
+
+.public-match-header {
+  margin-bottom: 1rem;
+}
+
+.public-match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.public-team {
+  flex: 1;
+  text-align: center;
+}
+
+.public-team-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.public-vs {
+  font-weight: 700;
+  color: #667eea;
+  font-size: 1.2rem;
+  background: #f8f9fa;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+}
+
+.public-match-score {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.public-score-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.public-score-separator {
+  color: #ccc;
+}
+
+.public-match-status {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.public-status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.public-status-badge.finalizado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.public-status-badge.en-curso {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.public-status-badge.pendiente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.public-match-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.public-match-date,
+.public-match-time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.public-scorers-preview {
+  font-size: 0.9rem;
+  color: #666;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.public-scorer-line {
+  margin-bottom: 0.25rem;
+}
+
+.public-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+.public-empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.public-empty-state h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.public-empty-state p {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .public-matches-container {
+    padding: 1rem;
+  }
+  
+  .public-phase-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .public-current-phase {
+    min-width: auto;
+  }
+  
+  .public-matches-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .public-match-teams {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .public-vs {
+    order: 2;
+  }
+  
+  .public-match-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Estilos para Public Horarios */
+
+.public-horarios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.public-dia-column {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.public-dia-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.public-dia-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.public-dia-icon {
+  font-size: 1.5rem;
+}
+
+.public-horarios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.public-horario-slot {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  min-height: 70px;
+}
+
+.public-hora-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.public-partido-card {
+  flex: 1;
+  background: #fff;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.public-partido-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.public-partido-header {
+  margin-bottom: 0.75rem;
+}
+
+.public-fase-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  width: fit-content;
+}
+
+.public-fase-icon {
+  font-size: 1rem;
+}
+
+.public-fase-text {
+  font-size: 0.75rem;
+}
+
+.public-partido-equipos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.public-equipo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.public-equipo-icon {
+  font-size: 1rem;
+  color: #666;
+}
+
+.public-equipo-nombre {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.public-vs-divider {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #666;
+  padding: 0 0.5rem;
+}
+
+.public-partido-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.public-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.public-info-icon {
+  font-size: 0.9rem;
+}
+
+.public-slot-vacio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.public-vacio-text {
+  font-size: 0.9rem;
+}
+
+.public-loading-section {
+  text-align: center;
+  padding: 3rem;
+  color: white;
+}
+
+.public-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.public-loading-text {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+/* ===== ESTILOS EXACTOS DEL PROFESOR CON COLORES PÚBLICOS ===== */
+
+/* ProfesorHorarios.css adaptado a colores públicos */
+.profesor-horarios-container {
+  min-height: 100vh !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  padding: 2rem !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Header */
+.profesor-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profesor-title {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.profesor-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+/* Controles */
+.horarios-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.controls-info {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-weight: 500;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.selected-count {
+  color: white;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+}
+
+.move-matches-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Loading */
+.loading-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-left-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.empty-state h3 {
+  color: white;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+}
+
+/* Grid de horarios */
+.horarios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+/* Columna de día */
+.dia-column {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.dia-header {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dia-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.dia-icon {
+  font-size: 1.8rem;
+  color: white;
+}
+
+.confirm-day-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+/* Lista de horarios */
+.horarios-lista {
+  padding: 1rem;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.horario-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  min-height: 80px;
+}
+
+.hora-label {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: center;
+  font-size: 0.9rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Tarjeta de partido */
+.partido-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 1rem;
+  flex: 1;
+  cursor: default;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.partido-card.view-only {
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.partido-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.partido-header {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.partido-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.time-select-btn {
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 4px;
+  cursor: not-allowed;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+
+.fase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.fase-icon {
+  font-size: 1rem;
+}
+
+.fase-text {
+  font-size: 0.8rem;
+}
+
+.status-indicator {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+/* Equipos */
+.partido-equipos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.equipo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+.equipo-icon {
+  font-size: 1.1rem;
+  color: #667eea;
+}
+
+.equipo-nombre {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.vs-divider {
+  text-align: center;
+  font-weight: 700;
+  color: white;
+  font-size: 0.8rem;
+  margin: 0.2rem 0;
+  padding: 0.3rem 0.8rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 6px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+/* Información del partido */
+.partido-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.partido-info .info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.partido-info .info-icon {
+  font-size: 0.9rem;
+}
+
+/* Slot vacío */
+.slot-vacio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 15px;
+  min-height: 60px;
+  transition: all 0.3s ease;
+}
+
+.slot-vacio:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.vacio-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Scrollbar personalizado */
+.horarios-lista::-webkit-scrollbar {
+  width: 6px;
+}
+
+.horarios-lista::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.horarios-lista::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.horarios-lista::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profesor-horarios-container {
+    padding: 1rem;
+  }
+  
+  .horarios-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .horarios-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .controls-info {
+    justify-content: center;
+  }
+  
+  .selection-controls {
+    justify-content: center;
+  }
+  
+  .profesor-title {
+    font-size: 2rem;
+  }
+  
+  .horario-slot {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .hora-label {
+    align-self: flex-start;
+  }
+}
+
+/* Loading estilo profesor con colores públicos */
+.loading-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-left-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state estilo profesor con colores públicos */
+.empty-state {
+  text-align: center;
+  padding: 4rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.empty-state h3 {
+  color: white;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+}
+
+/* Responsive estilo profesor con colores públicos */
+@media (max-width: 768px) {
+  .profesor-horarios-container {
+    padding: 1rem;
+  }
+  
+  .horarios-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .horarios-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .controls-info {
+    justify-content: center;
+  }
+  
+  .selection-controls {
+    justify-content: center;
+  }
+  
+  .profesor-title {
+    font-size: 2rem;
+  }
+  
+  .horario-slot {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .hora-label {
+    align-self: flex-start;
+  }
+}

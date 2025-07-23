@@ -1,0 +1,518 @@
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+/* Main container with improved background */
+.login-bg {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(120, 119, 198, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(255, 119, 198, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(120, 219, 255, 0.2) 0%,
+      transparent 50%
+    );
+  animation: gradientShift 8s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Loading animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading container */
+.loading-container {
+  text-align: center;
+  z-index: 1;
+  position: relative;
+  color: white;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+/* Enhanced card container */
+.cardview-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.2);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Logo container */
+.logo-container {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.logo-login {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.logo-login:hover {
+  transform: scale(1.05);
+}
+
+/* Header styling */
+.header-container {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-title {
+  color: #2d3748;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.025em;
+}
+
+.login-subtitle {
+  color: #718096;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+.sponsorship-title {
+  color: #ffffff;
+  font-size: 1.1rem;
+  margin: 0;
+  font-weight: 500;
+  font-style: italic;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.sponsor-fade-in {
+  animation: sponsorFadeIn 1s ease-in-out;
+}
+
+.sponsor-fade-out {
+  animation: sponsorFadeOut 1s ease-in-out;
+}
+
+.login-fade-in {
+  animation: loginSlideIn 1s ease-out;
+}
+
+@keyframes sponsorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sponsorFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes loginSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Form styling */
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-group {
+  width: 100%;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.input-wrapper:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: #ffffff;
+}
+
+.input-icon {
+  padding: 0 0.75rem;
+  font-size: 1.2rem;
+  color: #a0aec0;
+  user-select: none;
+}
+
+.login-input {
+  flex: 1;
+  padding: 1rem 0.75rem 1rem 0;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #2d3748;
+  outline: none;
+  font-weight: 500;
+}
+
+.login-input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+}
+
+/* Button styling */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.primary-btn,
+.secondary-btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+.secondary-btn {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+}
+
+.secondary-btn:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.secondary-btn:active {
+  transform: translateY(0);
+}
+
+/* Tablet responsive design */
+@media (max-width: 768px) and (min-width: 481px) {
+  .cardview-container {
+    max-width: 380px;
+    padding: 2rem;
+  }
+
+  .login-title {
+    font-size: 1.75rem;
+  }
+
+  .logo-login {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 480px) {
+  .login-bg {
+    padding: 0.75rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .cardview-container {
+    max-width: 100%;
+    padding: 1.75rem 1.25rem;
+    border-radius: 20px;
+    margin-top: 1rem;
+  }
+
+  .logo-login {
+    width: 50px;
+    height: 50px;
+  }
+
+  .header-container {
+    margin-bottom: 1.5rem;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .login-form {
+    gap: 1rem;
+  }
+
+  .input-wrapper {
+    border-radius: 10px;
+  }
+
+  .login-input {
+    padding: 0.875rem 0.5rem 0.875rem 0;
+    font-size: 0.95rem;
+  }
+
+  .input-icon {
+    padding: 0 0.625rem;
+    font-size: 1.1rem;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    padding: 0.875rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+  }
+
+  .btn-icon {
+    font-size: 1rem;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 360px) {
+  .login-bg {
+    padding: 0.5rem;
+  }
+
+  .cardview-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .logo-login {
+    width: 45px;
+    height: 45px;
+  }
+
+  .login-title {
+    font-size: 1.375rem;
+  }
+
+  .input-wrapper {
+    border-radius: 8px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .login-bg {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .cardview-container {
+    padding: 1.5rem;
+    margin-top: 0;
+  }
+
+  .header-container {
+    margin-bottom: 1rem;
+  }
+
+  .logo-login {
+    width: 50px;
+    height: 50px;
+  }
+
+  .login-title {
+    font-size: 1.25rem;
+  }
+
+  .login-form {
+    gap: 0.75rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .login-bg::before,
+  .cardview-container,
+  .logo-login,
+  .input-wrapper,
+  .primary-btn,
+  .secondary-btn {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cardview-container {
+    background: #ffffff;
+    border: 2px solid #000000;
+  }
+
+  .input-wrapper {
+    border: 2px solid #000000;
+  }
+
+  .primary-btn {
+    background: #000000;
+    color: #ffffff;
+  }
+
+  .secondary-btn {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .primary-btn:hover,
+  .secondary-btn:hover,
+  .logo-login:hover {
+    transform: none;
+  }
+
+  .primary-btn:active {
+    transform: scale(0.98);
+  }
+
+  .secondary-btn:active {
+    transform: scale(0.98);
+  }
+}

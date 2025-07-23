@@ -1,0 +1,542 @@
+/* ProfesorFutbolMatchDetail.css - Estilos específicos para fútbol */
+
+.profesor-match-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  position: relative;
+}
+
+.profesor-match-detail-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(22, 163, 74, 0.3) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Header */
+.profesor-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.profesor-back-button {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+}
+
+.profesor-back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+  background: linear-gradient(135deg, #15803d, #166534);
+}
+
+.profesor-match-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #166534;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.profesor-match-title::before {
+  content: "⚽ ";
+  color: #22c55e;
+}
+
+.profesor-match-info {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.profesor-match-group,
+.profesor-match-phase {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+/* Estado del partido */
+.profesor-match-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.profesor-status-badge {
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.profesor-status-badge.pendiente {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.profesor-status-badge.en-curso {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.profesor-status-badge.finalizado {
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: white;
+}
+
+.profesor-status-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.profesor-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profesor-btn-start {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.profesor-btn-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+.profesor-btn-finish {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+
+.profesor-btn-finish:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+}
+
+.profesor-btn-resume {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.profesor-btn-resume:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+/* Marcador principal */
+.profesor-scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  border: 2px solid rgba(22, 163, 74, 0.3);
+  position: relative;
+  z-index: 10;
+}
+
+.profesor-team-section {
+  text-align: center;
+}
+
+.profesor-team-header {
+  margin-bottom: 1rem;
+}
+
+.profesor-team-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 2px 4px rgba(22, 163, 74, 0.3));
+}
+
+.profesor-team-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #166534;
+  margin: 0;
+}
+
+.profesor-score-display {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+}
+
+.profesor-score {
+  font-size: 3rem;
+  font-weight: 900;
+  display: block;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.profesor-vs-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+  font-weight: 900;
+  font-size: 1.5rem;
+}
+
+.profesor-vs-text {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 50%;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+/* Sección de goleadores */
+.profesor-goalscorers-section {
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.profesor-goalscorers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.profesor-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #166534;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profesor-goalscorer-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.profesor-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.profesor-btn-edit,
+.profesor-btn-save,
+.profesor-btn-cancel {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+}
+
+.profesor-btn-edit {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.profesor-btn-save {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  color: white;
+}
+
+.profesor-btn-cancel {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+}
+
+.profesor-readonly-notice {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.profesor-goalscorers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.profesor-team-subtitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #166534;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #22c55e;
+}
+
+.profesor-goalscorers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profesor-goalscorer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #22c55e;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.profesor-goalscorer-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+.profesor-player-name {
+  font-weight: 600;
+  color: #166534;
+}
+
+.profesor-goal-count {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.profesor-goalscorer-edit-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.profesor-goalscorer-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #22c55e;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.profesor-goalscorer-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.profesor-no-goals {
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+  padding: 2rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 2px dashed #cbd5e1;
+}
+
+/* Información adicional */
+.profesor-match-additional-info {
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.profesor-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.profesor-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #22c55e;
+  border-radius: 12px;
+}
+
+.profesor-info-label {
+  font-weight: 600;
+  color: #166534;
+  white-space: nowrap;
+}
+
+.profesor-info-value {
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Estados de carga y error */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  margin: 2rem auto;
+  max-width: 500px;
+  padding: 3rem 2rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #22c55e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.back-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profesor-match-detail-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .profesor-match-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .profesor-scoreboard {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .profesor-vs-separator {
+    order: 2;
+  }
+
+  .profesor-goalscorers-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .profesor-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .profesor-status-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .profesor-edit-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .profesor-match-title {
+    font-size: 1.25rem;
+  }
+
+  .profesor-score {
+    font-size: 2rem;
+  }
+
+  .profesor-section-title {
+    font-size: 1.25rem;
+  }
+
+  .profesor-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+}

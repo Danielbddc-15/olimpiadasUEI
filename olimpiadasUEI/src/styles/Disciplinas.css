@@ -1,0 +1,472 @@
+/* Modern discipline selector styling to match login page */
+
+/* Main container with matching background */
+.disciplinas-container {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.disciplinas-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(120, 119, 198, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(255, 119, 198, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(120, 219, 255, 0.2) 0%,
+      transparent 50%
+    );
+  animation: gradientShift 8s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Content container */
+.disciplinas-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.2);
+  padding: 3rem 2.5rem;
+  width: 100%;
+  max-width: 900px;
+  position: relative;
+  z-index: 1;
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header section */
+.header-section {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.main-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.disciplinas-title {
+  color: #2d3748;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.025em;
+}
+
+.disciplinas-subtitle {
+  color: #718096;
+  font-size: 1.125rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Grid layout for discipline cards */
+.disciplinas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+/* Individual discipline cards */
+.discipline-card {
+  position: relative;
+  border-radius: 20px;
+  padding: 2rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out both;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.discipline-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.discipline-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.discipline-card:hover::before {
+  opacity: 1;
+}
+
+.discipline-card:active {
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* Card content */
+.card-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  width: 100%;
+}
+
+.discipline-icon {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  display: block;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.discipline-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.discipline-description {
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.card-arrow {
+  font-size: 1.5rem;
+  font-weight: bold;
+  opacity: 0.8;
+  transition: transform 0.3s ease;
+}
+
+.discipline-card:hover .card-arrow {
+  transform: translateX(8px);
+}
+
+/* Footer section */
+.footer-section {
+  text-align: center;
+}
+
+.welcome-text {
+  color: #718096;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Tablet responsive design */
+@media (max-width: 768px) {
+  .disciplinas-container {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .disciplinas-content {
+    padding: 2.5rem 2rem;
+  }
+
+  .main-icon {
+    font-size: 3.5rem;
+  }
+
+  .disciplinas-title {
+    font-size: 2rem;
+  }
+
+  .disciplinas-subtitle {
+    font-size: 1rem;
+  }
+
+  .disciplinas-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .discipline-card {
+    padding: 1.75rem 1.25rem;
+    min-height: 180px;
+  }
+
+  .discipline-icon {
+    font-size: 3rem;
+  }
+
+  .discipline-name {
+    font-size: 1.5rem;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 480px) {
+  .disciplinas-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .disciplinas-content {
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .header-section {
+    margin-bottom: 2rem;
+  }
+
+  .main-icon {
+    font-size: 3rem;
+  }
+
+  .disciplinas-title {
+    font-size: 1.75rem;
+  }
+
+  .disciplinas-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .disciplinas-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .discipline-card {
+    padding: 1.5rem 1rem;
+    min-height: 160px;
+  }
+
+  .discipline-icon {
+    font-size: 2.5rem;
+  }
+
+  .discipline-name {
+    font-size: 1.375rem;
+  }
+
+  .discipline-description {
+    font-size: 0.9rem;
+  }
+
+  .card-arrow {
+    font-size: 1.25rem;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 360px) {
+  .disciplinas-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .main-icon {
+    font-size: 2.5rem;
+  }
+
+  .disciplinas-title {
+    font-size: 1.5rem;
+  }
+
+  .discipline-card {
+    padding: 1.25rem 0.875rem;
+    min-height: 140px;
+  }
+
+  .discipline-icon {
+    font-size: 2.25rem;
+  }
+
+  .discipline-name {
+    font-size: 1.25rem;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .disciplinas-container {
+    padding: 1rem;
+  }
+
+  .disciplinas-content {
+    padding: 1.5rem;
+  }
+
+  .header-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .main-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .disciplinas-title {
+    font-size: 1.5rem;
+  }
+
+  .disciplinas-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .discipline-card {
+    padding: 1rem;
+    min-height: 120px;
+  }
+
+  .discipline-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .discipline-name {
+    font-size: 1.125rem;
+  }
+
+  .discipline-description {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .disciplinas-container::before,
+  .disciplinas-content,
+  .main-icon,
+  .discipline-card,
+  .discipline-icon,
+  .card-arrow {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .disciplinas-content {
+    background: #ffffff;
+    border: 2px solid #000000;
+  }
+
+  .disciplinas-title {
+    color: #000000;
+  }
+
+  .discipline-card {
+    background: #000000 !important;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .discipline-card:hover {
+    transform: none;
+  }
+
+  .discipline-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  .card-arrow {
+    opacity: 1;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.discipline-card:focus {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+.discipline-card:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}

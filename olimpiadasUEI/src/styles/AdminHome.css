@@ -1,0 +1,604 @@
+/* Modern Admin Home Styles */
+
+/* Main container with gradient background */
+.admin-home-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow-x: hidden;
+  padding: 2rem 1rem;
+}
+
+.admin-home-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(120, 119, 198, 0.2) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(255, 119, 198, 0.2) 0%,
+      transparent 50%
+    );
+  animation: gradientShift 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Admin header */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3rem;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-info {
+  text-align: left;
+}
+
+/* Logout button */
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.logout-button:active {
+  transform: translateY(0);
+}
+
+.logout-icon {
+  font-size: 1.2rem;
+}
+
+.logout-text {
+  font-size: 0.85rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admin-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .header-left {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .header-info {
+    text-align: center;
+  }
+}
+
+.admin-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.admin-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.025em;
+}
+
+.admin-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Disciplines grid */
+.disciplines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Individual discipline cards */
+.discipline-admin-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.6s ease-out both;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.discipline-admin-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(
+    --card-gradient,
+    linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  );
+  border-radius: 24px 24px 0 0;
+}
+
+.discipline-admin-card:hover {
+  transform: translateY(-8px);
+  box-shadow:
+    0 35px 60px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Card header */
+.discipline-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+.discipline-card-icon {
+  font-size: 3rem;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.discipline-card-info {
+  flex: 1;
+}
+
+.discipline-card-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 0.5rem 0;
+}
+
+.discipline-card-description {
+  font-size: 1rem;
+  color: #718096;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Admin actions grid */
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+/* Action buttons */
+.admin-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-action-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.05) 0%,
+    rgba(118, 75, 162, 0.05) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.admin-action-button:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+}
+
+.admin-action-button:hover::before {
+  opacity: 1;
+}
+
+.admin-action-button:active {
+  transform: translateY(0);
+}
+
+.action-button-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.action-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.admin-action-button:hover .action-icon {
+  background: rgba(102, 126, 234, 0.2);
+  transform: scale(1.1);
+}
+
+.action-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.action-arrow {
+  font-size: 1.25rem;
+  color: #a0aec0;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-action-button:hover .action-arrow {
+  color: #667eea;
+  transform: translateX(4px);
+}
+
+/* Info panel */
+.admin-info-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.info-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.info-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.info-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 0.5rem 0;
+}
+
+.info-text {
+  font-size: 0.9rem;
+  color: #718096;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .admin-home-container {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .admin-title {
+    font-size: 2.25rem;
+  }
+
+  .admin-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .disciplines-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .discipline-admin-card {
+    padding: 1.5rem;
+  }
+
+  .discipline-card-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .discipline-card-icon {
+    font-size: 2.5rem;
+  }
+
+  .discipline-card-title {
+    font-size: 1.5rem;
+  }
+
+  .admin-info-panel {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-home-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .admin-icon {
+    font-size: 3rem;
+  }
+
+  .admin-title {
+    font-size: 1.75rem;
+  }
+
+  .admin-subtitle {
+    font-size: 1rem;
+  }
+
+  .disciplines-grid {
+    gap: 1rem;
+  }
+
+  .discipline-admin-card {
+    padding: 1.25rem;
+    border-radius: 20px;
+  }
+
+  .discipline-card-title {
+    font-size: 1.375rem;
+  }
+
+  .discipline-card-description {
+    font-size: 0.9rem;
+  }
+
+  .admin-action-button {
+    padding: 0.875rem 1rem;
+  }
+
+  .action-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+  }
+
+  .action-label {
+    font-size: 0.9rem;
+  }
+
+  .info-card {
+    padding: 1.25rem;
+  }
+
+  .info-icon {
+    font-size: 2rem;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .admin-home-container {
+    padding: 1rem;
+  }
+
+  .admin-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .admin-title {
+    font-size: 1.5rem;
+  }
+
+  .disciplines-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    margin-bottom: 1.5rem;
+  }
+
+  .discipline-admin-card {
+    padding: 1rem;
+  }
+
+  .discipline-card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .admin-home-container::before,
+  .admin-icon,
+  .discipline-admin-card,
+  .discipline-card-icon,
+  .info-icon,
+  .action-icon {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .discipline-admin-card,
+  .admin-action-button,
+  .info-card {
+    background: #ffffff;
+    border: 2px solid #000000;
+  }
+
+  .admin-title {
+    color: #ffffff;
+    text-shadow: 2px 2px 4px #000000;
+  }
+
+  .admin-action-button:hover {
+    background: #f0f0f0;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.admin-action-button:focus {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+.admin-action-button:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}

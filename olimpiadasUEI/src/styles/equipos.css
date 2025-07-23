@@ -1,0 +1,42 @@
+/* src/styles/equipos.css */
+
+.equipos-admin {
+  @apply p-4 max-w-3xl mx-auto;
+}
+
+.title {
+  @apply text-2xl font-bold mb-4 text-center;
+}
+
+.equipo-form {
+  @apply mb-6 grid grid-cols-1 md:grid-cols-3 gap-2 items-end;
+}
+
+.equipo-form input {
+  @apply border p-2 rounded-md;
+}
+
+.form-buttons {
+  @apply flex gap-2;
+}
+
+.equipo-form button {
+  @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700;
+}
+
+.cancel-button {
+  @apply bg-gray-400 hover:bg-gray-500;
+}
+
+.equipos-table {
+  @apply w-full border-collapse;
+}
+
+.equipos-table th,
+.equipos-table td {
+  @apply border px-4 py-2 text-center;
+}
+
+.equipos-table button {
+  @apply bg-yellow-500 text-white px-2 py-1 rounded mx-1 hover:bg-yellow-600;
+}
