@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import "../styles/AdminBasquetMatchDetail.css";
 
@@ -9,6 +9,8 @@ export default function AdminBasquetMatchDetail() {
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
+  const [jugadoresEquipoB, setJugadoresEquipoB] = useState([]);
   
   // Estados para anotar puntos
   const [jugadorInput, setJugadorInput] = useState("");
@@ -57,6 +59,57 @@ export default function AdminBasquetMatchDetail() {
 
     fetchMatch();
   }, [matchId, navigate]);
+
+  // Cargar jugadores de los equipos
+  useEffect(() => {
+    const fetchJugadores = async () => {
+      if (!match?.equipoA || !match?.equipoB) return;
+
+      try {
+        // Cargar jugadores del equipo A
+        const queryA = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoA.curso),
+          where("paralelo", "==", match.equipoA.paralelo),
+          where("categoria", "==", match.equipoA.categoria || match.categoria),
+          where("genero", "==", match.equipoA.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotA = await getDocs(queryA);
+        const jugadoresA = snapshotA.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        // Cargar jugadores del equipo B
+        const queryB = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoB.curso),
+          where("paralelo", "==", match.equipoB.paralelo),
+          where("categoria", "==", match.equipoB.categoria || match.categoria),
+          where("genero", "==", match.equipoB.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotB = await getDocs(queryB);
+        const jugadoresB = snapshotB.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        setJugadoresEquipoA(jugadoresA);
+        setJugadoresEquipoB(jugadoresB);
+        
+        // Debug para verificar que se cargan los jugadores
+        console.log("Básquet - Jugadores Equipo A:", jugadoresA);
+        console.log("Básquet - Jugadores Equipo B:", jugadoresB);
+        console.log("Básquet - Match data:", match);
+      } catch (error) {
+        console.error("Error al cargar jugadores:", error);
+      }
+    };
+
+    fetchJugadores();
+  }, [match]);
 
   // Función para anotar puntos
   const anotarPuntos = async (equipo) => {
@@ -202,8 +255,12 @@ export default function AdminBasquetMatchDetail() {
 
   // Iniciar partido
   const iniciarPartido = async () => {
+    console.log("🏀 AdminBasquetMatchDetail - Intentando iniciar partido");
+    console.log("🏀 Role del usuario:", localStorage.getItem('userRole'));
+    
     if (window.confirm("¿Estás seguro de que quieres iniciar este partido?")) {
       try {
+        console.log("🏀 Actualizando estado en Firestore...");
         await updateDoc(doc(db, "matches", matchId), {
           estado: "en curso",
           fechaInicio: new Date().toISOString()
@@ -216,6 +273,7 @@ export default function AdminBasquetMatchDetail() {
         }));
 
         setPartidoIniciado(true);
+        console.log("🏀 Partido iniciado correctamente");
         alert("Partido iniciado correctamente");
       } catch (error) {
         console.error("Error al iniciar partido:", error);
@@ -297,7 +355,7 @@ export default function AdminBasquetMatchDetail() {
         </h1>
         <div className="admin-basquet-info">
           <span className={`status-badge ${match.estado}`}>
-            {match.estado === "pendiente" && "⏳ Pendiente"}
+            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
             {match.estado === "en curso" && "▶️ En Curso"}
             {match.estado === "finalizado" && "✅ Finalizado"}
           </span>
@@ -306,14 +364,25 @@ export default function AdminBasquetMatchDetail() {
 
       {/* Controles del partido */}
       <div className="partido-controles">
-        {match.estado === "pendiente" && (
-          <button 
-            onClick={iniciarPartido}
-            className="control-btn iniciar-btn"
-          >
-            <span className="btn-icon">▶️</span>
-            Iniciar Partido
-          </button>
+        {(match.estado === "pendiente" || match.estado === "programado") && (
+          <>
+            <button 
+              onClick={() => {
+                console.log("🏀 Botón Iniciar Partido clickeado");
+                console.log("🏀 Estado actual del partido:", match.estado);
+                console.log("🏀 Role del usuario:", localStorage.getItem('userRole'));
+                iniciarPartido();
+              }}
+              className="control-btn iniciar-btn"
+            >
+              <span className="btn-icon">▶️</span>
+              Iniciar Partido
+            </button>
+            <div className="basquet-privilege-info">
+              <span className="privilege-icon">🛡️</span>
+              <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
+            </div>
+          </>
         )}
         
         {match.estado === "en curso" && (
@@ -377,13 +446,42 @@ export default function AdminBasquetMatchDetail() {
               
               {mostrarInputJugador === 'A' ? (
                 <div className="input-anotacion">
-                  <input
-                    type="text"
-                    value={jugadorInput}
-                    onChange={(e) => setJugadorInput(e.target.value)}
-                    placeholder="Nombre del jugador"
-                    className="jugador-input"
-                  />
+                  {/* Selector de jugadores */}
+                  <div className="admin-player-selector">
+                    <h5>Seleccionar Jugador:</h5>
+                    <div className="admin-players-grid-inline">
+                      {jugadoresEquipoA.length > 0 ? (
+                        jugadoresEquipoA.map((jugador) => (
+                          <button
+                            key={jugador.id}
+                            onClick={() => setJugadorInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
+                            className={`admin-player-selector-btn-inline ${
+                              jugadorInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
+                            }`}
+                          >
+                            <span className="player-number-btn">#{jugador.numero || '?'}</span>
+                            <span className="player-name-btn">{jugador.nombre}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="no-players-available-inline">
+                          <span>⚠️ No hay jugadores registrados</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Input manual */}
+                  <div className="manual-input-section">
+                    <h5>O escribir manualmente:</h5>
+                    <input
+                      type="text"
+                      value={jugadorInput}
+                      onChange={(e) => setJugadorInput(e.target.value)}
+                      placeholder="Nombre del jugador"
+                      className="jugador-input"
+                    />
+                  </div>
                   
                   <div className="puntos-selector">
                     <span>Puntos:</span>
@@ -444,13 +542,42 @@ export default function AdminBasquetMatchDetail() {
               
               {mostrarInputJugador === 'B' ? (
                 <div className="input-anotacion">
-                  <input
-                    type="text"
-                    value={jugadorInput}
-                    onChange={(e) => setJugadorInput(e.target.value)}
-                    placeholder="Nombre del jugador"
-                    className="jugador-input"
-                  />
+                  {/* Selector de jugadores */}
+                  <div className="admin-player-selector">
+                    <h5>Seleccionar Jugador:</h5>
+                    <div className="admin-players-grid-inline">
+                      {jugadoresEquipoB.length > 0 ? (
+                        jugadoresEquipoB.map((jugador) => (
+                          <button
+                            key={jugador.id}
+                            onClick={() => setJugadorInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
+                            className={`admin-player-selector-btn-inline ${
+                              jugadorInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
+                            }`}
+                          >
+                            <span className="player-number-btn">#{jugador.numero || '?'}</span>
+                            <span className="player-name-btn">{jugador.nombre}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="no-players-available-inline">
+                          <span>⚠️ No hay jugadores registrados</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Input manual */}
+                  <div className="manual-input-section">
+                    <h5>O escribir manualmente:</h5>
+                    <input
+                      type="text"
+                      value={jugadorInput}
+                      onChange={(e) => setJugadorInput(e.target.value)}
+                      placeholder="Nombre del jugador"
+                      className="jugador-input"
+                    />
+                  </div>
                   
                   <div className="puntos-selector">
                     <span>Puntos:</span>

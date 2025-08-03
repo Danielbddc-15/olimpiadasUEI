@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import "../styles/AdminMatchDetail.css";
 
@@ -11,6 +11,8 @@ export default function AdminMatchDetail() {
   const [loading, setLoading] = useState(true);
   const [goleadorInput, setGoleadorInput] = useState("");
   const [mostrarInputGoleador, setMostrarInputGoleador] = useState(null); // 'A' o 'B'
+  const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
+  const [jugadoresEquipoB, setJugadoresEquipoB] = useState([]);
 
   // Estados para edición de goleadores
   const [editandoGoleadores, setEditandoGoleadores] = useState(false);
@@ -45,6 +47,57 @@ export default function AdminMatchDetail() {
 
     fetchMatch();
   }, [matchId, navigate]);
+
+  // Cargar jugadores de los equipos
+  useEffect(() => {
+    const fetchJugadores = async () => {
+      if (!match?.equipoA || !match?.equipoB) return;
+
+      try {
+        // Cargar jugadores del equipo A
+        const queryA = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoA.curso),
+          where("paralelo", "==", match.equipoA.paralelo),
+          where("categoria", "==", match.equipoA.categoria || match.categoria),
+          where("genero", "==", match.equipoA.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotA = await getDocs(queryA);
+        const jugadoresA = snapshotA.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        // Cargar jugadores del equipo B
+        const queryB = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoB.curso),
+          where("paralelo", "==", match.equipoB.paralelo),
+          where("categoria", "==", match.equipoB.categoria || match.categoria),
+          where("genero", "==", match.equipoB.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotB = await getDocs(queryB);
+        const jugadoresB = snapshotB.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        setJugadoresEquipoA(jugadoresA);
+        setJugadoresEquipoB(jugadoresB);
+        
+        // Debug para verificar que se cargan los jugadores
+        console.log("Jugadores Equipo A:", jugadoresA);
+        console.log("Jugadores Equipo B:", jugadoresB);
+        console.log("Match data:", match);
+      } catch (error) {
+        console.error("Error al cargar jugadores:", error);
+      }
+    };
+
+    fetchJugadores();
+  }, [match]);
 
   // Actualizar marcador y goleadores
   const marcarGol = async (equipo) => {
@@ -236,19 +289,26 @@ export default function AdminMatchDetail() {
       <div className="admin-match-status">
         <div className="admin-status-info">
           <span className={`admin-status-badge ${match.estado}`}>
-            {match.estado === "pendiente" && "⏳ Pendiente"}
+            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
             {match.estado === "en curso" && "🟢 En Curso"}
             {match.estado === "finalizado" && "✅ Finalizado"}
           </span>
         </div>
         <div className="admin-status-actions">
-          {match.estado === "pendiente" && (
-            <button 
-              onClick={() => cambiarEstado("en curso")}
-              className="admin-btn admin-btn-start"
-            >
-              ▶️ Iniciar Partido
-            </button>
+          {(match.estado === "pendiente" || match.estado === "programado") && (
+            <>
+              <button 
+                onClick={() => cambiarEstado("en curso")}
+                className="admin-btn admin-btn-start"
+                title="Como administrador, puedes iniciar el partido en cualquier momento"
+              >
+                ▶️ Iniciar Partido
+              </button>
+              <div className="admin-privilege-info">
+                <span className="privilege-icon">🛡️</span>
+                <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
+              </div>
+            </>
           )}
           {match.estado === "en curso" && (
             <button 
@@ -320,23 +380,55 @@ export default function AdminMatchDetail() {
             <h3>
               Gol para {mostrarInputGoleador === 'A' ? equipoA : equipoB}
             </h3>
-            <input
-              type="text"
-              placeholder="Nombre del goleador..."
-              value={goleadorInput}
-              onChange={(e) => setGoleadorInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  marcarGol(mostrarInputGoleador);
-                }
-              }}
-              autoFocus
-              className="admin-goal-input"
-            />
+            
+            {/* Lista de jugadores del equipo */}
+            <div className="admin-player-selector">
+              <h4>Seleccionar Jugador:</h4>
+              <div className="admin-players-grid">
+                {(mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).length > 0 ? (
+                  (mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).map((jugador) => (
+                    <button
+                      key={jugador.id}
+                      onClick={() => setGoleadorInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
+                      className={`admin-player-selector-btn ${
+                        goleadorInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
+                      }`}
+                    >
+                      <span className="player-number-btn">#{jugador.numero || '?'}</span>
+                      <span className="player-name-btn">{jugador.nombre}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="no-players-available">
+                    <span className="no-players-icon">⚠️</span>
+                    <span>No hay jugadores registrados para este equipo</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Input manual como alternativa */}
+            <div className="admin-manual-input">
+              <h4>O escribir manualmente:</h4>
+              <input
+                type="text"
+                placeholder="Nombre del goleador..."
+                value={goleadorInput}
+                onChange={(e) => setGoleadorInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    marcarGol(mostrarInputGoleador);
+                  }
+                }}
+                className="admin-goal-input"
+              />
+            </div>
+            
             <div className="admin-modal-actions">
               <button
                 onClick={() => marcarGol(mostrarInputGoleador)}
                 className="admin-btn admin-btn-confirm"
+                disabled={!goleadorInput.trim()}
               >
                 ✅ Confirmar Gol
               </button>

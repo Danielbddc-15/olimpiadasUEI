@@ -10,11 +10,11 @@ export default function PublicMatches() {
   const [matches, setMatches] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [faseActual, setFaseActual] = useState(0);
+  const [filtroGrupo, setFiltroGrupo] = useState("todos");
 
   // Fases según disciplina
   const fasesDb = {
     "grupos1": "Fase de Grupos 1",
-    "grupos2": "Fase de Grupos 2", 
     "grupos3": "Fase de Grupos 3",
     "semifinales": "Semifinales",
     "finales": "Finales"
@@ -35,6 +35,8 @@ export default function PublicMatches() {
   const irADetallePartido = (matchId) => {
     if (discipline === "voley") {
       navigate(`/public-voley-match-detail/${matchId}`);
+    } else if (discipline === "basquet") {
+      navigate(`/public-basquet-match-detail/${matchId}`);
     } else {
       navigate(`/public/partido/${matchId}`);
     }
@@ -86,9 +88,14 @@ export default function PublicMatches() {
   function TablaPartidos({ partidos }) {
     const partidosPorGrupo = agruparPorGrupo(partidos);
     
+    // Filtrar grupos según el filtro seleccionado
+    const gruposFiltrados = filtroGrupo === "todos" 
+      ? grupos 
+      : grupos.filter(grupo => grupo === filtroGrupo);
+    
     return (
       <>
-        {grupos.map((grupo) =>
+        {gruposFiltrados.map((grupo) =>
           partidosPorGrupo[grupo] && partidosPorGrupo[grupo].length > 0 ? (
             <div key={grupo} className="public-match-group">
               <h3 className="public-group-title">{grupo}</h3>
@@ -144,34 +151,6 @@ export default function PublicMatches() {
                         🕐 {match.hora || "Por definir"}
                       </div>
                     </div>
-
-                    {discipline === "futbol" &&
-                      (match.goleadoresA?.length > 0 || match.goleadoresB?.length > 0) && (
-                        <div className="public-scorers-preview">
-                          <div className="public-scorer-line">
-                            <strong>{match.equipoA?.curso} {match.equipoA?.paralelo}:</strong>{" "}
-                            {match.goleadoresA?.join(", ") || "-"}
-                          </div>
-                          <div className="public-scorer-line">
-                            <strong>{match.equipoB?.curso} {match.equipoB?.paralelo}:</strong>{" "}
-                            {match.goleadoresB?.join(", ") || "-"}
-                          </div>
-                        </div>
-                      )}
-
-                    {discipline === "voley" &&
-                      (match.anotadoresA?.length > 0 || match.anotadoresB?.length > 0) && (
-                        <div className="public-scorers-preview">
-                          <div className="public-scorer-line">
-                            <strong>{match.equipoA?.curso} {match.equipoA?.paralelo}:</strong>{" "}
-                            {match.anotadoresA?.join(", ") || "-"}
-                          </div>
-                          <div className="public-scorer-line">
-                            <strong>{match.equipoB?.curso} {match.equipoB?.paralelo}:</strong>{" "}
-                            {match.anotadoresB?.join(", ") || "-"}
-                          </div>
-                        </div>
-                      )}
                   </div>
                 ))}
               </div>
@@ -195,7 +174,7 @@ export default function PublicMatches() {
         <p className="public-subtitle">Seguimiento en tiempo real</p>
       </div>
 
-      {/* Navegador de fases */}
+      {/* Navegador de fases y filtros */}
       <div className="public-phase-navigation">
         <div className="public-phase-controls">
           <button
@@ -220,6 +199,22 @@ export default function PublicMatches() {
           >
             <span className="public-btn-icon">→</span>
           </button>
+        </div>
+
+        <div className="filter-controls">
+          <div className="filter-group">
+            <label className="filter-label">Filtrar por grupo:</label>
+            <select
+              value={filtroGrupo}
+              onChange={(e) => setFiltroGrupo(e.target.value)}
+              className="modern-select"
+            >
+              <option value="todos">Todos los grupos</option>
+              {grupos.map(grupo => (
+                <option key={grupo} value={grupo}>{grupo}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

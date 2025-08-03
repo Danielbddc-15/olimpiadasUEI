@@ -94,9 +94,63 @@ export default function ProfesorMatchDetail() {
     return conteo;
   };
 
+  // Validar si se puede iniciar el partido (solo para profesores)
+  const puedeIniciarPartido = () => {
+    const userRole = localStorage.getItem('userRole');
+    
+    // Si es admin, puede iniciar siempre
+    if (userRole === 'admin') {
+      return { puede: true, mensaje: '' };
+    }
+    
+    // Para profesores, validar hora
+    if (!match.fecha || !match.hora) {
+      return { 
+        puede: false, 
+        mensaje: 'Este partido no tiene fecha y hora programada. Solo un administrador puede iniciarlo.' 
+      };
+    }
+    
+    // Crear fecha del partido
+    const fechaPartido = new Date(`${match.fecha}T${match.hora}`);
+    const ahora = new Date();
+    
+    // Calcular diferencia en minutos
+    const diferenciaMinutos = (fechaPartido.getTime() - ahora.getTime()) / (1000 * 60);
+    
+    // Permitir iniciar 30 minutos antes del partido
+    if (diferenciaMinutos > 30) {
+      const horasRestantes = Math.floor(diferenciaMinutos / 60);
+      const minutosRestantes = Math.floor(diferenciaMinutos % 60);
+      return { 
+        puede: false, 
+        mensaje: `Solo puedes iniciar el partido 30 minutos antes de la hora programada. Tiempo restante: ${horasRestantes}h ${minutosRestantes}m` 
+      };
+    }
+    
+    // Si ya pasó mucho tiempo (más de 2 horas después), también restringir
+    if (diferenciaMinutos < -120) {
+      return { 
+        puede: false, 
+        mensaje: 'Este partido debió haberse jugado hace más de 2 horas. Contacta a un administrador.' 
+      };
+    }
+    
+    return { puede: true, mensaje: '' };
+  };
+
   // Cambiar estado del partido (con restricciones para profesor)
   const cambiarEstadoPartido = async (nuevoEstado) => {
     try {
+      // Validar si se puede iniciar el partido (solo para estado "en curso")
+      if (nuevoEstado === "en curso") {
+        const validacion = puedeIniciarPartido();
+        if (!validacion.puede) {
+          alert(validacion.mensaje);
+          return;
+        }
+      }
+      
       const updateData = { estado: nuevoEstado };
 
       await updateDoc(doc(db, "matches", matchId), updateData);
@@ -165,12 +219,22 @@ export default function ProfesorMatchDetail() {
         </div>
         <div className="profesor-status-actions">
           {match.estado === "pendiente" && (
-            <button
-              onClick={() => cambiarEstadoPartido("en curso")}
-              className="profesor-btn profesor-btn-start"
-            >
-              🚀 Iniciar Partido
-            </button>
+            <>
+              <button
+                onClick={() => cambiarEstadoPartido("en curso")}
+                className={`profesor-btn profesor-btn-start ${!puedeIniciarPartido().puede ? 'disabled' : ''}`}
+                disabled={!puedeIniciarPartido().puede}
+                title={!puedeIniciarPartido().puede ? puedeIniciarPartido().mensaje : 'Iniciar partido'}
+              >
+                🚀 Iniciar Partido
+              </button>
+              {!puedeIniciarPartido().puede && (
+                <div className="profesor-restriction-info">
+                  <span className="restriction-icon">⏰</span>
+                  <span className="restriction-text">{puedeIniciarPartido().mensaje}</span>
+                </div>
+              )}
+            </>
           )}
           {match.estado === "en curso" && (
             <>

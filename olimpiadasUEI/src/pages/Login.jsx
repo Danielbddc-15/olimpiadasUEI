@@ -11,6 +11,7 @@ function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [animationPhase, setAnimationPhase] = useState("sponsor"); // "sponsor", "transition", "login"
   const [user, loading] = useAuthState(auth);
 
@@ -124,6 +125,10 @@ function Login() {
     navigate("/selector");
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   // Mostrar loading mientras verifica autenticación
   if (loading) {
     return (
@@ -175,13 +180,21 @@ function Login() {
               <div className="input-wrapper">
                 <span className="input-icon">🔒</span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="login-input"
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="password-toggle-btn"
+                  title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
               </div>
             </div>
             <div className="button-group">

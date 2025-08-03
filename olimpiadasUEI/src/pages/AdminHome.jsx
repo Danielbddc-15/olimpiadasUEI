@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/config";
 import "../styles/AdminHome.css";
+import { Link } from "react-router-dom";
 
 export default function AdminHome() {
   const navigate = useNavigate();
@@ -158,6 +159,27 @@ export default function AdminHome() {
           </p>
         </div>
       </div>
+      
+      {/* Sección de gestión general */}
+      <div className="general-management-section">
+        <h3 className="section-title">
+          <span className="section-icon">⚙️</span>
+          Gestión General del Sistema
+        </h3>
+        <div className="management-actions">
+          <Link to="/admin/usuarios" className="management-card users-card">
+            <div className="management-card-icon">👥</div>
+            <div className="management-card-content">
+              <h4>Gestión de Usuarios</h4>
+              <p>Administrar usuarios con roles de administrador y profesor</p>
+            </div>
+            <div className="management-card-arrow">→</div>
+          </Link>
+          
+        </div>
+      </div>
+      
+      
     </div>
   );
 }

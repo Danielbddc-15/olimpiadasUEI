@@ -855,3 +855,344 @@
     font-size: 1.1rem;
   }
 }
+
+/* Botón deshabilitado por restricciones de horario */
+.iniciar-btn.disabled {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  color: #d1d5db;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.2);
+}
+
+.iniciar-btn.disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.2);
+}
+
+/* Mensaje de restricción de horario */
+.basquet-restriction-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.restriction-icon {
+  font-size: 1.2rem;
+  color: #ef4444;
+}
+
+.restriction-text {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mensaje de privilegios de administrador */
+.basquet-privilege-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.privilege-icon {
+  font-size: 1.2rem;
+  color: #22c55e;
+}
+
+.privilege-text {
+  color: #16a34a;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Sección de Jugadores */
+.admin-players-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  backdrop-filter: blur(10px);
+}
+
+.admin-players-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.admin-team-players {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.admin-team-players:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.1);
+}
+
+.admin-team-players-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+
+.team-icon {
+  font-size: 1.5rem;
+}
+
+.admin-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-player-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.admin-player-card:hover {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.player-number {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: white;
+  font-weight: bold;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  min-width: 2.5rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.player-name {
+  flex: 1;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.admin-no-players {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: #6b7280;
+  font-style: italic;
+  background: rgba(249, 250, 251, 0.8);
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+.no-players-icon {
+  font-size: 1.25rem;
+}
+
+/* Responsive para jugadores */
+@media (max-width: 768px) {
+  .admin-players-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .admin-team-players {
+    padding: 1rem;
+  }
+  
+  .admin-team-players-title {
+    font-size: 1.1rem;
+  }
+  
+  .admin-player-card {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .player-number {
+    min-width: 2rem;
+    font-size: 0.8rem;
+  }
+  
+  .player-name {
+    font-size: 0.9rem;
+  }
+}
+
+/* Selector de jugadores inline para básquet */
+.admin-player-selector {
+  margin-bottom: 1rem;
+}
+
+.admin-player-selector h5 {
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.admin-players-grid-inline {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.admin-player-selector-btn-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+
+.admin-player-selector-btn-inline:hover {
+  border-color: #ff6b35;
+  background: #fff7ed;
+  transform: translateY(-1px);
+}
+
+.admin-player-selector-btn-inline.selected {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.admin-player-selector-btn-inline .player-number-btn {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: white;
+  font-weight: bold;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  min-width: 1.5rem;
+  text-align: center;
+  font-size: 0.7rem;
+}
+
+.admin-player-selector-btn-inline.selected .player-number-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.admin-player-selector-btn-inline .player-name-btn {
+  flex: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.no-players-available-inline {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.manual-input-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+
+.manual-input-section h5 {
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.jugador-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.jugador-input:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+}
+
+/* Responsive para selector inline */
+@media (max-width: 768px) {
+  .admin-players-grid-inline {
+    grid-template-columns: 1fr;
+    max-height: 100px;
+  }
+  
+  .admin-player-selector-btn-inline {
+    padding: 0.4rem;
+    font-size: 0.75rem;
+  }
+  
+  .admin-player-selector-btn-inline .player-number-btn {
+    min-width: 1.2rem;
+    font-size: 0.65rem;
+  }
+  
+  .admin-player-selector-btn-inline .player-name-btn {
+    font-size: 0.75rem;
+  }
+}

@@ -602,3 +602,163 @@
   outline: 3px solid #667eea;
   outline-offset: 2px;
 }
+
+/* Sección de gestión general */
+.general-management-section {
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.section-icon {
+  font-size: 1.6rem;
+}
+
+.management-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.management-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.management-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.management-card:hover::before {
+  left: 100%;
+}
+
+.management-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  border-color: #667eea;
+}
+
+.management-card-icon {
+  font-size: 3rem;
+  padding: 1rem;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.users-card .management-card-icon {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.categories-card .management-card-icon {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+}
+
+.management-card-content {
+  flex: 1;
+}
+
+.management-card-content h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.management-card-content p {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.management-card-arrow {
+  font-size: 1.5rem;
+  color: #667eea;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.management-card:hover .management-card-arrow {
+  transform: translateX(5px);
+}
+
+/* Responsive para la sección de gestión */
+@media (max-width: 768px) {
+  .management-actions {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .management-card {
+    padding: 1.5rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .management-card-icon {
+    font-size: 2.5rem;
+    padding: 0.75rem;
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .general-management-section {
+    margin-top: 2rem;
+  }
+  
+  .management-card {
+    padding: 1rem;
+  }
+  
+  .management-card-content h4 {
+    font-size: 1.1rem;
+  }
+  
+  .management-card-content p {
+    font-size: 0.9rem;
+  }
+}

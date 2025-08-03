@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import "../styles/AdminVoleyMatchDetail.css";
 
@@ -9,6 +9,10 @@ export default function AdminVoleyMatchDetail() {
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Estados para jugadores de los equipos
+  const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
+  const [jugadoresEquipoB, setJugadoresEquipoB] = useState([]);
 
   // Estados para gestión de puntos
   const [mostrarInputPunto, setMostrarInputPunto] = useState(null);
@@ -46,6 +50,57 @@ export default function AdminVoleyMatchDetail() {
 
     fetchMatch();
   }, [matchId, navigate]);
+
+  // Cargar jugadores de los equipos
+  useEffect(() => {
+    const fetchJugadores = async () => {
+      if (!match?.equipoA || !match?.equipoB) return;
+
+      try {
+        // Cargar jugadores del equipo A
+        const queryA = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoA.curso),
+          where("paralelo", "==", match.equipoA.paralelo),
+          where("categoria", "==", match.equipoA.categoria || match.categoria),
+          where("genero", "==", match.equipoA.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotA = await getDocs(queryA);
+        const jugadoresA = snapshotA.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        // Cargar jugadores del equipo B
+        const queryB = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoB.curso),
+          where("paralelo", "==", match.equipoB.paralelo),
+          where("categoria", "==", match.equipoB.categoria || match.categoria),
+          where("genero", "==", match.equipoB.genero || match.genero),
+          where("disciplina", "==", match.disciplina)
+        );
+        const snapshotB = await getDocs(queryB);
+        const jugadoresB = snapshotB.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        setJugadoresEquipoA(jugadoresA);
+        setJugadoresEquipoB(jugadoresB);
+        
+        // Debug para verificar que se cargan los jugadores
+        console.log("Vóley - Jugadores Equipo A:", jugadoresA);
+        console.log("Vóley - Jugadores Equipo B:", jugadoresB);
+        console.log("Vóley - Match data:", match);
+      } catch (error) {
+        console.error("Error al cargar jugadores:", error);
+      }
+    };
+
+    fetchJugadores();
+  }, [match]);
 
   // Mapeo de fases para mostrar nombres legibles
   const fasesNombres = {
@@ -127,15 +182,20 @@ export default function AdminVoleyMatchDetail() {
 
   // Cambiar estado del partido
   const cambiarEstadoPartido = async (nuevoEstado) => {
+    console.log("🔧 AdminVoleyMatchDetail - Iniciando cambio de estado a:", nuevoEstado);
+    console.log("🔧 Role del usuario:", localStorage.getItem('userRole'));
+    
     try {
       const updateData = { estado: nuevoEstado };
       
       if (nuevoEstado === "en curso") {
+        console.log("🔧 Inicializando sets para el partido");
         // Inicializar sets al comenzar el partido
         const setsIniciales = inicializarSets();
         updateData.sets = setsIniciales;
       }
 
+      console.log("🔧 Actualizando documento en Firestore...");
       await updateDoc(doc(db, "matches", matchId), updateData);
       setMatch(prev => ({ ...prev, ...updateData }));
       
@@ -144,6 +204,7 @@ export default function AdminVoleyMatchDetail() {
         "finalizado": "Partido finalizado",
         "pendiente": "Partido pausado"
       };
+      console.log("🔧 Estado cambiado exitosamente a:", nuevoEstado);
       alert(mensajes[nuevoEstado] || "Estado actualizado");
     } catch (error) {
       console.error("Error al cambiar estado:", error);
@@ -324,19 +385,30 @@ export default function AdminVoleyMatchDetail() {
       <div className="admin-voley-status">
         <div className="admin-status-info">
           <span className={`admin-status-badge ${match.estado?.replace(' ', '-')}`}>
-            {match.estado === "pendiente" && "⏳ Pendiente"}
+            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
             {match.estado === "en curso" && "🟢 En Curso"}
             {match.estado === "finalizado" && "✅ Finalizado"}
           </span>
         </div>
         <div className="admin-status-actions">
-          {match.estado === "pendiente" && (
-            <button
-              onClick={() => cambiarEstadoPartido("en curso")}
-              className="admin-btn admin-btn-start"
-            >
-              🚀 Iniciar Partido
-            </button>
+          {(match.estado === "pendiente" || match.estado === "programado") && (
+            <>
+              <button
+                onClick={() => {
+                  console.log("🚀 Botón Iniciar Partido clickeado");
+                  console.log("🚀 Estado actual del partido:", match.estado);
+                  console.log("🚀 Role del usuario:", localStorage.getItem('userRole'));
+                  cambiarEstadoPartido("en curso");
+                }}
+                className="admin-btn admin-btn-start"
+              >
+                🚀 Iniciar Partido
+              </button>
+              <div className="admin-privilege-info">
+                <span className="privilege-icon">🛡️</span>
+                <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
+              </div>
+            </>
           )}
           {match.estado === "en curso" && (
             <>
@@ -481,18 +553,50 @@ export default function AdminVoleyMatchDetail() {
             <h3>Agregar Punto</h3>
             <p>Equipo: {mostrarInputPunto.equipo === 'A' ? equipoA : equipoB}</p>
             <p>Set: {mostrarInputPunto.set + 1}</p>
-            <input
-              type="text"
-              value={puntoInput}
-              onChange={(e) => setPuntoInput(e.target.value)}
-              placeholder="Nombre del anotador"
-              className="admin-punto-input"
-              autoFocus
-            />
+            
+            {/* Lista de jugadores del equipo */}
+            <div className="admin-player-selector">
+              <h4>Seleccionar Jugador:</h4>
+              <div className="admin-players-grid">
+                {(mostrarInputPunto.equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB).length > 0 ? (
+                  (mostrarInputPunto.equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB).map((jugador) => (
+                    <button
+                      key={jugador.id}
+                      onClick={() => setPuntoInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
+                      className={`admin-player-selector-btn ${
+                        puntoInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
+                      }`}
+                    >
+                      <span className="player-number-btn">#{jugador.numero || '?'}</span>
+                      <span className="player-name-btn">{jugador.nombre}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="no-players-available">
+                    <span className="no-players-icon">⚠️</span>
+                    <span>No hay jugadores registrados para este equipo</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Input manual como alternativa */}
+            <div className="admin-manual-input">
+              <h4>O escribir manualmente:</h4>
+              <input
+                type="text"
+                value={puntoInput}
+                onChange={(e) => setPuntoInput(e.target.value)}
+                placeholder="Nombre del anotador"
+                className="admin-punto-input"
+              />
+            </div>
+            
             <div className="admin-modal-actions">
               <button
                 onClick={() => marcarPunto(mostrarInputPunto.equipo, mostrarInputPunto.set)}
                 className="admin-btn admin-btn-confirm"
+                disabled={!puntoInput.trim()}
               >
                 ✅ Confirmar
               </button>

@@ -4,12 +4,12 @@ import {
   getDocs,
   query,
   where,
+  addDoc,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useParams } from "react-router-dom";
 import "../styles/ProfesorStandings.css";
-import Bracket from "../components/Bracket";
 import { Link, useLocation } from "react-router-dom";
 
 export default function ProfesorStandings() {
@@ -18,8 +18,6 @@ export default function ProfesorStandings() {
   const [equipos, setEquipos] = useState([]);
   const [standingsPorGrupo, setStandingsPorGrupo] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showBracket, setShowBracket] = useState(false);
-  const [grupoBracket, setGrupoBracket] = useState(null);
   const location = useLocation();
 
   // Obtener partidos en tiempo real
@@ -187,8 +185,8 @@ export default function ProfesorStandings() {
           }
         });
 
-      // Para vóley: marcar equipos eliminados
-      if (discipline === "voley") {
+      // Para vóley y fútbol: marcar equipos eliminados
+      if (discipline === "voley" || discipline === "futbol") {
         // Verificar qué equipos están activos según los partidos más recientes
         const todosLosPartidos = matches.filter(m => 
           m.grupo === grupo && 
@@ -196,10 +194,10 @@ export default function ProfesorStandings() {
         );
         
         // Obtener la fase más avanzada con partidos en este grupo
-        const fasesConPartidos = ['grupos3', 'grupos2', 'grupos1'];
+        const todasLasFases = ['final', 'semifinal', 'cuartos', 'octavos', 'grupos3', 'grupos1'];
         let faseActual = 'grupos1';
         
-        for (const fase of fasesConPartidos) {
+        for (const fase of todasLasFases) {
           const partidosFase = todosLosPartidos.filter(m => m.fase === fase);
           if (partidosFase.length > 0) {
             faseActual = fase;
@@ -207,26 +205,62 @@ export default function ProfesorStandings() {
           }
         }
         
-        // Marcar equipos como eliminados o activos
-        const equiposEnFaseReciente = new Set();
+        // Obtener equipos que siguen activos según la fase actual
+        const equiposActivos = new Set();
         
-        if (faseActual === 'grupos2' || faseActual === 'grupos3') {
+        if (faseActual === 'final') {
+          // En finales, solo los equipos que están jugando la final están activos
+          todosLosPartidos
+            .filter(m => m.fase === 'final')
+            .forEach(match => {
+              equiposActivos.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
+              equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
+            });
+        } else if (faseActual === 'semifinal') {
+          // En semifinales, equipos activos son los que están en semifinales
+          todosLosPartidos
+            .filter(m => m.fase === 'semifinal')
+            .forEach(match => {
+              equiposActivos.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
+              equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
+            });
+        } else if (faseActual === 'cuartos') {
+          // En cuartos, equipos activos son los que están en cuartos
+          todosLosPartidos
+            .filter(m => m.fase === 'cuartos')
+            .forEach(match => {
+              equiposActivos.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
+              equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
+            });
+        } else if (faseActual === 'octavos') {
+          // En octavos, equipos activos son los que están en octavos
+          todosLosPartidos
+            .filter(m => m.fase === 'octavos')
+            .forEach(match => {
+              equiposActivos.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
+              equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
+            });
+        } else if (faseActual === 'grupos3') {
+          // Para fase de grupos3
           todosLosPartidos
             .filter(m => m.fase === faseActual)
             .forEach(match => {
-              equiposEnFaseReciente.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
-              equiposEnFaseReciente.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
+              equiposActivos.add(`${match.equipoA.curso} ${match.equipoA.paralelo}`);
+              equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
             });
+        } else {
+          // En grupos1 o sin fase específica, todos los equipos que han jugado están activos
+          result.forEach(team => {
+            if (team.pj > 0) {
+              equiposActivos.add(team.nombre);
+            }
+          });
         }
         
         // Marcar estado de cada equipo
         result = result.map(team => ({
           ...team,
-          eliminado: team.pj > 0 && (
-            (faseActual === 'grupos2' || faseActual === 'grupos3') 
-              ? !equiposEnFaseReciente.has(team.nombre)
-              : false
-          )
+          eliminado: team.pj > 0 && !equiposActivos.has(team.nombre)
         }));
         
         // Ordenar: equipos activos primero, eliminados al final
@@ -238,11 +272,15 @@ export default function ProfesorStandings() {
           if (discipline === "voley") {
             if (b.pg !== a.pg) return b.pg - a.pg;
             return a.gc - b.gc;
+          } else if (discipline === "futbol") {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.dg !== a.dg) return b.dg - a.dg;
+            return b.gf - a.gf;
           }
           return 0;
         });
         
-        // Filtrar equipos con 0 partidos jugados solo si hay equipos activos
+        // Siempre mostrar todos los equipos que han jugado
         const equiposConPartidos = result.filter(team => team.pj > 0);
         if (equiposConPartidos.length > 0) {
           result = equiposConPartidos;
@@ -254,6 +292,185 @@ export default function ProfesorStandings() {
 
     console.log("Resultado final standings:", standingsPorGrupoTemp);
     setStandingsPorGrupo(standingsPorGrupoTemp);
+
+    // Generar automáticamente partidos de fases eliminatorias para vóley y fútbol
+    Object.entries(standingsPorGrupoTemp).forEach(async ([grupo, standings]) => {
+      if (standings.length >= 4 && standings.every(team => team.pj >= 1)) {
+        // Verificar qué fases ya existen para este grupo
+        const partidosGrupo = matches.filter(m => m.grupo === grupo);
+        const fasesExistentes = new Set(partidosGrupo.map(m => m.fase).filter(Boolean));
+        
+        console.log(`Fases existentes para ${grupo}:`, Array.from(fasesExistentes));
+        
+        // Verificar si todos los equipos tienen al menos 2 partidos jugados y finalizados
+        const todosConDosPartidos = standings.every(team => team.pj >= 2);
+        
+        console.log(`${grupo}: Todos con 2+ partidos: ${todosConDosPartidos}`);
+        
+        // FASE 2 (grupos3): Se genera cuando todos tienen 2 partidos finalizados
+        if (todosConDosPartidos && !fasesExistentes.has('grupos3')) {
+          console.log(`Generando grupos3 para ${grupo} - enfrentamientos por posición en tabla`);
+          
+          // Verificar que todos los equipos existen en la base de datos
+          const equiposValidados = [];
+          for (const team of standings) {
+            const equipoExiste = equipos.find(eq => 
+              `${eq.curso} ${eq.paralelo}` === team.nombre && eq.grupo === grupo
+            );
+            if (equipoExiste) {
+              equiposValidados.push(team);
+            } else {
+              console.warn(`Equipo no encontrado en BD: ${team.nombre} del ${grupo}`);
+            }
+          }
+          
+          console.log(`Equipos validados para ${grupo}:`, equiposValidados.map(t => t.nombre));
+          
+          // Generar enfrentamientos según posición: 1vs2, 3vs4, 5vs6, etc.
+          const emparejamientos = [];
+          for (let i = 0; i < equiposValidados.length - 1; i += 2) {
+            if (equiposValidados[i + 1]) { // Verificar que existe el segundo equipo
+              emparejamientos.push([i, i + 1]);
+            }
+          }
+          
+          console.log(`Emparejamientos para ${grupo}:`, emparejamientos.map(([a, b]) => 
+            `${equiposValidados[a]?.nombre} vs ${equiposValidados[b]?.nombre}`
+          ));
+          
+          for (const [idxA, idxB] of emparejamientos) {
+            const equipoA = equiposValidados[idxA];
+            const equipoB = equiposValidados[idxB];
+            if (!equipoA || !equipoB) continue;
+            
+            // Doble verificación: que el partido no exista ya
+            const partidoExiste = matches.some(m => 
+              m.grupo === grupo && 
+              m.fase === 'grupos3' &&
+              ((m.equipoA.curso === equipoA.nombre.split(" ")[0] && 
+                m.equipoA.paralelo === equipoA.nombre.split(" ")[1] &&
+                m.equipoB.curso === equipoB.nombre.split(" ")[0] && 
+                m.equipoB.paralelo === equipoB.nombre.split(" ")[1]) ||
+               (m.equipoA.curso === equipoB.nombre.split(" ")[0] && 
+                m.equipoA.paralelo === equipoB.nombre.split(" ")[1] &&
+                m.equipoB.curso === equipoA.nombre.split(" ")[0] && 
+                m.equipoB.paralelo === equipoA.nombre.split(" ")[1]))
+            );
+            
+            if (!partidoExiste) {
+              await addDoc(collection(db, "matches"), {
+                equipoA: { 
+                  curso: equipoA.nombre.split(" ")[0], 
+                  paralelo: equipoA.nombre.split(" ")[1] 
+                },
+                equipoB: { 
+                  curso: equipoB.nombre.split(" ")[0], 
+                  paralelo: equipoB.nombre.split(" ")[1] 
+                },
+                disciplina: discipline,
+                marcadorA: 0,
+                marcadorB: 0,
+                estado: "pendiente",
+                fecha: null,
+                hora: null,
+                grupo: grupo,
+                fase: "grupos3",
+                goleadoresA: [],
+                goleadoresB: [],
+              });
+            }
+          }
+        }
+        
+        // SEMIFINALES: Solo los 4 primeros de la tabla pasan
+        const partidosGrupos3 = partidosGrupo.filter(m => m.fase === 'grupos3' && m.estado === 'finalizado');
+        const totalPartidosGrupos3Esperados = Math.floor(standings.length / 2);
+        
+        if (partidosGrupos3.length >= totalPartidosGrupos3Esperados && !fasesExistentes.has('semifinal')) {
+          // Solo los 4 primeros equipos pasan a semifinales
+          const equiposClasificados = standings.slice(0, 4);
+          
+          console.log(`Generando semifinales para ${grupo} con los 4 primeros:`, 
+            equiposClasificados.map(t => t.nombre)
+          );
+          
+          if (equiposClasificados.length >= 4) {
+            // Semifinales: 1vs4 y 2vs3
+            const emparejamientosSemi = [[0, 3], [1, 2]];
+            
+            for (const [idxA, idxB] of emparejamientosSemi) {
+              const equipoA = equiposClasificados[idxA];
+              const equipoB = equiposClasificados[idxB];
+              if (!equipoA || !equipoB) continue;
+              
+              await addDoc(collection(db, "matches"), {
+                equipoA: { 
+                  curso: equipoA.nombre.split(" ")[0], 
+                  paralelo: equipoA.nombre.split(" ")[1] 
+                },
+                equipoB: { 
+                  curso: equipoB.nombre.split(" ")[0], 
+                  paralelo: equipoB.nombre.split(" ")[1] 
+                },
+                disciplina: discipline,
+                marcadorA: 0,
+                marcadorB: 0,
+                estado: "pendiente",
+                fecha: null,
+                hora: null,
+                grupo: grupo,
+                fase: "semifinal",
+                goleadoresA: [],
+                goleadoresB: [],
+              });
+            }
+          }
+        }
+        
+        // FINAL: Ganadores de semifinales
+        const partidosSemi = partidosGrupo.filter(m => m.fase === 'semifinal' && m.estado === 'finalizado');
+        if (partidosSemi.length >= 2 && !fasesExistentes.has('final')) {
+          // Obtener ganadores de semifinales
+          const ganadoresSemi = partidosSemi.map(match => {
+            if (match.marcadorA > match.marcadorB) {
+              return `${match.equipoA.curso} ${match.equipoA.paralelo}`;
+            } else {
+              return `${match.equipoB.curso} ${match.equipoB.paralelo}`;
+            }
+          });
+          
+          console.log(`Generando final para ${grupo} con finalistas:`, ganadoresSemi);
+          
+          if (ganadoresSemi.length >= 2) {
+            const equipoA = standings.find(t => t.nombre === ganadoresSemi[0]);
+            const equipoB = standings.find(t => t.nombre === ganadoresSemi[1]);
+            
+            if (equipoA && equipoB) {
+              await addDoc(collection(db, "matches"), {
+                equipoA: { 
+                  curso: equipoA.nombre.split(" ")[0], 
+                  paralelo: equipoA.nombre.split(" ")[1] 
+                },
+                equipoB: { 
+                  curso: equipoB.nombre.split(" ")[0], 
+                  paralelo: equipoB.nombre.split(" ")[1] 
+                },
+                disciplina: discipline,
+                marcadorA: 0,
+                marcadorB: 0,
+                estado: "pendiente",
+                fecha: null,
+                hora: null,
+                grupo: grupo,
+                fase: "final",
+                goleadoresA: [],
+                goleadoresB: [],
+              });
+            }
+          }
+        }
+      }
+    });
   }, [matches, equipos, discipline]);
 
   const createTeamEntry = (nombre, grupo) => ({
@@ -268,32 +485,6 @@ export default function ProfesorStandings() {
     pts: 0,
     dg: 0,
   });
-
-  // Obtener partidos de semifinal y final del grupo seleccionado para el bracket
-  let semifinales = ["Por definir", "Por definir"];
-  let final = "Por definir";
-  if (showBracket && grupoBracket) {
-    const semisGrupo = matches.filter(
-      (m) => m.grupo === grupoBracket && m.fase === "semifinal",
-    );
-    const finalGrupo = matches.find(
-      (m) => m.grupo === grupoBracket && m.fase === "final",
-    );
-    
-    // Limitar a máximo 2 semifinales
-    const semisLimitadas = semisGrupo.slice(0, 2);
-    
-    if (semisLimitadas.length >= 1) {
-      semifinales[0] = `${semisLimitadas[0].equipoA.curso} ${semisLimitadas[0].equipoA.paralelo} vs ${semisLimitadas[0].equipoB.curso} ${semisLimitadas[0].equipoB.paralelo}`;
-    }
-    if (semisLimitadas.length >= 2) {
-      semifinales[1] = `${semisLimitadas[1].equipoA.curso} ${semisLimitadas[1].equipoA.paralelo} vs ${semisLimitadas[1].equipoB.curso} ${semisLimitadas[1].equipoB.paralelo}`;
-    }
-    
-    if (finalGrupo) {
-      final = `${finalGrupo.equipoA.curso} ${finalGrupo.equipoA.paralelo} vs ${finalGrupo.equipoB.curso} ${finalGrupo.equipoB.paralelo}`;
-    }
-  }
 
   return (
     <div className="profesor-standings-container">
@@ -313,6 +504,13 @@ export default function ProfesorStandings() {
       {/* Navegación moderna entre secciones */}
       <div className="profesor-navigation">
         <Link
+          to="/profesor"
+          className="nav-link panel-link"
+        >
+          <span className="nav-icon">🏠</span>
+          <span className="nav-text">Panel</span>
+        </Link>
+        <Link
           to={`/profesor/${discipline}/partidos`}
           className={`nav-link ${location.pathname.includes("/partidos") ? "active" : ""}`}
         >
@@ -325,6 +523,13 @@ export default function ProfesorStandings() {
         >
           <span className="nav-icon">🏆</span>
           <span className="nav-text">Posiciones</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/horarios`}
+          className={`nav-link ${location.pathname.includes("/horarios") ? "active" : ""}`}
+        >
+          <span className="nav-icon">📅</span>
+          <span className="nav-text">Horarios</span>
         </Link>
       </div>
       {loading ? (
@@ -353,16 +558,6 @@ export default function ProfesorStandings() {
                   </h3>
                   <div className="teams-count">{standings.length} equipos</div>
                 </div>
-                <button
-                  className="bracket-btn"
-                  onClick={() => {
-                    setGrupoBracket(grupo);
-                    setShowBracket(true);
-                  }}
-                >
-                  <span className="btn-icon">🎯</span>
-                  <span>Ver Bracket</span>
-                </button>
               </div>
 
               <div className="standings-table-container">
@@ -445,15 +640,15 @@ export default function ProfesorStandings() {
                         key={team.nombre}
                         className={`table-row position-${idx + 1} ${team.eliminado ? 'eliminated-team' : ''}`}
                         style={{
-                          opacity: team.eliminado ? 0.6 : 1,
-                          backgroundColor: team.eliminado ? '#ffebee' : 'transparent'
+                          opacity: team.eliminado ? 0.7 : 1,
+                          backgroundColor: team.eliminado ? 'rgba(244, 67, 54, 0.15)' : 'transparent'
                         }}
                       >
                         <td className="position-cell">
                           <span
                             className={`position-badge position-${idx + 1} ${team.eliminado ? 'eliminated' : ''}`}
                             style={{
-                              backgroundColor: team.eliminado ? '#f44336' : '',
+                              backgroundColor: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '',
                               color: team.eliminado ? 'white' : ''
                             }}
                           >
@@ -466,46 +661,36 @@ export default function ProfesorStandings() {
                             <span 
                               className="team-name"
                               style={{
-                                color: team.eliminado ? '#757575' : '',
+                                color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '',
                                 textDecoration: team.eliminado ? 'line-through' : 'none'
                               }}
                             >
                               {team.nombre}
-                              {team.eliminado && (
-                                <span style={{ 
-                                  marginLeft: '8px', 
-                                  fontSize: '0.8em', 
-                                  color: '#f44336',
-                                  fontWeight: 'bold'
-                                }}>
-                                  ELIMINADO
-                                </span>
-                              )}
                             </span>
                           </div>
                         </td>
-                        <td className="table-cell" style={{ color: team.eliminado ? '#757575' : '' }}>{team.pj}</td>
-                        <td className="table-cell wins" style={{ color: team.eliminado ? '#757575' : '' }}>{team.pg}</td>
+                        <td className="table-cell" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.pj}</td>
+                        <td className="table-cell wins" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.pg}</td>
                         {discipline === "futbol" && (
-                          <td className="table-cell draws" style={{ color: team.eliminado ? '#757575' : '' }}>{team.pe}</td>
+                          <td className="table-cell draws" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.pe}</td>
                         )}
-                        <td className="table-cell losses" style={{ color: team.eliminado ? '#757575' : '' }}>{team.pp}</td>
+                        <td className="table-cell losses" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.pp}</td>
                         {discipline === "futbol" && (
                           <>
-                            <td className="table-cell goals-for" style={{ color: team.eliminado ? '#757575' : '' }}>{team.gf}</td>
+                            <td className="table-cell goals-for" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.gf}</td>
                             <td
                               className={`table-cell goal-diff ${team.dg >= 0 ? "positive" : "negative"}`}
-                              style={{ color: team.eliminado ? '#757575' : '' }}
+                              style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}
                             >
                               {team.dg > 0 ? "+" : ""}
                               {team.dg}
                             </td>
                           </>
                         )}
-                        <td className="table-cell goals-against" style={{ color: team.eliminado ? '#757575' : '' }}>{team.gc}</td>
+                        <td className="table-cell goals-against" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.gc}</td>
                         {discipline === "futbol" && (
                           <td className="points-cell">
-                            <span className="points-badge">{team.pts}</span>
+                            <span className="points-badge" style={{ color: team.eliminado ? 'rgba(244, 67, 54, 0.8)' : '' }}>{team.pts}</span>
                           </td>
                         )}
                       </tr>
@@ -515,63 +700,6 @@ export default function ProfesorStandings() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-      
-      {/* Modal Bracket por grupo */}
-      {showBracket && grupoBracket && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              padding: "2rem",
-              borderRadius: "10px",
-              boxShadow: "0 2px 16px #0002",
-              minWidth: 350,
-            }}
-          >
-            <h3>Llave del grupo {grupoBracket}</h3>
-            <Bracket
-              octavos={["Por definir", "Por definir", "Por definir"]}
-              cuartos={["Por definir", "Por definir"]}
-              semifinales={semifinales}
-              final={final}
-              tercerLugar="Por definir"
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 16,
-              }}
-            >
-              <button
-                onClick={() => setShowBracket(false)}
-                style={{
-                  background: "#eee",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "0.5rem 1rem",
-                  cursor: "pointer",
-                }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

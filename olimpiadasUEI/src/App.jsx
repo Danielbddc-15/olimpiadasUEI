@@ -14,6 +14,7 @@ import AdminTeams from "./pages/AdminTeams";
 import AdminMatchDetail from "./pages/AdminMatchDetail";
 import AdminVoleyMatchDetail from "./pages/AdminVoleyMatchDetail";
 import AdminBasquetMatchDetail from "./pages/AdminBasquetMatchDetail";
+import AdminUsers from "./pages/AdminUsers";
 import ProfesorVoleyMatchDetail from "./pages/ProfesorVoleyMatchDetail";
 import ProfesorBasquetMatchDetail from "./pages/ProfesorBasquetMatchDetail";
 
@@ -23,6 +24,7 @@ import ProfesorStandings from "./pages/ProfesorStandings";
 import ProfesorHorarios from "./pages/ProfesorHorarios";
 import ProfesorHome from "./pages/ProfesorHome";
 import ProfesorMatchDetail from "./pages/ProfesorMatchDetail";
+import CategoriasAdmin from "./components/CategoriasAdmin";
 
 function App() {
   return (
@@ -61,6 +63,14 @@ function App() {
           element={
             <PrivateRoute allowedRoles={["admin"]}>
               <AdminHome />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios"
+          element={
+            <PrivateRoute allowedRoles={["admin"]}>
+              <AdminUsers />
             </PrivateRoute>
           }
         />
