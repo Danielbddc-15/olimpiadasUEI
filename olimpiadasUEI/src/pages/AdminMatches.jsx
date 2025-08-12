@@ -1,237 +1,238 @@
-import { useEffect, useState, useRef } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { db } from "../firebase/config";
 import {
   collection,
   getDocs,
   addDoc,
-  updateDoc,
-  deleteDoc,
   doc,
   query,
   where,
   onSnapshot,
+  updateDoc,
+  deleteDoc
 } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 import "../styles/AdminMatches.css";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../components/Toast";
 
 export default function AdminMatches() {
   const { discipline } = useParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  
+  // Estados principales
   const [matches, setMatches] = useState([]);
+  const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newMatch, setNewMatch] = useState({
-    equipoA: "",
-    equipoB: "",
-    fecha: "",
-    hora: "",
+  
+  // Estados para filtros con persistencia
+  const [filtroGenero, setFiltroGenero] = useState(() => {
+    return localStorage.getItem(`olimpiadas_filtro_genero_${discipline}`) || "";
   });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem(`olimpiadas_filtro_nivel_${discipline}`) || "";
+  });
+  const [filtroCategoria, setFiltroCategoria] = useState(() => {
+    return localStorage.getItem(`olimpiadas_filtro_categoria_${discipline}`) || "";
+  });
+
+  // Estados para opciones de filtros (extraídos dinámicamente de los equipos)
+  const [opcionesGenero, setOpcionesGenero] = useState([]);
+  const [opcionesNivel, setOpcionesNivel] = useState([]);
+  const [opcionesCategorias, setOpcionesCategorias] = useState([]);
+
+  // Estados para edición de partidos y navegación
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [editedMatch, setEditedMatch] = useState({ fecha: "", hora: "" });
   const [scoreEdit, setScoreEdit] = useState({});
-  const [grupos, setGrupos] = useState([]);
-  const [equipos, setEquipos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [filtroGenero, setFiltroGenero] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
-  const [filtroGrupos, setFiltroGrupos] = useState([]);
-  const [faseActual, setFaseActual] = useState(0);
+  const [faseActiva, setFaseActiva] = useState("grupos");
+
+  // Estados para eliminación
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [grupoAEliminar, setGrupoAEliminar] = useState(null);
+  const [partidoAEliminar, setPartidoAEliminar] = useState(null);
+  const [showConfirmDeleteGroup, setShowConfirmDeleteGroup] = useState(false);
+  const [tipoEliminacion, setTipoEliminacion] = useState(""); // "categoria" o "fase"
 
-  const navigate = useNavigate();
-
-  // Función para navegar al detalle del partido
-  const irADetallePartido = (matchId) => {
-    // Redireccionar según la disciplina
-    if (discipline === "voley") {
-      navigate(`/admin-voley-match-detail/${matchId}`);
-    } else if (discipline === "basquet") {
-      navigate(`/admin-basquet-match-detail/${matchId}`);
-    } else {
-      // Para fútbol y otras disciplinas, mantener la ruta original
-      navigate(`/admin/partido/${matchId}`);
-    }
+  // ==================== FUNCIONES DE FILTROS ====================
+  
+  // Guardar filtros en localStorage
+  const guardarFiltros = (genero, nivel, categoria) => {
+    localStorage.setItem(`olimpiadas_filtro_genero_${discipline}`, genero);
+    localStorage.setItem(`olimpiadas_filtro_nivel_${discipline}`, nivel);
+    localStorage.setItem(`olimpiadas_filtro_categoria_${discipline}`, categoria);
   };
 
-  // Funciones de navegación
-  const goToTeams = () => {
-    navigate(`/admin/${discipline}/equipos`);
+  // Manejar cambio de género
+  const handleFiltroGeneroChange = (value) => {
+    setFiltroGenero(value);
+    setFiltroNivelEducacional(""); // Reset dependientes
+    setFiltroCategoria("");
+    guardarFiltros(value, "", "");
   };
 
-  const goToStandings = () => {
-    navigate(`/admin/${discipline}/tabla`);
+  // Manejar cambio de nivel educacional
+  const handleFiltroNivelEducacionalChange = (value) => {
+    setFiltroNivelEducacional(value);
+    setFiltroCategoria(""); // Reset dependientes
+    guardarFiltros(filtroGenero, value, "");
   };
 
-  const goToSchedule = () => {
-    navigate(`/admin/${discipline}/horarios`);
+  // Manejar cambio de categoría
+  const handleFiltroCategoriaChange = (value) => {
+    setFiltroCategoria(value);
+    guardarFiltros(filtroGenero, filtroNivelEducacional, value);
   };
 
-  const goToPanel = () => {
-    navigate('/admin');
-  };
+  // ==================== FUNCIONES DE CARGA DE DATOS ====================
+  
+  // Cargar equipos desde Firestore
+  useEffect(() => {
+    const cargarEquipos = async () => {
+      try {
+        const q = query(
+          collection(db, "equipos"),
+          where("disciplina", "==", discipline)
+        );
+        const snapshot = await getDocs(q);
+        const equiposData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setEquipos(equiposData);
 
-  // Detectar si es fútbol
-  const esFutbol = discipline === "futbol";
+        // Extraer opciones únicas para filtros
+        const generos = [...new Set(equiposData.map(e => e.genero).filter(Boolean))];
+        const niveles = [...new Set(equiposData.map(e => e.nivelEducacional).filter(Boolean))];
+        const categorias = [...new Set(equiposData.map(e => e.categoria).filter(Boolean))];
 
-  // Nuevo sistema de fases simplificado
-  const fasesDb = {
-    grupos: "Fase de Grupos",
-    semifinales: "Semifinales",
-    final: "Final",
-    tercerPuesto: "Tercer Puesto",
-  };
+        setOpcionesGenero(generos);
+        setOpcionesNivel(niveles);
+        setOpcionesCategorias(categorias);
 
-  // Arrays para la navegación
-  const fases = Object.values(fasesDb);
-  const fasesArray = Object.keys(fasesDb);
+        console.log('📊 Datos cargados:', {
+          equipos: equiposData.length,
+          generos,
+          niveles,
+          categorias
+        });
 
-  // Función para obtener el icono de la fase
-  const obtenerIconoFase = (faseKey) => {
-    if (faseKey === "grupos") return "👥";
-    if (faseKey === "semifinales") return "🥈";
-    if (faseKey === "final") return "🏆";
-    if (faseKey === "tercerPuesto") return "🥉";
-    return "🏅";
-  };
-
-  // Función para calcular clasificación por grupo
-  const calcularClasificacion = (partidosGrupo) => {
-    const equipos = {};
-    
-    partidosGrupo.forEach((match) => {
-      if (match.estado !== "finalizado") return;
-      
-      const equipoAKey = `${match.equipoA.curso} ${match.equipoA.paralelo}`;
-      const equipoBKey = `${match.equipoB.curso} ${match.equipoB.paralelo}`;
-      
-      if (!equipos[equipoAKey]) {
-        equipos[equipoAKey] = {
-          nombre: equipoAKey,
-          curso: match.equipoA.curso,
-          paralelo: match.equipoA.paralelo,
-          grupo: match.grupo,
-          partidos: 0,
-          ganados: 0,
-          empatados: 0,
-          perdidos: 0,
-          puntosAFavor: 0,
-          puntosEnContra: 0,
-          puntos: 0
-        };
+      } catch (error) {
+        console.error("Error al cargar equipos:", error);
+        setError("Error al cargar equipos");
       }
+    };
+
+    cargarEquipos();
+  }, [discipline]);
+
+  // Cargar partidos desde Firestore con onSnapshot
+  useEffect(() => {
+    const q = query(
+      collection(db, "matches"),
+      where("disciplina", "==", discipline)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const matchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMatches(matchesData);
+      setLoading(false);
       
-      if (!equipos[equipoBKey]) {
-        equipos[equipoBKey] = {
-          nombre: equipoBKey,
-          curso: match.equipoB.curso,
-          paralelo: match.equipoB.paralelo,
-          grupo: match.grupo,
-          partidos: 0,
-          ganados: 0,
-          empatados: 0,
-          perdidos: 0,
-          puntosAFavor: 0,
-          puntosEnContra: 0,
-          puntos: 0
-        };
-      }
-      
-      const marcadorA = match.marcadorA || 0;
-      const marcadorB = match.marcadorB || 0;
-      
-      equipos[equipoAKey].partidos++;
-      equipos[equipoBKey].partidos++;
-      equipos[equipoAKey].puntosAFavor += marcadorA;
-      equipos[equipoAKey].puntosEnContra += marcadorB;
-      equipos[equipoBKey].puntosAFavor += marcadorB;
-      equipos[equipoBKey].puntosEnContra += marcadorA;
-      
-      if (marcadorA > marcadorB) {
-        // Equipo A gana
-        equipos[equipoAKey].ganados++;
-        equipos[equipoAKey].puntos += 3;
-        equipos[equipoBKey].perdidos++;
-      } else if (marcadorA < marcadorB) {
-        // Equipo B gana
-        equipos[equipoBKey].ganados++;
-        equipos[equipoBKey].puntos += 3;
-        equipos[equipoAKey].perdidos++;
-      } else {
-        // Empate
-        equipos[equipoAKey].empatados++;
-        equipos[equipoAKey].puntos += 1;
-        equipos[equipoBKey].empatados++;
-        equipos[equipoBKey].puntos += 1;
-      }
+      console.log(`🔄 Partidos actualizados: ${matchesData.length}`);
     });
-    
-    // Ordenar según la disciplina
-    if (discipline === "voley") {
-      // Para vóley: 1) Partidos ganados, 2) Menos puntos en contra
-      return Object.values(equipos).sort((a, b) => {
-        if (b.ganados !== a.ganados) return b.ganados - a.ganados;
-        return a.puntosEnContra - b.puntosEnContra;
-      });
-    } else {
-      // Para fútbol: 1) Puntos, 2) Partidos ganados, 3) Menos puntos en contra
-      return Object.values(equipos).sort((a, b) => {
-        if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-        if (b.ganados !== a.ganados) return b.ganados - a.ganados;
-        return a.puntosEnContra - b.puntosEnContra;
-      });
+
+    return () => unsubscribe();
+  }, [discipline]);
+
+  // Validar fase seleccionada cuando cambian los filtros
+  useEffect(() => {
+    if (filtroGenero && filtroNivelEducacional && filtroCategoria) {
+      const fasesDisponibles = verificarFasesExistentes();
+      
+      // Si la fase actual no existe, cambiar a la primera disponible
+      if (!fasesDisponibles[faseActiva] && faseActiva !== "todas") {
+        const primeraFaseDisponible = Object.keys(fasesDisponibles).find(fase => fasesDisponibles[fase]);
+        if (primeraFaseDisponible) {
+          setFaseActiva(primeraFaseDisponible);
+        } else {
+          setFaseActiva("todas");
+        }
+      }
     }
+  }, [filtroGenero, filtroNivelEducacional, filtroCategoria, matches]);
+
+  // ==================== FUNCIONES AUXILIARES ====================
+
+  // Verificar qué fases existen en la categoría actual
+  const verificarFasesExistentes = () => {
+    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
+      return {
+        grupos: false,
+        semifinal: false,
+        final: false,
+        ida_vuelta: false
+      };
+    }
+
+    const partidosCategoria = matches.filter(match => 
+      match.genero === filtroGenero &&
+      match.nivelEducacional === filtroNivelEducacional &&
+      match.categoria === filtroCategoria
+    );
+
+    return {
+      grupos: partidosCategoria.some(m => m.fase === "grupos" || !m.fase),
+      semifinal: partidosCategoria.some(m => m.fase === "semifinal"),
+      final: partidosCategoria.some(m => m.fase === "final" || m.fase === "tercer_puesto" || m.fase === "tercerPuesto"),
+      ida_vuelta: partidosCategoria.some(m => m.fase === "ida" || m.fase === "vuelta" || m.fase === "desempate")
+    };
   };
 
-  // Función para verificar si una fase está completa
-  const verificarFaseCompleta = (fase) => {
-    const partidosFase = matches.filter(m => (m.fase || "grupos1") === fase && m.estado === "finalizado");
-    
-    if (partidosFase.length === 0) return false;
-    
-    // Si es fase de grupos 1, verificar que todos los partidos estén finalizados
-    if (fase === "grupos1") {
-      const partidosPendientes = matches.filter(m => (m.fase || "grupos1") === fase && m.estado !== "finalizado");
-      return partidosPendientes.length === 0;
-    }
-    
-    // Para fases 2 y 3, verificar que todos los partidos de esa fase estén finalizados
-    if (fase === "grupos2" || fase === "grupos3") {
-      const partidosPendientes = matches.filter(m => m.fase === fase && m.estado !== "finalizado");
-      return partidosPendientes.length === 0;
-    }
-    
-    // Para semifinales y finales, verificar que todos los partidos estén finalizados
-    if (fase === "semifinales" || fase === "finales") {
-      const partidosPendientes = matches.filter(m => m.fase === fase && m.estado !== "finalizado");
-      return partidosPendientes.length === 0;
-    }
-    
-    return false;
+  // ==================== FUNCIONES DE GENERACIÓN DE PARTIDOS ====================
+
+  // Obtener equipos filtrados
+  const obtenerEquiposFiltrados = () => {
+    return equipos.filter(equipo => 
+      equipo.disciplina === discipline &&
+      (!filtroGenero || equipo.genero === filtroGenero) &&
+      (!filtroNivelEducacional || equipo.nivelEducacional === filtroNivelEducacional) &&
+      (!filtroCategoria || equipo.categoria === filtroCategoria)
+    );
   };
 
-  // Función para generar partidos "todos contra todos" para grupos
+  // Generar partidos de fase de grupos (todos contra todos) o ida/vuelta según cantidad de equipos
   const generarPartidosGrupos = async () => {
-    if (!filtroGenero || !filtroCategoria) {
-      alert("Primero selecciona género y categoría para generar partidos");
+    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
+      showToast("⚠️ Debes seleccionar género, nivel educacional y categoría", "warning");
       return;
     }
 
     try {
-      // Obtener equipos filtrados por género y categoría
-      const equiposFiltrados = equipos.filter(eq => 
-        eq.genero === filtroGenero && eq.categoria === filtroCategoria
+      const equiposFiltrados = obtenerEquiposFiltrados();
+      
+      if (equiposFiltrados.length < 2) {
+        showToast(`⚠️ Se necesitan al menos 2 equipos. Encontrados: ${equiposFiltrados.length}`, "warning");
+        return;
+      }
+
+      console.log(`🚀 Generando partidos para ${equiposFiltrados.length} equipos...`);
+
+      // Verificar si ya existen partidos para esta categoría
+      const partidosExistentes = matches.filter(m => 
+        m.disciplina === discipline &&
+        m.genero === filtroGenero &&
+        m.nivelEducacional === filtroNivelEducacional &&
+        m.categoria === filtroCategoria
       );
 
-      if (equiposFiltrados.length < 2) {
-        alert("Se necesitan al menos 2 equipos para generar partidos");
-        return;
+      if (partidosExistentes.length > 0) {
+        if (!confirm(`Ya existen ${partidosExistentes.length} partidos para esta categoría. ¿Continuar generando más?`)) {
+          return;
+        }
       }
 
       // Agrupar equipos por grupo
       const equiposPorGrupo = {};
       equiposFiltrados.forEach(equipo => {
-        const grupo = equipo.grupo || "Sin grupo";
+        const grupo = equipo.grupo || "Grupo Único";
         if (!equiposPorGrupo[grupo]) {
           equiposPorGrupo[grupo] = [];
         }
@@ -240,2300 +241,1836 @@ export default function AdminMatches() {
 
       let partidosCreados = 0;
 
-      // Generar partidos "todos contra todos" para cada grupo
+      // Procesar cada grupo
       for (const [nombreGrupo, equiposGrupo] of Object.entries(equiposPorGrupo)) {
-        if (equiposGrupo.length < 2) continue;
-
-        // Verificar si ya existen partidos para este grupo, género y categoría
-        const partidosExistentes = matches.filter(m => 
-          m.grupo === nombreGrupo && 
-          m.equipoA?.genero === filtroGenero && 
-          m.equipoA?.categoria === filtroCategoria &&
-          m.fase === "grupos"
-        );
-
-        if (partidosExistentes.length > 0) {
-          if (!window.confirm(`Ya existen partidos para el grupo "${nombreGrupo}" en la categoría "${filtroCategoria}" (${filtroGenero}). ¿Deseas continuar y crear más partidos?`)) {
-            continue;
-          }
-        }
-
-        // Generar todos los enfrentamientos posibles (todos contra todos)
-        for (let i = 0; i < equiposGrupo.length; i++) {
-          for (let j = i + 1; j < equiposGrupo.length; j++) {
-            const equipoA = equiposGrupo[i];
-            const equipoB = equiposGrupo[j];
-
-            // Verificar si ya existe este enfrentamiento
-            const enfrentamientoExiste = matches.some(m => 
-              m.grupo === nombreGrupo &&
-              ((m.equipoA?.curso === equipoA.curso && m.equipoA?.paralelo === equipoA.paralelo &&
-                m.equipoB?.curso === equipoB.curso && m.equipoB?.paralelo === equipoB.paralelo) ||
-               (m.equipoA?.curso === equipoB.curso && m.equipoA?.paralelo === equipoB.paralelo &&
-                m.equipoB?.curso === equipoA.curso && m.equipoB?.paralelo === equipoA.paralelo))
-            );
-
-            if (!enfrentamientoExiste) {
-              await addDoc(collection(db, "matches"), {
-                equipoA: {
-                  curso: equipoA.curso,
-                  paralelo: equipoA.paralelo,
-                  genero: equipoA.genero,
-                  categoria: equipoA.categoria
-                },
-                equipoB: {
-                  curso: equipoB.curso,
-                  paralelo: equipoB.paralelo,
-                  genero: equipoB.genero,
-                  categoria: equipoB.categoria
-                },
-                grupo: nombreGrupo,
-                fase: "grupos",
-                estado: "programado",
-                disciplina: discipline,
-                marcadorA: 0,
-                marcadorB: 0,
-                fecha: "",
-                hora: "",
-                goleadoresA: [],
-                goleadoresB: []
-              });
-              partidosCreados++;
-            }
-          }
+        console.log(`📋 Procesando ${nombreGrupo} (${equiposGrupo.length} equipos)`);
+        
+        if (equiposGrupo.length === 2) {
+          // Para 2 equipos: generar ida y vuelta
+          console.log(`⚽ Generando ida y vuelta para ${nombreGrupo}`);
+          partidosCreados += await generarIdaYVueltaPara2Equipos(equiposGrupo, nombreGrupo);
+        } else {
+          // Para más de 2 equipos: fase de grupos (todos contra todos)
+          console.log(`🏃‍♂️ Generando fase de grupos para ${nombreGrupo}`);
+          partidosCreados += await generarFaseGruposTodosContraTodos(equiposGrupo, nombreGrupo);
         }
       }
 
-      if (partidosCreados > 0) {
-        alert(`Se crearon ${partidosCreados} partidos para la fase de grupos`);
-      } else {
-        alert("No se crearon partidos nuevos. Puede que ya existan todos los enfrentamientos.");
-      }
+      const tipoPartidos = Object.values(equiposPorGrupo).some(grupo => grupo.length === 2) ? 
+        "ida/vuelta y fase de grupos" : "fase de grupos";
+      
+      showToast(`✅ Se generaron ${partidosCreados} partidos (${tipoPartidos})`, "success");
+      console.log(`✅ Total partidos creados: ${partidosCreados}`);
 
     } catch (error) {
       console.error("Error al generar partidos:", error);
-      alert("Error al generar partidos");
+      showToast("❌ Error al generar partidos", "error");
     }
   };
 
-  // Función para generar semifinales, final y tercer puesto
-  const generarFasesFinales = async () => {
-    if (!filtroGenero || !filtroCategoria) {
-      alert("Primero selecciona género y categoría");
+  // Función auxiliar para generar ida y vuelta entre 2 equipos
+  const generarIdaYVueltaPara2Equipos = async (equipos, nombreGrupo) => {
+    const [equipoA, equipoB] = equipos;
+    let partidosCreados = 0;
+
+    // Partido de ida
+    await addDoc(collection(db, "matches"), {
+      equipoA: {
+        curso: equipoA.curso,
+        paralelo: equipoA.paralelo,
+        genero: filtroGenero,
+        categoria: filtroCategoria,
+        nivelEducacional: filtroNivelEducacional
+      },
+      equipoB: {
+        curso: equipoB.curso,
+        paralelo: equipoB.paralelo,
+        genero: filtroGenero,
+        categoria: filtroCategoria,
+        nivelEducacional: filtroNivelEducacional
+      },
+      grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
+      fase: "ida",
+      estado: "programado",
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      goleadoresA: [],
+      goleadoresB: [],
+      observaciones: "Partido de ida"
+    });
+    partidosCreados++;
+
+    // Partido de vuelta (equipos intercambiados)
+    await addDoc(collection(db, "matches"), {
+      equipoA: {
+        curso: equipoB.curso,
+        paralelo: equipoB.paralelo,
+        genero: filtroGenero,
+        categoria: filtroCategoria,
+        nivelEducacional: filtroNivelEducacional
+      },
+      equipoB: {
+        curso: equipoA.curso,
+        paralelo: equipoA.paralelo,
+        genero: filtroGenero,
+        categoria: filtroCategoria,
+        nivelEducacional: filtroNivelEducacional
+      },
+      grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
+      fase: "vuelta",
+      estado: "programado",
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      goleadoresA: [],
+      goleadoresB: [],
+      observaciones: "Partido de vuelta"
+    });
+    partidosCreados++;
+
+    return partidosCreados;
+  };
+
+  // Función auxiliar para generar fase de grupos (todos contra todos)
+  const generarFaseGruposTodosContraTodos = async (equipos, nombreGrupo) => {
+    let partidosCreados = 0;
+
+    for (let i = 0; i < equipos.length; i++) {
+      for (let j = i + 1; j < equipos.length; j++) {
+        const equipoA = equipos[i];
+        const equipoB = equipos[j];
+
+        await addDoc(collection(db, "matches"), {
+          equipoA: {
+            curso: equipoA.curso,
+            paralelo: equipoA.paralelo,
+            genero: filtroGenero,
+            categoria: filtroCategoria,
+            nivelEducacional: filtroNivelEducacional
+          },
+          equipoB: {
+            curso: equipoB.curso,
+            paralelo: equipoB.paralelo,
+            genero: filtroGenero,
+            categoria: filtroCategoria,
+            nivelEducacional: filtroNivelEducacional
+          },
+          grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
+          fase: "grupos",
+          estado: "programado",
+          disciplina: discipline,
+          categoria: filtroCategoria,
+          genero: filtroGenero,
+          nivelEducacional: filtroNivelEducacional,
+          marcadorA: 0,
+          marcadorB: 0,
+          fecha: "",
+          hora: "",
+          goleadoresA: [],
+          goleadoresB: []
+        });
+        
+        partidosCreados++;
+      }
+    }
+
+    return partidosCreados;
+  };
+
+  // ==================== FUNCIONES DE ANÁLISIS DE CATEGORÍAS ====================
+
+  // Obtener clasificación de un grupo
+  const obtenerClasificacion = (nombreGrupo) => {
+    const partidosGrupo = matches.filter(m => 
+      m.grupo === nombreGrupo &&
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      (m.fase === "grupos" || !m.fase) &&
+      m.estado === "finalizado"
+    );
+
+    const equiposStats = {};
+
+    // Inicializar stats para todos los equipos del grupo
+    const equiposGrupo = obtenerEquiposFiltrados().filter(e => {
+      const grupoEquipo = e.grupo || "Grupo Único";
+      return grupoEquipo === nombreGrupo || 
+             (nombreGrupo === `${filtroCategoria} - ${filtroGenero}` && grupoEquipo === "Grupo Único");
+    });
+
+    equiposGrupo.forEach(equipo => {
+      const key = `${equipo.curso} ${equipo.paralelo}`;
+      equiposStats[key] = {
+        curso: equipo.curso,
+        paralelo: equipo.paralelo,
+        puntos: 0,
+        golesFavor: 0,
+        golesContra: 0,
+        partidosJugados: 0,
+        partidosGanados: 0,
+        partidosEmpatados: 0,
+        partidosPerdidos: 0
+      };
+    });
+
+    // Calcular estadísticas basadas en partidos finalizados
+    partidosGrupo.forEach(partido => {
+      const equipoA = `${partido.equipoA.curso} ${partido.equipoA.paralelo}`;
+      const equipoB = `${partido.equipoB.curso} ${partido.equipoB.paralelo}`;
+      
+      if (equiposStats[equipoA] && equiposStats[equipoB]) {
+        equiposStats[equipoA].partidosJugados++;
+        equiposStats[equipoB].partidosJugados++;
+        
+        equiposStats[equipoA].golesFavor += partido.marcadorA || 0;
+        equiposStats[equipoA].golesContra += partido.marcadorB || 0;
+        equiposStats[equipoB].golesFavor += partido.marcadorB || 0;
+        equiposStats[equipoB].golesContra += partido.marcadorA || 0;
+
+        if (partido.marcadorA > partido.marcadorB) {
+          equiposStats[equipoA].puntos += 3;
+          equiposStats[equipoA].partidosGanados++;
+          equiposStats[equipoB].partidosPerdidos++;
+        } else if (partido.marcadorA < partido.marcadorB) {
+          equiposStats[equipoB].puntos += 3;
+          equiposStats[equipoB].partidosGanados++;
+          equiposStats[equipoA].partidosPerdidos++;
+        } else {
+          equiposStats[equipoA].puntos += 1;
+          equiposStats[equipoB].puntos += 1;
+          equiposStats[equipoA].partidosEmpatados++;
+          equiposStats[equipoB].partidosEmpatados++;
+        }
+      }
+    });
+
+    // Ordenar por puntos, diferencia de goles y goles a favor
+    return Object.values(equiposStats).sort((a, b) => {
+      if (b.puntos !== a.puntos) return b.puntos - a.puntos;
+      const difA = a.golesFavor - a.golesContra;
+      const difB = b.golesFavor - b.golesContra;
+      if (difB !== difA) return difB - difA;
+      return b.golesFavor - a.golesFavor;
+    });
+  };
+
+  // Analizar el estado de la categoría y determinar qué fases generar
+  const analizarEstadoCategoria = () => {
+    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
+      return { tipo: "sin_filtros" };
+    }
+
+    const equiposFiltrados = obtenerEquiposFiltrados();
+    const equiposPorGrupo = {};
+    
+    equiposFiltrados.forEach(equipo => {
+      const grupo = equipo.grupo || "Grupo Único";
+      if (!equiposPorGrupo[grupo]) {
+        equiposPorGrupo[grupo] = [];
+      }
+      equiposPorGrupo[grupo].push(equipo);
+    });
+
+    const gruposConEquipos = Object.keys(equiposPorGrupo).filter(g => equiposPorGrupo[g].length > 0);
+    
+    // Verificar si todos los partidos de grupos están finalizados
+    const partidosGrupos = matches.filter(m => 
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      (m.fase === "grupos" || !m.fase)
+    );
+    
+    const partidosPendientes = partidosGrupos.filter(p => p.estado !== "finalizado");
+    const gruposCompletos = partidosPendientes.length === 0 && partidosGrupos.length > 0;
+
+    const clasificaciones = {};
+    gruposConEquipos.forEach(grupo => {
+      clasificaciones[grupo] = obtenerClasificacion(grupo);
+    });
+
+    return {
+      tipo: "analisis_completo",
+      totalEquipos: equiposFiltrados.length,
+      totalGrupos: gruposConEquipos.length,
+      gruposConEquipos,
+      equiposPorGrupo,
+      clasificaciones,
+      gruposCompletos,
+      partidosGruposPendientes: partidosPendientes.length,
+      totalPartidosGrupos: partidosGrupos.length
+    };
+  };
+
+  // ==================== GENERACIÓN AUTOMÁTICA DE FASES FINALES ====================
+
+  const generarFasesFinalesAutomaticas = async () => {
+    const estado = analizarEstadoCategoria();
+    
+    if (estado.tipo === "sin_filtros") {
+      showToast("⚠️ Selecciona todos los filtros primero", "warning");
+      return;
+    }
+
+    if (!estado.gruposCompletos) {
+      showToast(`⚠️ Completa todos los partidos de grupos primero (${estado.partidosGruposPendientes} pendientes)`, "warning");
       return;
     }
 
     try {
-      // Obtener equipos de la categoría y género seleccionado
-      const equiposFiltrados = equipos.filter(eq => 
-        eq.genero === filtroGenero && eq.categoria === filtroCategoria
-      );
+      console.log(`🏆 Generando fases finales automáticas...`);
+      console.log(`📊 Estado:`, estado);
 
-      // Agrupar equipos por grupo
-      const equiposPorGrupo = {};
-      equiposFiltrados.forEach(equipo => {
-        const grupo = equipo.grupo || "Sin grupo";
-        if (!equiposPorGrupo[grupo]) {
-          equiposPorGrupo[grupo] = [];
-        }
-        equiposPorGrupo[grupo].push(equipo);
-      });
-
-      const gruposConEquipos = Object.keys(equiposPorGrupo).filter(g => equiposPorGrupo[g].length >= 2);
-
-      if (gruposConEquipos.length < 1) {
-        alert("No hay suficientes grupos con equipos para generar fases finales");
-        return;
+      // CASO 1: Categoría con 2 grupos - Semifinales cruzadas
+      if (estado.totalGrupos === 2) {
+        await generarSemifinalesCruzadas(estado);
       }
-
-      // Calcular clasificaciones de cada grupo
-      const clasificaciones = {};
-      for (const grupo of gruposConEquipos) {
-        const partidosGrupo = matches.filter(m => 
-          m.grupo === grupo && 
-          m.equipoA?.genero === filtroGenero && 
-          m.equipoA?.categoria === filtroCategoria &&
-          m.fase === "grupos" &&
-          m.estado === "finalizado"
-        );
-        
-        if (partidosGrupo.length === 0) {
-          alert(`El grupo "${grupo}" no tiene partidos finalizados. Completa los partidos de grupos primero.`);
-          return;
-        }
-
-        clasificaciones[grupo] = calcularClasificacion(partidosGrupo);
+      // CASO 2: Categoría con 1 grupo y 4+ equipos - Final y tercer puesto
+      else if (estado.totalGrupos === 1 && estado.totalEquipos >= 4) {
+        await generarFinalYTercerPuesto(estado);
       }
-
-      let partidosCreados = 0;
-      const tipoFormato = gruposConEquipos.length === 2 ? "cruzado" : "directo";
-
-      if (gruposConEquipos.length === 2) {
-        // Hay 2 grupos: Semifinales cruzadas + Final + Tercer puesto
-        const opcion = window.confirm(
-          "Hay 2 grupos. ¿Quieres semifinales CRUZADAS?\n" +
-          "Aceptar: 1°GrupoA vs 2°GrupoB y 1°GrupoB vs 2°GrupoA\n" +
-          "Cancelar: 1°GrupoA vs 1°GrupoB y 2°GrupoA vs 2°GrupoB"
-        );
-
-        const [grupo1, grupo2] = gruposConEquipos;
-        const primeroGrupo1 = clasificaciones[grupo1][0];
-        const segundoGrupo1 = clasificaciones[grupo1][1];
-        const primeroGrupo2 = clasificaciones[grupo2][0];
-        const segundoGrupo2 = clasificaciones[grupo2][1];
-
-        if (!primeroGrupo1 || !segundoGrupo1 || !primeroGrupo2 || !segundoGrupo2) {
-          alert("No hay suficientes equipos clasificados en las posiciones necesarias");
-          return;
-        }
-
-        // Generar semifinales
-        if (opcion) {
-          // Cruzado
-          await addDoc(collection(db, "matches"), {
-            equipoA: { curso: primeroGrupo1.curso, paralelo: primeroGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            equipoB: { curso: segundoGrupo2.curso, paralelo: segundoGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            grupo: `${filtroCategoria} - ${filtroGenero}`,
-            fase: "semifinales",
-            estado: "programado",
-            disciplina: discipline,
-            marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-          });
-
-          await addDoc(collection(db, "matches"), {
-            equipoA: { curso: primeroGrupo2.curso, paralelo: primeroGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            equipoB: { curso: segundoGrupo1.curso, paralelo: segundoGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            grupo: `${filtroCategoria} - ${filtroGenero}`,
-            fase: "semifinales",
-            estado: "programado",
-            disciplina: discipline,
-            marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-          });
-        } else {
-          // Directo
-          await addDoc(collection(db, "matches"), {
-            equipoA: { curso: primeroGrupo1.curso, paralelo: primeroGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            equipoB: { curso: primeroGrupo2.curso, paralelo: primeroGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            grupo: `${filtroCategoria} - ${filtroGenero}`,
-            fase: "semifinales",
-            estado: "programado",
-            disciplina: discipline,
-            marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-          });
-
-          await addDoc(collection(db, "matches"), {
-            equipoA: { curso: segundoGrupo1.curso, paralelo: segundoGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            equipoB: { curso: segundoGrupo2.curso, paralelo: segundoGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            grupo: `${filtroCategoria} - ${filtroGenero}`,
-            fase: "semifinales",
-            estado: "programado",
-            disciplina: discipline,
-            marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-          });
-        }
-        partidosCreados += 2;
-
-        // Crear partidos de final y tercer puesto (se definirán después de semifinales)
-        await addDoc(collection(db, "matches"), {
-          equipoA: { curso: "TBD", paralelo: "Ganador SF1", genero: filtroGenero, categoria: filtroCategoria },
-          equipoB: { curso: "TBD", paralelo: "Ganador SF2", genero: filtroGenero, categoria: filtroCategoria },
-          grupo: `${filtroCategoria} - ${filtroGenero}`,
-          fase: "final",
-          estado: "programado",
-          disciplina: discipline,
-          marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-        });
-
-        await addDoc(collection(db, "matches"), {
-          equipoA: { curso: "TBD", paralelo: "Perdedor SF1", genero: filtroGenero, categoria: filtroCategoria },
-          equipoB: { curso: "TBD", paralelo: "Perdedor SF2", genero: filtroGenero, categoria: filtroCategoria },
-          grupo: `${filtroCategoria} - ${filtroGenero}`,
-          fase: "tercerPuesto",
-          estado: "programado",
-          disciplina: discipline,
-          marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-        });
-        partidosCreados += 2;
-
-      } else if (gruposConEquipos.length === 1) {
-        // Solo hay 1 grupo: Los 2 primeros van directo a final, 3° y 4° al tercer puesto
-        const grupo = gruposConEquipos[0];
-        const clasificacion = clasificaciones[grupo];
-        
-        if (clasificacion.length < 2) {
-          alert("No hay suficientes equipos en el grupo para generar una final");
-          return;
-        }
-
-        const primero = clasificacion[0];
-        const segundo = clasificacion[1];
-
-        // Crear final
-        await addDoc(collection(db, "matches"), {
-          equipoA: { curso: primero.curso, paralelo: primero.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-          equipoB: { curso: segundo.curso, paralelo: segundo.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-          grupo: `${filtroCategoria} - ${filtroGenero}`,
-          fase: "final",
-          estado: "programado",
-          disciplina: discipline,
-          marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-        });
-        partidosCreados++;
-
-        // Si hay 3° y 4°, crear partido por tercer puesto
-        if (clasificacion.length >= 4) {
-          const tercero = clasificacion[2];
-          const cuarto = clasificacion[3];
-          
-          await addDoc(collection(db, "matches"), {
-            equipoA: { curso: tercero.curso, paralelo: tercero.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            equipoB: { curso: cuarto.curso, paralelo: cuarto.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-            grupo: `${filtroCategoria} - ${filtroGenero}`,
-            fase: "tercerPuesto",
-            estado: "programado",
-            disciplina: discipline,
-            marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-          });
-          partidosCreados++;
-        }
+      // CASO 3: Categoría con 1 grupo y 3 equipos - Solo final
+      else if (estado.totalGrupos === 1 && estado.totalEquipos === 3) {
+        await generarSoloFinal(estado);
       }
-
-      if (partidosCreados > 0) {
-        alert(`Se crearon ${partidosCreados} partidos para las fases finales`);
-      } else {
-        alert("No se pudieron crear partidos");
+      // CASO 4: Categoría con 1 grupo y 2 equipos - Ida y vuelta
+      else if (estado.totalGrupos === 1 && estado.totalEquipos === 2) {
+        await generarIdaYVuelta(estado);
+      }
+      else {
+        showToast(`⚠️ Configuración no soportada: ${estado.totalGrupos} grupos, ${estado.totalEquipos} equipos`, "warning");
       }
 
     } catch (error) {
       console.error("Error al generar fases finales:", error);
-      alert("Error al generar fases finales");
+      showToast("❌ Error al generar fases finales", "error");
     }
   };
 
-  // Función para generar fases finales automáticamente cuando se completa la fase de grupos
-  const generarFasesFinalesAutomatico = async (nombreGrupo, equiposOrdenados, totalGrupos) => {
-    try {
-      let partidosCreados = 0;
-      console.log(`🎯 Generando fases finales para grupo ${nombreGrupo} con ${equiposOrdenados.length} equipos`);
-
-      if (totalGrupos >= 2) {
-        // 2 o más grupos: Los 2 primeros de cada grupo van a semifinales inter-grupos
-        if (equiposOrdenados.length < 2) return;
-
-        const primero = equiposOrdenados[0];
-        const segundo = equiposOrdenados[1];
-
-        console.log(`📋 Grupo ${nombreGrupo} completado. Clasificados: 1° ${primero.nombre}, 2° ${segundo.nombre}`);
-        // Para múltiples grupos, las semifinales se crean cuando todos los grupos terminan
-        
-      } else if (totalGrupos === 1) {
-        // Solo 1 grupo: Los 2 primeros van directo a final, 3° y 4° al tercer puesto
-        if (equiposOrdenados.length < 2) return;
-
-        const primero = equiposOrdenados[0];
-        const segundo = equiposOrdenados[1];
-
-        console.log(`🏆 Creando final para grupo único: ${primero.nombre} vs ${segundo.nombre}`);
-
-        // Buscar equipos en la base de datos
-        const equipoPrimero = equipos.find(eq => 
-          `${eq.curso} ${eq.paralelo}` === primero.nombre &&
-          eq.genero === filtroGenero && 
-          eq.categoria === filtroCategoria
-        );
-        const equipoSegundo = equipos.find(eq => 
-          `${eq.curso} ${eq.paralelo}` === segundo.nombre &&
-          eq.genero === filtroGenero && 
-          eq.categoria === filtroCategoria
-        );
-
-        if (!equipoPrimero || !equipoSegundo) {
-          console.error("❌ No se encontraron los equipos para la final:", { primero: primero.nombre, segundo: segundo.nombre });
-          return;
-        }
-
-        // Crear final
-        await addDoc(collection(db, "matches"), {
-          equipoA: { 
-            curso: equipoPrimero.curso, 
-            paralelo: equipoPrimero.paralelo, 
-            genero: filtroGenero, 
-            categoria: filtroCategoria 
-          },
-          equipoB: { 
-            curso: equipoSegundo.curso, 
-            paralelo: equipoSegundo.paralelo, 
-            genero: filtroGenero, 
-            categoria: filtroCategoria 
-          },
-          grupo: nombreGrupo,
-          fase: "final",
-          estado: "programado",
-          disciplina: discipline,
-          marcadorA: 0, 
-          marcadorB: 0, 
-          fecha: "", 
-          hora: "", 
-          goleadoresA: [], 
-          goleadoresB: []
-        });
-        partidosCreados++;
-        console.log("✅ Final creada exitosamente");
-
-        // Si hay 3° y 4°, crear partido por tercer puesto
-        if (equiposOrdenados.length >= 4) {
-          const tercero = equiposOrdenados[2];
-          const cuarto = equiposOrdenados[3];
-          
-          console.log(`🥉 Creando partido por 3er puesto: ${tercero.nombre} vs ${cuarto.nombre}`);
-          
-          const equipoTercero = equipos.find(eq => 
-            `${eq.curso} ${eq.paralelo}` === tercero.nombre &&
-            eq.genero === filtroGenero && 
-            eq.categoria === filtroCategoria
-          );
-          const equipoCuarto = equipos.find(eq => 
-            `${eq.curso} ${eq.paralelo}` === cuarto.nombre &&
-            eq.genero === filtroGenero && 
-            eq.categoria === filtroCategoria
-          );
-
-          if (equipoTercero && equipoCuarto) {
-            await addDoc(collection(db, "matches"), {
-              equipoA: { 
-                curso: equipoTercero.curso, 
-                paralelo: equipoTercero.paralelo, 
-                genero: filtroGenero, 
-                categoria: filtroCategoria 
-              },
-              equipoB: { 
-                curso: equipoCuarto.curso, 
-                paralelo: equipoCuarto.paralelo, 
-                genero: filtroGenero, 
-                categoria: filtroCategoria 
-              },
-              grupo: nombreGrupo,
-              fase: "tercerPuesto",
-              estado: "programado",
-              disciplina: discipline,
-              marcadorA: 0, 
-              marcadorB: 0, 
-              fecha: "", 
-              hora: "", 
-              goleadoresA: [], 
-              goleadoresB: []
-            });
-            partidosCreados++;
-            console.log("✅ Partido por 3er puesto creado exitosamente");
-          }
-        }
-      }
-
-      if (partidosCreados > 0) {
-        console.log(`🎉 Se crearon ${partidosCreados} partidos de fases finales automáticamente`);
-        alert(`Se generaron automáticamente ${partidosCreados} partidos de fases finales para ${nombreGrupo}`);
-      }
-
-    } catch (error) {
-      console.error("❌ Error al generar fases finales automáticamente:", error);
-      alert("Error al generar fases finales automáticamente");
-    }
-  };
-
-  // Función para generar semifinales cuando múltiples grupos han terminado
-  const generarSemifinalesMultiplesGrupos = async (clasificadosPorGrupo) => {
-    try {
-      const gruposNombres = Object.keys(clasificadosPorGrupo);
-      if (gruposNombres.length < 2) return;
-
-      // Tomar los 2 primeros de cada grupo
-      const grupo1 = gruposNombres[0];
-      const grupo2 = gruposNombres[1];
-      
-      const primerosGrupo1 = clasificadosPorGrupo[grupo1].slice(0, 2);
-      const primerosGrupo2 = clasificadosPorGrupo[grupo2].slice(0, 2);
-
-      if (primerosGrupo1.length < 2 || primerosGrupo2.length < 2) return;
-
-      // Buscar equipos en la base de datos
-      const buscarEquipo = (nombreEquipo) => {
-        return equipos.find(eq => 
-          `${eq.curso} ${eq.paralelo}` === nombreEquipo &&
-          eq.genero === filtroGenero && 
-          eq.categoria === filtroCategoria
-        );
-      };
-
-      const equipoPrimeroGrupo1 = buscarEquipo(primerosGrupo1[0].nombre);
-      const equipoSegundoGrupo1 = buscarEquipo(primerosGrupo1[1].nombre);
-      const equipoPrimeroGrupo2 = buscarEquipo(primerosGrupo2[0].nombre);
-      const equipoSegundoGrupo2 = buscarEquipo(primerosGrupo2[1].nombre);
-
-      if (!equipoPrimeroGrupo1 || !equipoSegundoGrupo1 || !equipoPrimeroGrupo2 || !equipoSegundoGrupo2) {
-        console.error("No se encontraron todos los equipos para las semifinales");
-        return;
-      }
-
-      // Crear semifinales cruzadas: 1°A vs 2°B, 1°B vs 2°A
-      await addDoc(collection(db, "matches"), {
-        equipoA: { curso: equipoPrimeroGrupo1.curso, paralelo: equipoPrimeroGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-        equipoB: { curso: equipoSegundoGrupo2.curso, paralelo: equipoSegundoGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-        grupo: `${filtroCategoria} - ${filtroGenero}`,
-        fase: "semifinales",
-        estado: "programado",
-        disciplina: discipline,
-        marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-      });
-
-      await addDoc(collection(db, "matches"), {
-        equipoA: { curso: equipoPrimeroGrupo2.curso, paralelo: equipoPrimeroGrupo2.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-        equipoB: { curso: equipoSegundoGrupo1.curso, paralelo: equipoSegundoGrupo1.paralelo, genero: filtroGenero, categoria: filtroCategoria },
-        grupo: `${filtroCategoria} - ${filtroGenero}`,
-        fase: "semifinales",
-        estado: "programado",
-        disciplina: discipline,
-        marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-      });
-
-      // Crear placeholders para final y tercer puesto
-      await addDoc(collection(db, "matches"), {
-        equipoA: { curso: "TBD", paralelo: "Ganador SF1", genero: filtroGenero, categoria: filtroCategoria },
-        equipoB: { curso: "TBD", paralelo: "Ganador SF2", genero: filtroGenero, categoria: filtroCategoria },
-        grupo: `${filtroCategoria} - ${filtroGenero}`,
-        fase: "final",
-        estado: "programado",
-        disciplina: discipline,
-        marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-      });
-
-      await addDoc(collection(db, "matches"), {
-        equipoA: { curso: "TBD", paralelo: "Perdedor SF1", genero: filtroGenero, categoria: filtroCategoria },
-        equipoB: { curso: "TBD", paralelo: "Perdedor SF2", genero: filtroGenero, categoria: filtroCategoria },
-        grupo: `${filtroCategoria} - ${filtroGenero}`,
-        fase: "tercerPuesto",
-        estado: "programado",
-        disciplina: discipline,
-        marcadorA: 0, marcadorB: 0, fecha: "", hora: "", goleadoresA: [], goleadoresB: []
-      });
-
-      console.log("Semifinales generadas automáticamente para múltiples grupos");
-
-    } catch (error) {
-      console.error("Error al generar semifinales para múltiples grupos:", error);
-    }
-  };
-
-  const generarSiguienteFase = async (faseActual) => {
-    if (faseActual === "finales") return; // No hay fase después de finales
-    
-    const fasesSiguientes = {
-      "grupos1": "grupos2",
-      "grupos2": "grupos3", 
-      "grupos3": "semifinales",
-      "semifinales": "finales"
-    };
-    
-    const siguienteFase = fasesSiguientes[faseActual];
-    if (!siguienteFase) return;
-    
-    // Verificar si ya existen partidos en la siguiente fase
-    const partidosSiguienteFase = matches.filter(m => m.fase === siguienteFase);
-    if (partidosSiguienteFase.length > 0) return;
-    
-    try {
-      // Obtener clasificados de la fase actual
-      const clasificados = [];
-      
-      if (faseActual.includes("grupos")) {
-        // Para fases de grupos, obtener equipos según la lógica específica
-        for (const grupo of grupos) {
-          // Obtener todos los partidos finalizados hasta la fase actual
-          const partidosCompletos = matches.filter(m => 
-            m.grupo === grupo && 
-            m.estado === "finalizado" &&
-            (m.fase === "grupos1" || m.fase === "grupos2" || m.fase === "grupos3")
-          );
-          
-          if (partidosCompletos.length > 0) {
-            const clasificacionGrupo = calcularClasificacion(partidosCompletos);
-            
-            if (siguienteFase === "grupos2") {
-              // Fase 2: Solo equipos que NO tienen 2 partidos jugados
-              const equiposParaFase2 = clasificacionGrupo.filter(equipo => equipo.partidos < 2);
-              clasificados.push(...equiposParaFase2);
-            } else if (siguienteFase === "grupos3") {
-              // Fase 3: Solo equipos que NO tienen 3 partidos jugados
-              const equiposParaFase3 = clasificacionGrupo.filter(equipo => equipo.partidos < 3);
-              clasificados.push(...equiposParaFase3);
-            } else if (siguienteFase === "semifinales") {
-              // Semifinales: Top 4 de cada grupo, pero solo los que hayan jugado 3 partidos
-              const equiposConTresPartidos = clasificacionGrupo.filter(equipo => equipo.partidos === 3);
-              clasificados.push(...equiposConTresPartidos.slice(0, 4));
-            }
-          }
-        }
-      } else if (faseActual === "semifinales") {
-        // Para finales, obtener ganadores de semifinales
-        const semifinales = matches.filter(m => m.fase === "semifinales" && m.estado === "finalizado");
-        semifinales.forEach(match => {
-          const ganador = (match.marcadorA || 0) > (match.marcadorB || 0) 
-            ? { curso: match.equipoA.curso, paralelo: match.equipoA.paralelo, grupo: match.grupo }
-            : { curso: match.equipoB.curso, paralelo: match.equipoB.paralelo, grupo: match.grupo };
-          clasificados.push(ganador);
-        });
-      }
-      
-      if (clasificados.length < 2) return;
-      
-      // Generar partidos para la siguiente fase
-      const nuevosPartidos = [];
-      
-      if (siguienteFase === "finales") {
-        // Final: los 2 ganadores de semifinales
-        if (clasificados.length >= 2) {
-          nuevosPartidos.push({
-            equipoA: { curso: clasificados[0].curso, paralelo: clasificados[0].paralelo },
-            equipoB: { curso: clasificados[1].curso, paralelo: clasificados[1].paralelo },
-            disciplina: discipline,
-            marcadorA: 0,
-            marcadorB: 0,
-            estado: "pendiente",
-            fecha: null,
-            hora: null,
-            grupo: clasificados[0].grupo,
-            fase: siguienteFase,
-            goleadoresA: [],
-            goleadoresB: [],
-            ...(discipline === "voley" && {
-              sets: Array(5).fill({ A: 0, B: 0 }),
-              anotadoresA: [],
-              anotadoresB: []
-            })
-          });
-        }
-      } else if (siguienteFase === "semifinales") {
-        // Semifinales: 1° vs 4°, 2° vs 3° por grupo
-        const gruposClasificados = {};
-        clasificados.forEach(equipo => {
-          if (!gruposClasificados[equipo.grupo]) gruposClasificados[equipo.grupo] = [];
-          gruposClasificados[equipo.grupo].push(equipo);
-        });
-        
-        Object.entries(gruposClasificados).forEach(([grupo, equiposGrupo]) => {
-          if (equiposGrupo.length >= 4) {
-            // 1° vs 4°
-            nuevosPartidos.push({
-              equipoA: { curso: equiposGrupo[0].curso, paralelo: equiposGrupo[0].paralelo },
-              equipoB: { curso: equiposGrupo[3].curso, paralelo: equiposGrupo[3].paralelo },
-              disciplina: discipline,
-              marcadorA: 0,
-              marcadorB: 0,
-              estado: "pendiente",
-              fecha: null,
-              hora: null,
-              grupo: grupo,
-              fase: siguienteFase,
-              goleadoresA: [],
-              goleadoresB: [],
-              ...(discipline === "voley" && {
-                sets: Array(5).fill({ A: 0, B: 0 }),
-                anotadoresA: [],
-                anotadoresB: []
-              })
-            });
-            
-            // 2° vs 3°
-            nuevosPartidos.push({
-              equipoA: { curso: equiposGrupo[1].curso, paralelo: equiposGrupo[1].paralelo },
-              equipoB: { curso: equiposGrupo[2].curso, paralelo: equiposGrupo[2].paralelo },
-              disciplina: discipline,
-              marcadorA: 0,
-              marcadorB: 0,
-              estado: "pendiente",
-              fecha: null,
-              hora: null,
-              grupo: grupo,
-              fase: siguienteFase,
-              goleadoresA: [],
-              goleadoresB: [],
-              ...(discipline === "voley" && {
-                sets: Array(5).fill({ A: 0, B: 0 }),
-                anotadoresA: [],
-                anotadoresB: []
-              })
-            });
-          }
-        });
-      } else {
-        // Para grupos2 y grupos3: enfrentar equipos según posición en tabla
-        const gruposClasificados = {};
-        clasificados.forEach(equipo => {
-          if (!gruposClasificados[equipo.grupo]) gruposClasificados[equipo.grupo] = [];
-          gruposClasificados[equipo.grupo].push(equipo);
-        });
-        
-        Object.entries(gruposClasificados).forEach(([grupo, equiposGrupo]) => {
-          // Ordenar equipos por posición (ya vienen ordenados por calcularClasificacion)
-          let equiposOrdenados = [...equiposGrupo];
-          
-          // Si hay número impar de equipos, eliminar el último clasificado
-          if (equiposOrdenados.length % 2 !== 0) {
-            console.log(`Eliminando último clasificado del ${grupo}: ${equiposOrdenados[equiposOrdenados.length - 1].nombre}`);
-            equiposOrdenados.pop(); // Eliminar el último equipo
-          }
-          
-          // Crear partidos basados en posiciones: 1°vs último, 2°vs penúltimo, etc.
-          if (equiposOrdenados.length >= 2) {
-            for (let i = 0; i < Math.floor(equiposOrdenados.length / 2); i++) {
-              const equipoA = equiposOrdenados[i];
-              const equipoB = equiposOrdenados[equiposOrdenados.length - 1 - i];
-              
-              nuevosPartidos.push({
-                equipoA: { curso: equipoA.curso, paralelo: equipoA.paralelo },
-                equipoB: { curso: equipoB.curso, paralelo: equipoB.paralelo },
-                disciplina: discipline,
-                marcadorA: 0,
-                marcadorB: 0,
-                estado: "pendiente",
-                fecha: null,
-                hora: null,
-                grupo: grupo,
-                fase: siguienteFase,
-                goleadoresA: [],
-                goleadoresB: [],
-                ...(discipline === "voley" && {
-                  sets: siguienteFase.includes("grupos") ? [{ A: 0, B: 0 }] : Array(5).fill({ A: 0, B: 0 }),
-                  anotadoresA: [],
-                  anotadoresB: []
-                })
-              });
-            }
-          }
-        });
-      }
-      
-      // Guardar nuevos partidos en Firestore
-      if (nuevosPartidos.length > 0) {
-        for (const partido of nuevosPartidos) {
-          await addDoc(collection(db, "matches"), partido);
-        }
-        
-        console.log(`Generados ${nuevosPartidos.length} partidos para ${fasesDb[siguienteFase]}`);
-      }
-      
-    } catch (error) {
-      console.error("Error al generar siguiente fase:", error);
-    }
-  };
-
-  // Función para obtener equipos clasificados por puntos
-  const obtenerClasificacion = async (discipline) => {
-    try {
-      const matchesQuery = query(
-        collection(db, "matches"),
-        where("disciplina", "==", discipline),
-        where("estado", "==", "finalizado"),
-      );
-      const matchesSnapshot = await getDocs(matchesQuery);
-      const matches = matchesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      // Calcular puntos por equipo
-      const equipos = {};
-
-      matches.forEach((match) => {
-        const equipoAKey = `${match.equipoA.curso}${match.equipoA.paralelo}`;
-        const equipoBKey = `${match.equipoB.curso}${match.equipoB.paralelo}`;
-
-        if (!equipos[equipoAKey]) {
-          equipos[equipoAKey] = {
-            curso: match.equipoA.curso,
-            paralelo: match.equipoA.paralelo,
-            puntos: 0,
-            puntosAnotados: 0,
-            puntosRecibidos: 0,
-            partidos: 0,
-          };
-        }
-
-        if (!equipos[equipoBKey]) {
-          equipos[equipoBKey] = {
-            curso: match.equipoB.curso,
-            paralelo: match.equipoB.paralelo,
-            puntos: 0,
-            puntosAnotados: 0,
-            puntosRecibidos: 0,
-            partidos: 0,
-          };
-        }
-
-        // Sumar estadísticas
-        equipos[equipoAKey].puntosAnotados += match.marcadorA || 0;
-        equipos[equipoAKey].puntosRecibidos += match.marcadorB || 0;
-        equipos[equipoAKey].partidos++;
-
-        equipos[equipoBKey].puntosAnotados += match.marcadorB || 0;
-        equipos[equipoBKey].puntosRecibidos += match.marcadorA || 0;
-        equipos[equipoBKey].partidos++;
-
-        // Asignar puntos por victoria/empate/derrota
-        if (discipline === "voley") {
-          // En vóley no hay empates
-          if (match.marcadorA > match.marcadorB) {
-            equipos[equipoAKey].puntos += 3;
-          } else {
-            equipos[equipoBKey].puntos += 3;
-          }
-        } else {
-          // Fútbol
-          if (match.marcadorA > match.marcadorB) {
-            equipos[equipoAKey].puntos += 3;
-          } else if (match.marcadorA < match.marcadorB) {
-            equipos[equipoBKey].puntos += 3;
-          } else {
-            equipos[equipoAKey].puntos += 1;
-            equipos[equipoBKey].puntos += 1;
-          }
-        }
-      });
-
-      // Convertir a array y ordenar
-      return Object.values(equipos).sort((a, b) => {
-        if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-        const difA = a.puntosAnotados - a.puntosRecibidos;
-        const difB = b.puntosAnotados - b.puntosRecibidos;
-        return difB - difA;
-      });
-    } catch (error) {
-      console.error("Error al obtener clasificación:", error);
-      return [];
-    }
-  };
-
-  // Función para recargar partidos
-  const fetchMatches = () => {
-    // Esta función se ejecuta automáticamente por el onSnapshot en el useEffect
-  };
-
-  // Modal para goleador
-  const [showGoleadorModal, setShowGoleadorModal] = useState(false);
-  const [goleadorNombre, setGoleadorNombre] = useState("");
-  const [golMatchId, setGolMatchId] = useState(null);
-  const [golEquipo, setGolEquipo] = useState(null);
-
-  // Modal para ver y editar goleadores
-  const [showListaGoleadores, setShowListaGoleadores] = useState(false);
-  const [editGoleadoresA, setEditGoleadoresA] = useState([]);
-  const [editGoleadoresB, setEditGoleadoresB] = useState([]);
-  const [editMatchId, setEditMatchId] = useState(null);
-
-  // Para standings y auto-creación de partidos
-  const [standingsPorGrupo, setStandingsPorGrupo] = useState({});
-
-  // Obtener grupos desde Firestore
-  useEffect(() => {
-    const obtenerGrupos = async () => {
-      try {
-        const q = query(
-          collection(db, "grupos"),
-          where("disciplina", "==", discipline)
-        );
-        
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        
-        // Filtrar grupos en el cliente según los filtros activos
-        let gruposFiltrados = data;
-        
-        if (filtroGenero) {
-          gruposFiltrados = gruposFiltrados.filter(grupo => grupo.genero === filtroGenero);
-        }
-        
-        if (filtroCategoria) {
-          gruposFiltrados = gruposFiltrados.filter(grupo => grupo.categoria === filtroCategoria);
-        }
-        
-        setGrupos(gruposFiltrados);
-      } catch (error) {
-        console.error("Error al obtener grupos:", error);
-        setError("Error al cargar grupos");
-        setGrupos([]); // En caso de error, establecer array vacío
-      }
-    };
-    obtenerGrupos();
-  }, [discipline, filtroGenero, filtroCategoria]);
-
-  // Obtener categorías desde Firestore
-  useEffect(() => {
-    const obtenerCategorias = async () => {
-      try {
-        setLoading(true);
-        const q = query(
-          collection(db, "categorias"),
-          where("disciplina", "==", discipline)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setCategorias(data);
-      } catch (error) {
-        console.error("Error al obtener categorías:", error);
-        setError("Error al cargar categorías");
-        setCategorias([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    obtenerCategorias();
-  }, [discipline]);
-
-  // Obtener equipos desde Firestore
-  useEffect(() => {
-    const obtenerEquipos = async () => {
-      try {
-        const q = query(
-          collection(db, "equipos"),
-          where("disciplina", "==", discipline),
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          curso: doc.data().curso,
-          paralelo: doc.data().paralelo,
-          grupo: doc.data().grupo,
-          categoria: doc.data().categoria,
-          genero: doc.data().genero,
-        }));
-        setEquipos(data);
-      } catch (error) {
-        console.error("Error al obtener equipos:", error);
-        setEquipos([]);
-      }
-    };
-    obtenerEquipos();
-  }, [discipline]);
-
-  // Obtener partidos en tiempo real
-  useEffect(() => {
-    try {
-      const q = query(
-        collection(db, "matches"),
-        where("disciplina", "==", discipline),
-      );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setMatches(data);
-      }, (error) => {
-        console.error("Error al obtener partidos:", error);
-        setMatches([]);
-      });
-      return () => unsubscribe();
-    } catch (error) {
-      console.error("Error al configurar listener de partidos:", error);
-      setMatches([]);
-    }
-  }, [discipline]);
-
-  // Auto-generación de siguientes fases cuando se completa una fase
-  useEffect(() => {
-    if (!filtroGenero || !filtroCategoria || matches.length === 0 || equipos.length === 0) return;
-
-    const verificarYGenerarFasesFinales = async () => {
-      console.log("🔍 Verificando si se pueden generar fases finales...");
-      console.log("Filtros:", { genero: filtroGenero, categoria: filtroCategoria });
-      
-      // Filtrar partidos y equipos por género y categoría seleccionados
-      const partidosFiltrados = matches.filter(match => {
-        const matchGenero = match.equipoA?.genero || match.genero;
-        const matchCategoria = match.equipoA?.categoria || match.categoria;
-        return matchGenero === filtroGenero && matchCategoria === filtroCategoria;
-      });
-
-      const equiposFiltrados = equipos.filter(equipo => {
-        return equipo.genero === filtroGenero && equipo.categoria === filtroCategoria;
-      });
-
-      console.log("Partidos filtrados:", partidosFiltrados.length);
-      console.log("Equipos filtrados:", equiposFiltrados.length);
-
-      // Agrupar equipos por grupo
-      const equiposPorGrupo = {};
-      equiposFiltrados.forEach(equipo => {
-        const grupo = equipo.grupo || "Sin grupo";
-        if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
-        equiposPorGrupo[grupo].push(equipo);
-      });
-
-      console.log("Grupos encontrados:", Object.keys(equiposPorGrupo));
-
-      // Verificar si la fase de grupos está completa para generar semifinales automáticamente
-      for (const [nombreGrupo, equiposGrupo] of Object.entries(equiposPorGrupo)) {
-        if (equiposGrupo.length < 2) continue;
-
-        // Calcular cuántos partidos de grupos deberían existir (todos contra todos)
-        const partidosGruposEsperados = (equiposGrupo.length * (equiposGrupo.length - 1)) / 2;
-        
-        // Contar partidos de grupos finalizados
-        const partidosGruposFinalizados = partidosFiltrados.filter(match => 
-          match.grupo === nombreGrupo && 
-          (!match.fase || match.fase === "grupos") && 
-          match.estado === "finalizado"
-        ).length;
-
-        console.log(`📊 Grupo ${nombreGrupo}: ${partidosGruposFinalizados}/${partidosGruposEsperados} partidos finalizados`);
-
-        // Si la fase de grupos está completa, generar semifinales automáticamente
-        if (partidosGruposFinalizados >= partidosGruposEsperados) {
-          // Verificar si ya existen semifinales para este grupo
-          const semifinalesExistentes = partidosFiltrados.filter(match => 
-            match.grupo === nombreGrupo && 
-            (match.fase === "semifinales" || match.fase === "final" || match.fase === "tercerPuesto")
-          );
-
-          console.log(`🏆 Grupo ${nombreGrupo} - Semifinales existentes:`, semifinalesExistentes.length);
-
-          if (semifinalesExistentes.length === 0) {
-            console.log(`🚀 Generando fases finales automáticamente para ${nombreGrupo}...`);
-            
-            // Calcular clasificación del grupo
-            const partidosGrupo = partidosFiltrados.filter(match => 
-              match.grupo === nombreGrupo && (!match.fase || match.fase === "grupos")
-            );
-            const clasificacion = calcularClasificacion(partidosGrupo);
-
-            // Obtener los equipos ordenados por posición
-            const equiposOrdenados = Object.entries(clasificacion)
-              .map(([nombre, stats]) => ({ nombre, ...stats }))
-              .sort((a, b) => {
-                if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-                if (b.diferencia !== a.diferencia) return b.diferencia - a.diferencia;
-                return b.golesFavor - a.golesFavor;
-              });
-
-            console.log(`📈 Clasificación final del grupo ${nombreGrupo}:`, equiposOrdenados);
-
-            // Generar fases finales basado en el número de grupos
-            const totalGrupos = Object.keys(equiposPorGrupo).length;
-            await generarFasesFinalesAutomatico(nombreGrupo, equiposOrdenados, totalGrupos);
-          }
-        }
-      }
-
-      // Si hay múltiples grupos, verificar si todos han terminado para generar semifinales inter-grupos
-      const totalGrupos = Object.keys(equiposPorGrupo).length;
-      if (totalGrupos >= 2) {
-        console.log("🏟️ Verificando si todos los grupos han terminado para generar semifinales inter-grupos...");
-        
-        // Verificar si todos los grupos han completado su fase de grupos
-        let todosGruposCompletos = true;
-        const clasificadosPorGrupo = {};
-
-        for (const [nombreGrupo, equiposGrupo] of Object.entries(equiposPorGrupo)) {
-          if (equiposGrupo.length < 2) continue;
-
-          const partidosGruposEsperados = (equiposGrupo.length * (equiposGrupo.length - 1)) / 2;
-          const partidosGruposFinalizados = partidosFiltrados.filter(match => 
-            match.grupo === nombreGrupo && 
-            (!match.fase || match.fase === "grupos") && 
-            match.estado === "finalizado"
-          ).length;
-
-          if (partidosGruposFinalizados < partidosGruposEsperados) {
-            console.log(`⏳ Grupo ${nombreGrupo} aún no ha terminado: ${partidosGruposFinalizados}/${partidosGruposEsperados}`);
-            todosGruposCompletos = false;
-            break;
-          } else {
-            // Calcular clasificación del grupo
-            const partidosGrupo = partidosFiltrados.filter(match => 
-              match.grupo === nombreGrupo && (!match.fase || match.fase === "grupos")
-            );
-            const clasificacion = calcularClasificacion(partidosGrupo);
-
-            const equiposOrdenados = Object.entries(clasificacion)
-              .map(([nombre, stats]) => ({ nombre, ...stats }))
-              .sort((a, b) => {
-                if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-                if (b.diferencia !== a.diferencia) return b.diferencia - a.diferencia;
-                return b.golesFavor - a.golesFavor;
-              });
-
-            clasificadosPorGrupo[nombreGrupo] = equiposOrdenados;
-            console.log(`✅ Grupo ${nombreGrupo} completado. Clasificados:`, equiposOrdenados.slice(0, 2).map(e => e.nombre));
-          }
-        }
-
-        // Si todos los grupos están completos, generar semifinales inter-grupos
-        if (todosGruposCompletos && Object.keys(clasificadosPorGrupo).length >= 2) {
-          const semifinalesExistentes = partidosFiltrados.filter(match => 
-            match.fase === "semifinales" && 
-            match.equipoA?.genero === filtroGenero && 
-            match.equipoA?.categoria === filtroCategoria
-          );
-
-          console.log("🏆 Semifinales inter-grupos existentes:", semifinalesExistentes.length);
-
-          if (semifinalesExistentes.length === 0) {
-            console.log("🚀 Generando semifinales automáticamente para múltiples grupos...");
-            await generarSemifinalesMultiplesGrupos(clasificadosPorGrupo);
-          }
-        }
-      }
-    };
-
-    verificarYGenerarFasesFinales();
-  }, [matches, equipos, filtroGenero, filtroCategoria]);
-
-  // Calcular standings por grupo
-  useEffect(() => {
-    const equiposPorGrupo = {};
-    equipos.forEach((equipo) => {
-      const grupo = equipo.grupo || "Sin grupo";
-      if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
-      equiposPorGrupo[grupo].push(equipo);
-    });
-
-    const standingsPorGrupoTemp = {};
-    Object.entries(equiposPorGrupo).forEach(([grupo, equiposGrupo]) => {
-      const table = {};
-      matches
-        .filter(
-          (match) =>
-            match.estado === "finalizado" &&
-            equiposGrupo.some(
-              (eq) =>
-                `${eq.curso} ${eq.paralelo}` ===
-                  `${match.equipoA.curso} ${match.equipoA.paralelo}` ||
-                `${eq.curso} ${eq.paralelo}` ===
-                  `${match.equipoB.curso} ${match.equipoB.paralelo}`,
-            ),
-        )
-        .forEach((match) => {
-          const { equipoA, equipoB, marcadorA, marcadorB } = match;
-          if (marcadorA === null || marcadorB === null) return;
-          const keyA = `${equipoA.curso} ${equipoA.paralelo}`;
-          const keyB = `${equipoB.curso} ${equipoB.paralelo}`;
-          if (!table[keyA]) table[keyA] = createTeamEntry(keyA, grupo);
-          if (!table[keyB]) table[keyB] = createTeamEntry(keyB, grupo);
-          table[keyA].pj++;
-          table[keyB].pj++;
-          table[keyA].gf += marcadorA;
-          table[keyA].gc += marcadorB;
-          table[keyB].gf += marcadorB;
-          table[keyB].gc += marcadorA;
-          if (marcadorA > marcadorB) {
-            table[keyA].pts += 3;
-            table[keyA].pg++;
-            table[keyB].pp++;
-          } else if (marcadorA < marcadorB) {
-            table[keyB].pts += 3;
-            table[keyB].pg++;
-            table[keyA].pp++;
-          } else {
-            table[keyA].pts += 1;
-            table[keyB].pts += 1;
-            table[keyA].pe++;
-            table[keyB].pe++;
-          }
-        });
-      equiposGrupo.forEach((equipo) => {
-        const nombre = `${equipo.curso} ${equipo.paralelo}`;
-        if (!table[nombre]) {
-          table[nombre] = createTeamEntry(nombre, grupo);
-        }
-      });
-      const result = Object.values(table)
-        .map((team) => ({
-          ...team,
-          dg: team.gf - team.gc,
-        }))
-        .sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
-      standingsPorGrupoTemp[grupo] = result;
-    });
-    setStandingsPorGrupo(standingsPorGrupoTemp);
-  }, [matches, equipos]);
-
-  function createTeamEntry(nombre, grupo) {
-    return {
-      nombre,
-      grupo,
-      pj: 0,
-      pg: 0,
-      pe: 0,
-      pp: 0,
-      gf: 0,
-      gc: 0,
-      pts: 0,
-      dg: 0,
-    };
-  }
-
-  // --- HANDLERS Y RENDER ---
-
-  // Agregar partido manualmente (solo para fase de grupos)
-  const handleAddMatch = async () => {
-    if (!newMatch.equipoA || !newMatch.equipoB) {
-      alert("Completa los campos de equipos.");
+  // CASO 1: Semifinales cruzadas (2 grupos)
+  const generarSemifinalesCruzadas = async (estado) => {
+    const [grupo1, grupo2] = estado.gruposConEquipos;
+    const clasificacion1 = estado.clasificaciones[grupo1];
+    const clasificacion2 = estado.clasificaciones[grupo2];
+
+    if (clasificacion1.length < 2 || clasificacion2.length < 2) {
+      showToast("⚠️ Cada grupo necesita al menos 2 equipos para generar semifinales", "warning");
       return;
     }
-    // Buscar el grupo del equipoA en la colección de equipos
-    const equipoAData = equipos.find(
-      (eq) => `${eq.curso} ${eq.paralelo}` === newMatch.equipoA,
-    );
-    const grupoAsignado = equipoAData?.grupo || "Sin grupo";
 
+    const primero1 = clasificacion1[0];
+    const segundo1 = clasificacion1[1];
+    const primero2 = clasificacion2[0];
+    const segundo2 = clasificacion2[1];
+
+    // Verificar si ya existen semifinales
+    const semifinalesExistentes = matches.filter(m => 
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      m.fase === "semifinales"
+    );
+
+    if (semifinalesExistentes.length > 0) {
+      showToast("⚠️ Ya existen semifinales para esta categoría", "warning");
+      return;
+    }
+
+    // Crear semifinales cruzadas
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: primero1.curso, paralelo: primero1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: segundo2.curso, paralelo: segundo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "semifinales",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `SF1 - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: primero2.curso, paralelo: primero2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: segundo1.curso, paralelo: segundo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "semifinales",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `SF2 - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    showToast(`✅ Semifinales cruzadas generadas:\n• ${primero1.curso} ${primero1.paralelo} vs ${segundo2.curso} ${segundo2.paralelo}\n• ${primero2.curso} ${primero2.paralelo} vs ${segundo1.curso} ${segundo1.paralelo}`, "success");
+  };
+
+  // CASO 2: Final y tercer puesto (1 grupo, 4+ equipos)
+  const generarFinalYTercerPuesto = async (estado) => {
+    const grupo = estado.gruposConEquipos[0];
+    const clasificacion = estado.clasificaciones[grupo];
+
+    if (clasificacion.length < 4) {
+      showToast("⚠️ Se necesitan al menos 4 equipos para generar final y tercer puesto", "warning");
+      return;
+    }
+
+    // Verificar si ya existen finales
+    const finalesExistentes = matches.filter(m => 
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      (m.fase === "final" || m.fase === "tercerPuesto")
+    );
+
+    if (finalesExistentes.length > 0) {
+      showToast("⚠️ Ya existen partidos finales para esta categoría", "warning");
+      return;
+    }
+
+    const primero = clasificacion[0];
+    const segundo = clasificacion[1];
+    const tercero = clasificacion[2];
+    const cuarto = clasificacion[3];
+
+    // Final: 1° vs 2°
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: primero.curso, paralelo: primero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: segundo.curso, paralelo: segundo.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "final",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `Final - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    // Tercer puesto: 3° vs 4°
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: tercero.curso, paralelo: tercero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: cuarto.curso, paralelo: cuarto.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "tercerPuesto",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `3er Puesto - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    showToast(`✅ Final y tercer puesto generados:\n• Final: ${primero.curso} ${primero.paralelo} vs ${segundo.curso} ${segundo.paralelo}\n• 3er Puesto: ${tercero.curso} ${tercero.paralelo} vs ${cuarto.curso} ${cuarto.paralelo}`, "success");
+  };
+
+  // CASO 3: Solo final (1 grupo, 3 equipos)
+  const generarSoloFinal = async (estado) => {
+    const grupo = estado.gruposConEquipos[0];
+    const clasificacion = estado.clasificaciones[grupo];
+
+    if (clasificacion.length < 2) {
+      showToast("⚠️ Se necesitan al menos 2 equipos para generar final", "warning");
+      return;
+    }
+
+    // Verificar si ya existe final
+    const finalesExistentes = matches.filter(m => 
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      m.fase === "final"
+    );
+
+    if (finalesExistentes.length > 0) {
+      showToast("⚠️ Ya existe una final para esta categoría", "warning");
+      return;
+    }
+
+    const primero = clasificacion[0];
+    const segundo = clasificacion[1];
+
+    // Solo final: 1° vs 2°
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: primero.curso, paralelo: primero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: segundo.curso, paralelo: segundo.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "final",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `Final - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    showToast(`✅ Final generada: ${primero.curso} ${primero.paralelo} vs ${segundo.curso} ${segundo.paralelo}`, "success");
+  };
+
+  // CASO 4: Ida y vuelta (1 grupo, 2 equipos)
+  const generarIdaYVuelta = async (estado) => {
+    const grupo = estado.gruposConEquipos[0];
+    const clasificacion = estado.clasificaciones[grupo];
+
+    if (clasificacion.length < 2) {
+      showToast("⚠️ Se necesitan 2 equipos para generar ida y vuelta", "warning");
+      return;
+    }
+
+    // Verificar si ya existen partidos de ida y vuelta
+    const idaVueltaExistentes = matches.filter(m => 
+      m.disciplina === discipline &&
+      m.genero === filtroGenero &&
+      m.nivelEducacional === filtroNivelEducacional &&
+      m.categoria === filtroCategoria &&
+      (m.fase === "ida" || m.fase === "vuelta")
+    );
+
+    if (idaVueltaExistentes.length > 0) {
+      showToast("⚠️ Ya existen partidos de ida y vuelta para esta categoría", "warning");
+      return;
+    }
+
+    const equipo1 = clasificacion[0];
+    const equipo2 = clasificacion[1];
+
+    // Partido de ida
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: equipo1.curso, paralelo: equipo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: equipo2.curso, paralelo: equipo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "ida",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `Ida - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    // Partido de vuelta
+    await addDoc(collection(db, "matches"), {
+      equipoA: { curso: equipo2.curso, paralelo: equipo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoB: { curso: equipo1.curso, paralelo: equipo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      disciplina: discipline,
+      categoria: filtroCategoria,
+      genero: filtroGenero,
+      nivelEducacional: filtroNivelEducacional,
+      fase: "vuelta",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      grupo: `Vuelta - ${filtroCategoria} ${filtroGenero}`,
+      goleadoresA: [],
+      goleadoresB: []
+    });
+
+    showToast(`✅ Ida y vuelta generados:\n• Ida: ${equipo1.curso} ${equipo1.paralelo} vs ${equipo2.curso} ${equipo2.paralelo}\n• Vuelta: ${equipo2.curso} ${equipo2.paralelo} vs ${equipo1.curso} ${equipo1.paralelo}`, "success");
+  };
+
+  // ==================== FUNCIONES DE NAVEGACIÓN ====================
+
+  const navegarADetalle = (matchId) => {
+    if (discipline === "futbol") {
+      navigate(`/admin/partido/${matchId}`);
+    } else if (discipline === "basquet") {
+      navigate(`/admin-basquet-match-detail/${matchId}`);
+    } else if (discipline === "voley") {
+      navigate(`/admin-voley-match-detail/${matchId}`);
+    }
+  };
+
+  // ==================== FUNCIONES DE ELIMINACIÓN ====================
+
+  // Eliminar un partido individual
+  const eliminarPartido = async (partidoId) => {
     try {
-      const partidoData = {
-        equipoA: {
-          curso: newMatch.equipoA.split(" ")[0],
-          paralelo: newMatch.equipoA.split(" ")[1],
-        },
-        equipoB: {
-          curso: newMatch.equipoB.split(" ")[0],
-          paralelo: newMatch.equipoB.split(" ")[1],
-        },
-        disciplina: discipline,
-        marcadorA: 0,
-        marcadorB: 0,
-        estado: "pendiente",
-        fecha: newMatch.fecha || null,
-        hora: newMatch.hora || null,
-        grupo: grupoAsignado,
-        fase: "grupos1", // Siempre empezar en grupos1
-        goleadoresA: [],
-        goleadoresB: [],
-      };
-
-      // Solo agregar sets si es vóley
-      if (discipline === "voley") {
-        partidoData.sets = [{ A: 0, B: 0 }]; // 1 set para grupos1
-        partidoData.anotadoresA = [];
-        partidoData.anotadoresB = [];
-      }
-
-      await addDoc(collection(db, "matches"), partidoData);
-
-      setNewMatch({ equipoA: "", equipoB: "", fecha: "", hora: "" });
+      await deleteDoc(doc(db, "matches", partidoId));
+      setMatches(prev => prev.filter(m => m.id !== partidoId));
+      showToast("🗑️ Partido eliminado correctamente", "success");
     } catch (error) {
-      console.error("Error al crear partido:", error);
+      console.error("Error al eliminar partido:", error);
+      showToast("❌ Error al eliminar el partido", "error");
     }
   };
 
-  // Cambiar marcador
-  const handleScoreChange = (id, team, delta) => {
-    setScoreEdit((prev) => {
-      const prevScore = prev[id] || {
-        marcadorA: matches.find((m) => m.id === id)?.marcadorA || 0,
-        marcadorB: matches.find((m) => m.id === id)?.marcadorB || 0,
-      };
-      const newScore = {
-        ...prevScore,
-        [team]: Math.max(0, prevScore[team] + delta),
-      };
-      return { ...prev, [id]: newScore };
-    });
+  // Confirmar eliminación de partido individual
+  const confirmarEliminarPartido = (partido) => {
+    setPartidoAEliminar(partido);
+    setShowConfirmDelete(true);
   };
 
-  // Guardar marcador
-  const handleSaveScore = async (id) => {
-    const { marcadorA, marcadorB } = scoreEdit[id];
-    await updateDoc(doc(db, "matches", id), { marcadorA, marcadorB });
-    setScoreEdit((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
-    });
-    setMatches((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, marcadorA, marcadorB } : m)),
-    );
-  };
+  // Eliminar todos los partidos de la categoría actual
+  const eliminarPartidosCategoria = async () => {
+    try {
+      const partidosAEliminar = matches.filter(match => 
+        match.genero === filtroGenero &&
+        match.nivelEducacional === filtroNivelEducacional &&
+        match.categoria === filtroCategoria &&
+        match.disciplina === discipline
+      );
 
-  // Finalizar partido
-  const handleFinishMatch = async (id) => {
-    await updateDoc(doc(db, "matches", id), { estado: "finalizado" });
-    setMatches((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, estado: "finalizado" } : m)),
-    );
-  };
+      // Eliminar cada partido
+      for (const partido of partidosAEliminar) {
+        await deleteDoc(doc(db, "matches", partido.id));
+      }
 
-  // Poner partido en curso
-  const handleStartMatch = async (id) => {
-    await updateDoc(doc(db, "matches", id), { estado: "en curso" });
-    setMatches((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, estado: "en curso" } : m)),
-    );
-  };
+      setMatches(prev => prev.filter(m => 
+        !(m.genero === filtroGenero &&
+          m.nivelEducacional === filtroNivelEducacional &&
+          m.categoria === filtroCategoria &&
+          m.disciplina === discipline)
+      ));
 
-  // Botón Gol con nombre desde modal
-  const handleGol = async (id, equipo, nombre) => {
-    if (!nombre) return;
-    const matchRef = doc(db, "matches", id);
-    const matchDoc = matches.find((m) => m.id === id);
-    let goleadoresA = matchDoc.goleadoresA || [];
-    let goleadoresB = matchDoc.goleadoresB || [];
-    let marcadorA = matchDoc.marcadorA || 0;
-    let marcadorB = matchDoc.marcadorB || 0;
-
-    if (equipo === "A") {
-      goleadoresA = [...goleadoresA, nombre];
-      marcadorA += 1;
-    } else {
-      goleadoresB = [...goleadoresB, nombre];
-      marcadorB += 1;
+      showToast(`🗑️ ${partidosAEliminar.length} partidos eliminados de la categoría`, "success");
+    } catch (error) {
+      console.error("Error al eliminar partidos por categoría:", error);
+      showToast("❌ Error al eliminar los partidos", "error");
     }
-
-    await updateDoc(matchRef, {
-      marcadorA,
-      marcadorB,
-      goleadoresA,
-      goleadoresB,
-    });
-    setMatches((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? { ...m, marcadorA, marcadorB, goleadoresA, goleadoresB }
-          : m,
-      ),
-    );
   };
 
-  const handleDelete = async (id) => {
-    await deleteDoc(doc(db, "matches", id));
-    setMatches((prev) => prev.filter((m) => m.id !== id));
-  };
+  // Eliminar todos los partidos de la fase actual
+  const eliminarPartidosFase = async () => {
+    try {
+      const partidosAEliminar = matches.filter(match => {
+        const cumpleFiltros = match.genero === filtroGenero &&
+                             match.nivelEducacional === filtroNivelEducacional &&
+                             match.categoria === filtroCategoria &&
+                             match.disciplina === discipline;
+        
+        if (faseActiva === "grupos") {
+          return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+        } else if (faseActiva === "semifinal") {
+          return cumpleFiltros && match.fase === "semifinal";
+        } else if (faseActiva === "final") {
+          return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
+        } else if (faseActiva === "ida_vuelta") {
+          return cumpleFiltros && (match.fase === "ida" || match.fase === "vuelta" || match.fase === "desempate");
+        }
+        return false;
+      });
 
-  const handleEdit = (match) => {
-    setEditingMatchId(match.id);
-    setEditedMatch({ fecha: match.fecha || "", hora: match.hora || "" });
-  };
+      // Eliminar cada partido
+      for (const partido of partidosAEliminar) {
+        await deleteDoc(doc(db, "matches", partido.id));
+      }
 
-  const handleSaveEdit = async (id) => {
-    await updateDoc(doc(db, "matches", id), {
-      fecha: editedMatch.fecha || null,
-      hora: editedMatch.hora || null,
-    });
-    setEditingMatchId(null);
-    setMatches((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? { ...m, fecha: editedMatch.fecha, hora: editedMatch.hora }
-          : m,
-      ),
-    );
-  };
+      setMatches(prev => prev.filter(m => !partidosAEliminar.some(p => p.id === m.id)));
 
-  // Agrupar partidos por grupo (usando el campo grupo)
-  const agruparPorGrupo = (matches) => {
-    const agrupados = {};
-    matches.forEach((match) => {
-      const grupoAsignado = match.grupo || "Sin grupo";
-      if (!agrupados[grupoAsignado]) agrupados[grupoAsignado] = [];
-      agrupados[grupoAsignado].push(match);
-    });
-    
-    return agrupados;
-  };
-
-  //boton para eliminar los partidos por grupo
-  const handleDeleteGroupMatches = async () => {
-    if (!grupoAEliminar) return;
-    const partidosGrupo = matches.filter((m) => m.grupo === grupoAEliminar);
-    for (const partido of partidosGrupo) {
-      await deleteDoc(doc(db, "matches", partido.id));
-    }
-    setShowConfirmDelete(false);
-    setGrupoAEliminar(null);
-    setMatches((prev) => prev.filter((m) => m.grupo !== grupoAEliminar));
-  };
-
-  // Filtrar partidos por fase y aplicar filtros de género/categoría/grupos
-  const partidosPorFase = (fase) => {
-    const partidosFiltrados = matches.filter((m) => {
-      // Primero filtrar por fase
-      const faseMatch = (m.fase || "grupos") === fase;
-      if (!faseMatch) return false;
+      const nombreFase = faseActiva === "grupos" ? "Fase de Grupos" :
+                        faseActiva === "semifinal" ? "Semifinales" :
+                        faseActiva === "final" ? "Finales" : "Ida y Vuelta";
       
-      // Si no hay filtros seleccionados, mostrar todos los partidos de la fase
-      if (!filtroGenero && !filtroCategoria && filtroGrupos.length === 0) {
-        return true;
+      showToast(`🗑️ ${partidosAEliminar.length} partidos eliminados de ${nombreFase}`, "success");
+    } catch (error) {
+      console.error("Error al eliminar partidos por fase:", error);
+      showToast("❌ Error al eliminar los partidos", "error");
+    }
+  };
+
+  // Confirmar eliminación masiva
+  const confirmarEliminarGrupo = (tipo) => {
+    setTipoEliminacion(tipo);
+    setShowConfirmDeleteGroup(true);
+  };
+
+  // Ejecutar eliminación masiva
+  const ejecutarEliminacionMasiva = async () => {
+    if (tipoEliminacion === "categoria") {
+      await eliminarPartidosCategoria();
+    } else if (tipoEliminacion === "fase") {
+      await eliminarPartidosFase();
+    }
+    setShowConfirmDeleteGroup(false);
+    setTipoEliminacion("");
+  };
+
+  // ==================== FILTROS PARA MOSTRAR DATOS ====================
+
+  // Filtrar partidos según los filtros activos y fase
+  const partidosFiltrados = matches.filter(match => {
+    const cumpleFiltros = (!filtroGenero || match.genero === filtroGenero) &&
+                         (!filtroNivelEducacional || match.nivelEducacional === filtroNivelEducacional) &&
+                         (!filtroCategoria || match.categoria === filtroCategoria);
+    
+    // Filtrar por fase activa
+    if (faseActiva === "grupos") {
+      return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+    } else if (faseActiva === "semifinal") {
+      return cumpleFiltros && match.fase === "semifinal";
+    } else if (faseActiva === "final") {
+      return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
+    } else if (faseActiva === "ida_vuelta") {
+      return cumpleFiltros && (match.fase === "ida" || match.fase === "vuelta" || match.fase === "desempate");
+    } else if (faseActiva === "todas") {
+      return cumpleFiltros;
+    }
+    
+    return cumpleFiltros;
+  });
+
+  // Contar partidos por fase
+  const contarPartidosPorFase = (fase) => {
+    return matches.filter(match => {
+      const cumpleFiltros = (!filtroGenero || match.genero === filtroGenero) &&
+                           (!filtroNivelEducacional || match.nivelEducacional === filtroNivelEducacional) &&
+                           (!filtroCategoria || match.categoria === filtroCategoria);
+      
+      if (fase === "grupos") {
+        return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+      } else if (fase === "semifinal") {
+        return cumpleFiltros && match.fase === "semifinal";
+      } else if (fase === "final") {
+        return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
+      } else if (fase === "ida_vuelta") {
+        return cumpleFiltros && (match.fase === "ida" || match.fase === "vuelta" || match.fase === "desempate");
       }
       
-      // Aplicar filtros (pero permitir undefined para partidos antiguos)
-      const generoMatch = !filtroGenero || (
-        (m.equipoA?.genero === filtroGenero || !m.equipoA?.genero) && 
-        (m.equipoB?.genero === filtroGenero || !m.equipoB?.genero)
-      );
-      const categoriaMatch = !filtroCategoria || (
-        (m.equipoA?.categoria === filtroCategoria || !m.equipoA?.categoria) && 
-        (m.equipoB?.categoria === filtroCategoria || !m.equipoB?.categoria)
-      );
-      const grupoMatch = filtroGrupos.length === 0 || filtroGrupos.includes(m.grupo) || !m.grupo;
-      
-      return generoMatch && categoriaMatch && grupoMatch;
+      return cumpleFiltros;
+    }).length;
+  };
+
+  const fasesExistentes = verificarFasesExistentes();
+
+  // Obtener texto dinámico para el botón de ida/vuelta
+  const getTextoIdaVuelta = () => {
+    const partidosIdaVuelta = matches.filter(match => {
+      const cumpleFiltros = (!filtroGenero || match.genero === filtroGenero) &&
+                           (!filtroNivelEducacional || match.nivelEducacional === filtroNivelEducacional) &&
+                           (!filtroCategoria || match.categoria === filtroCategoria);
+      return cumpleFiltros && (match.fase === "ida" || match.fase === "vuelta" || match.fase === "desempate");
     });
+
+    const ida = partidosIdaVuelta.filter(m => m.fase === "ida").length;
+    const vuelta = partidosIdaVuelta.filter(m => m.fase === "vuelta").length;
+    const desempate = partidosIdaVuelta.filter(m => m.fase === "desempate").length;
     
-    return partidosFiltrados;
+    let texto = "⚽ ";
+    if (ida > 0 && vuelta > 0 && desempate > 0) {
+      texto += `Ida/Vuelta/Desempate (${partidosIdaVuelta.length})`;
+    } else if (ida > 0 && vuelta > 0) {
+      texto += `Ida/Vuelta (${partidosIdaVuelta.length})`;
+    } else if (ida > 0 || vuelta > 0) {
+      texto += `${ida > 0 ? 'Ida' : 'Vuelta'} (${partidosIdaVuelta.length})`;
+    } else if (desempate > 0) {
+      texto += `Desempate (${desempate})`;
+    } else {
+      texto += `Ida/Vuelta (${partidosIdaVuelta.length})`;
+    }
+    
+    return texto;
   };
 
-  // Abrir modal de goleadores para editar
-  const handleOpenGoleadores = (match) => {
-    setEditGoleadoresA([...match.goleadoresA]);
-    setEditGoleadoresB([...match.goleadoresB]);
-    setEditMatchId(match.id);
-    setShowListaGoleadores(true);
-  };
-
-  // Guardar edición de goleadores
-  const handleSaveGoleadoresEdit = async () => {
-    const matchRef = doc(db, "matches", editMatchId);
-    await updateDoc(matchRef, {
-      goleadoresA: editGoleadoresA,
-      goleadoresB: editGoleadoresB,
-    });
-    setShowListaGoleadores(false);
-    setMatches((prev) =>
-      prev.map((m) =>
-        m.id === editMatchId
-          ? { ...m, goleadoresA: editGoleadoresA, goleadoresB: editGoleadoresB }
-          : m,
-      ),
+  // Obtener opciones de filtros dependientes
+  const getNivelesDisponibles = () => {
+    if (!filtroGenero) return opcionesNivel;
+    return opcionesNivel.filter(nivel => 
+      equipos.some(e => 
+        e.disciplina === discipline &&
+        e.genero === filtroGenero &&
+        e.nivelEducacional === nivel
+      )
     );
   };
 
-  // Componente para mostrar la tabla de partidos de una fase
-  function TablaPartidos({ partidos }) {
-    // Agrupa partidos por grupo para cualquier fase
-    const partidosPorGrupo = agruparPorGrupo(partidos);
-    
-    return (
-      <>
-        {grupos.map((grupoObj) => {
-          const nombreGrupo = grupoObj.nombre;
-          const partidosDelGrupo = partidosPorGrupo[nombreGrupo];
-          
-          return partidosDelGrupo && partidosDelGrupo.length > 0 ? (
-            <div key={nombreGrupo} className="match-group">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "1.5rem 0 0.5rem",
-                }}
-              >
-                <h3 style={{ margin: 0 }}>{nombreGrupo}</h3>
-                {/* Botón eliminar solo para fase de grupos */}
-                {fasesArray[faseActual] === "grupos" && (
-                  <button
-                    style={{
-                      marginLeft: 16,
-                      background: "#ef4444",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 4,
-                      padding: "0.2rem 0.7rem",
-                      cursor: "pointer",
-                      fontSize: "0.9em",
-                    }}
-                    onClick={() => {
-                      setGrupoAEliminar(nombreGrupo);
-                      setShowConfirmDelete(true);
-                    }}
-                  >
-                    Eliminar todos los partidos
-                  </button>
-                )}
-              </div>
-
-              <table className="admin-matches-table">
-                <thead>
-                  <tr>
-                    <th>Equipo A</th>
-                    <th>Equipo B</th>
-                    <th>Marcador</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partidosPorGrupo[nombreGrupo].map((match) => (
-                    <tr
-                      key={match.id}
-                      onClick={() => irADetallePartido(match.id)}
-                      style={{ cursor: "pointer" }}
-                      className="admin-clickable-row"
-                    >
-                      <td>
-                        {match.equipoA?.curso} {match.equipoA?.paralelo}
-                      </td>
-                      <td>
-                        {match.equipoB?.curso} {match.equipoB?.paralelo}
-                      </td>
-                      <td>
-                        {match.marcadorA ?? 0} - {match.marcadorB ?? 0}
-                      </td>
-                      <td>
-                        {match.estado === "finalizado" ? (
-                          <span style={{ color: "green", fontWeight: "bold" }}>
-                            ✅ Finalizado
-                          </span>
-                        ) : match.estado === "en curso" ? (
-                          <span
-                            style={{ color: "#2563eb", fontWeight: "bold" }}
-                          >
-                            🟢 En curso
-                          </span>
-                        ) : (
-                          <span style={{ color: "orange", fontWeight: "bold" }}>
-                            ⏳ Pendiente
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {editingMatchId === match.id ? (
-                          <input
-                            type="date"
-                            value={editedMatch.fecha}
-                            onChange={(e) =>
-                              setEditedMatch({
-                                ...editedMatch,
-                                fecha: e.target.value,
-                              })
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          match.fecha || "Por definir"
-                        )}
-                      </td>
-                      <td>
-                        {editingMatchId === match.id ? (
-                          <input
-                            type="time"
-                            value={editedMatch.hora}
-                            onChange={(e) =>
-                              setEditedMatch({
-                                ...editedMatch,
-                                hora: e.target.value,
-                              })
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          match.hora || "Por definir"
-                        )}
-                      </td>
-                      <td>
-                        {editingMatchId === match.id ? (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSaveEdit(match.id);
-                              }}
-                              style={{
-                                background: "#22c55e",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 4,
-                                padding: "0.2rem 0.7rem",
-                                cursor: "pointer",
-                                marginRight: 4,
-                              }}
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingMatchId(null);
-                              }}
-                              style={{
-                                background: "#64748b",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 4,
-                                padding: "0.2rem 0.7rem",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(match);
-                              }}
-                              style={{
-                                background: "#3b82f6",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 4,
-                                padding: "0.2rem 0.7rem",
-                                cursor: "pointer",
-                                marginRight: 4,
-                              }}
-                            >
-                              Editar Fecha/Hora
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(match.id);
-                              }}
-                              style={{
-                                background: "#ef4444",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 4,
-                                padding: "0.2rem 0.7rem",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Eliminar
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null;
-        })}
-      </>
+  const getCategoriasDisponibles = () => {
+    if (!filtroGenero || !filtroNivelEducacional) return opcionesCategorias;
+    return opcionesCategorias.filter(categoria => 
+      equipos.some(e => 
+        e.disciplina === discipline &&
+        e.genero === filtroGenero &&
+        e.nivelEducacional === filtroNivelEducacional &&
+        e.categoria === categoria
+      )
     );
+  };
+
+  // ==================== RENDER ====================
+
+  if (loading) {
+    return <div className="loading">Cargando partidos...</div>;
   }
 
+  if (error) {
+    return <div className="error">Error: {error}</div>;
+  }
+
+  const estado = analizarEstadoCategoria();
+
   return (
-    <div className="admin-matches-container">
-      {/* Mostrar estado de carga */}
-      {loading && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '200px',
-          fontSize: '1.2rem',
-          color: '#666'
-        }}>
-          <div>
-            <div style={{textAlign: 'center', marginBottom: '1rem'}}>⏳</div>
-            Cargando datos...
-          </div>
-        </div>
-      )}
-
-      {/* Mostrar error si existe */}
-      {error && !loading && (
-        <div style={{
-          background: '#fee',
-          border: '1px solid #fcc',
-          borderRadius: '8px',
-          padding: '1rem',
-          margin: '1rem',
-          color: '#c33'
-        }}>
-          <strong>Error:</strong> {error}
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{
-              marginLeft: '1rem',
-              padding: '0.5rem 1rem',
-              background: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Recargar página
-          </button>
-        </div>
-      )}
-
-      {/* Contenido principal - solo mostrar si no hay carga ni error */}
-      {!loading && !error && (
-        <>
-          {/* Header moderno */}
-          <div className="admin-header">
-            <div className="header-icon">
-              {discipline === "futbol"
-                ? "⚽"
-                : discipline === "voley"
-                  ? "🏐"
-                  : "🏀"}
-            </div>
-        <h1 className="admin-title">Gestión de Partidos</h1>
-        <p className="admin-subtitle">
-          Administra los encuentros de{" "}
-          {discipline === "futbol"
-            ? "Fútbol"
-            : discipline === "voley"
-              ? "Vóley"
-              : "Básquet"}
-        </p>
-      </div>
-
-      {/* Navegación */}
-      <div className="navigation-section">
-        <button onClick={goToPanel} className="nav-card panel-card">
-          <div className="nav-card-icon">🏠</div>
-          <div className="nav-card-content">
-            <h3 className="nav-card-title">Volver al Panel</h3>
-            <p className="nav-card-description">Ir al panel principal</p>
-          </div>
-          <div className="nav-card-arrow">→</div>
+    <div className="admin-matches">
+      <h1>Gestión de Partidos - {discipline.charAt(0).toUpperCase() + discipline.slice(1)}</h1>
+      
+      {/* Navegación con botones de colores */}
+      <div className="nav-buttons">
+        <button 
+          className="nav-button volver"
+          onClick={() => navigate(`/admin`)}
+        >
+          ← Volver al Panel
         </button>
-        <button onClick={goToTeams} className="nav-card teams-card">
-          <div className="nav-card-icon">👥</div>
-          <div className="nav-card-content">
-            <h3 className="nav-card-title">Gestionar Equipos</h3>
-            <p className="nav-card-description">Administrar equipos participantes</p>
-          </div>
-          <div className="nav-card-arrow">→</div>
+        <button 
+          className="nav-button equipos"
+          onClick={() => navigate(`/admin/equipos?discipline=${discipline}`)}
+        >
+          📋 Equipos
         </button>
-        <button onClick={goToStandings} className="nav-card standings-card">
-          <div className="nav-card-icon">🏆</div>
-          <div className="nav-card-content">
-            <h3 className="nav-card-title">Ver Posiciones</h3>
-            <p className="nav-card-description">Consultar tabla de posiciones</p>
-          </div>
-          <div className="nav-card-arrow">→</div>
+        <button className="nav-button partidos">
+          ⚽ Partidos
         </button>
-        <button onClick={goToSchedule} className="nav-card schedule-card">
-          <div className="nav-card-icon">📅</div>
-          <div className="nav-card-content">
-            <h3 className="nav-card-title">Gestionar Horarios</h3>
-            <p className="nav-card-description">Programar partidos por días</p>
-          </div>
-          <div className="nav-card-arrow">→</div>
+        <button 
+          className="nav-button posiciones"
+          onClick={() => navigate(`/admin/posiciones?discipline=${discipline}`)}
+        >
+          🏆 Posiciones
+        </button>
+        <button 
+          className="nav-button horarios"
+          onClick={() => navigate(`/admin/horarios?discipline=${discipline}`)}
+        >
+          📅 Horarios
         </button>
       </div>
-
-      {/* Filtros por Género y Categoría */}
-      <div className="filters-section" style={{
-        background: 'white', 
-        borderRadius: '20px', 
-        boxShadow: '0 2px 12px rgba(0,0,0,0.1)', 
-        padding: '1.5rem', 
-        marginBottom: '2rem'
-      }}>
-        <h3 style={{margin: '0 0 1rem 0', color: '#495057', fontSize: '1.1rem'}}>
-          🔍 Filtrar Partidos
-        </h3>
-        <div style={{display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-            <label style={{fontWeight: '500', color: '#666'}}>
-              <span style={{marginRight: '0.5rem'}}>🚻</span>
-              Género:
-            </label>
-            <select
-              value={filtroGenero}
-              onChange={e => {
-                setFiltroGenero(e.target.value);
-                setFiltroCategoria(""); // Reset categoría
-                setFiltroGrupos([]); // Reset grupos
-              }}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #ced4da',
-                minWidth: '140px'
-              }}
+      
+      {/* Contenedor de filtros */}
+      <div className="filters-container">
+        <h3>📊 Género:</h3>
+        
+        <div className="filters-row">
+          <div className="filter-group">
+            <label>🚻 Género: </label>
+            <select 
+              value={filtroGenero} 
+              onChange={(e) => handleFiltroGeneroChange(e.target.value)}
             >
-              <option value="">Todos los géneros</option>
-              <option value="Hombre">Hombre</option>
-              <option value="Mujer">Mujer</option>
+              <option value="">Selecciona un género</option>
+              {opcionesGenero.map(genero => (
+                <option key={genero} value={genero}>{genero}</option>
+              ))}
             </select>
           </div>
-          
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-            <label style={{fontWeight: '500', color: '#666'}}>
-              <span style={{marginRight: '0.5rem'}}>🏷️</span>
-              Categoría:
-            </label>
-            <select
-              value={filtroCategoria}
-              onChange={e => {
-                setFiltroCategoria(e.target.value);
-                setFiltroGrupos([]); // Reset grupos cuando cambie categoría
-              }}
+
+          <div className="filter-group">
+            <label>🎓 Nivel Educacional: </label>
+            <select 
+              value={filtroNivelEducacional} 
+              onChange={(e) => handleFiltroNivelEducacionalChange(e.target.value)}
               disabled={!filtroGenero}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #ced4da',
-                minWidth: '200px',
-                backgroundColor: !filtroGenero ? '#f5f5f5' : '',
-                color: !filtroGenero ? '#999' : '',
-                cursor: !filtroGenero ? 'not-allowed' : 'pointer'
-              }}
             >
-              <option value="">Todas las categorías</option>
-              {categorias
-                .filter(cat => !filtroGenero || cat.genero === filtroGenero)
-                .map(cat => (
-                  <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
-                ))}
+              <option value="">Primero selecciona un género</option>
+              {getNivelesDisponibles().map(nivel => (
+                <option key={nivel} value={nivel}>{nivel}</option>
+              ))}
             </select>
           </div>
-          
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
-            <label style={{fontWeight: '500', color: '#666'}}>
-              <span style={{marginRight: '0.5rem'}}>👥</span>
-              Grupos:
-            </label>
-            <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxWidth: '500px'}}>
-              {grupos
-                .filter(grupo => {
-                  // Solo mostrar grupos que coincidan con los filtros actuales
-                  if (filtroGenero && grupo.genero !== filtroGenero) return false;
-                  if (filtroCategoria && grupo.categoria !== filtroCategoria) return false;
-                  return true;
-                })
-                .map(grupo => (
-                  <label key={grupo.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: filtroGrupos.includes(grupo.nombre) ? '#007bff' : '#f8f9fa',
-                    color: filtroGrupos.includes(grupo.nombre) ? 'white' : '#495057',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    border: '1px solid #dee2e6',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filtroGrupos.includes(grupo.nombre)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFiltroGrupos([...filtroGrupos, grupo.nombre]);
-                        } else {
-                          setFiltroGrupos(filtroGrupos.filter(g => g !== grupo.nombre));
-                        }
-                      }}
-                      style={{marginRight: '0.25rem', transform: 'scale(0.9)'}}
-                    />
-                    {grupo.nombre}
-                  </label>
-                ))}
-              {grupos.filter(grupo => {
-                if (filtroGenero && grupo.genero !== filtroGenero) return false;
-                if (filtroCategoria && grupo.categoria !== filtroCategoria) return false;
-                return true;
-              }).length === 0 && (
-                <span style={{color: '#6c757d', fontStyle: 'italic', fontSize: '0.875rem'}}>
-                  No hay grupos disponibles con los filtros actuales
-                </span>
+
+          <div className="filter-group">
+            <label>🏅 Categoría: </label>
+            <select 
+              value={filtroCategoria} 
+              onChange={(e) => handleFiltroCategoriaChange(e.target.value)}
+              disabled={!filtroGenero || !filtroNivelEducacional}
+            >
+              <option value="">Primero selecciona género y nivel educacional</option>
+              {getCategoriasDisponibles().map(categoria => (
+                <option key={categoria} value={categoria}>{categoria}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Estado de la categoría */}
+        {estado.tipo === "analisis_completo" && (
+          <div className="category-status">
+            <h3>📊 Estado de la Categoría: {filtroGenero} - {filtroNivelEducacional} - {filtroCategoria}</h3>
+            <div className="status-grid">
+              <div className="status-item">
+                <span className="status-icon">👥</span>
+                <strong>Equipos:</strong> {estado.totalEquipos}
+              </div>
+              <div className="status-item">
+                <span className="status-icon">🏆</span>
+                <strong>Grupos:</strong> {estado.totalGrupos}
+              </div>
+              <div className="status-item">
+                <span className="status-icon">⚽</span>
+                <strong>Partidos:</strong> {estado.totalPartidosGrupos}
+              </div>
+              <div className="status-item">
+                <span className="status-icon">⏳</span>
+                <strong>Pendientes:</strong> {estado.partidosGruposPendientes}
+              </div>
+              {estado.gruposCompletos && (
+                <>
+                  <div className="status-item">
+                    <span className="status-icon">✅</span>
+                    <strong>Estado:</strong> Listo para fases finales
+                  </div>
+                </>
               )}
             </div>
-            {filtroGrupos.length > 0 && (
-              <button
-                onClick={() => setFiltroGrupos([])}
-                style={{
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  cursor: 'pointer'
-                }}
-                title="Limpiar selección de grupos"
-              >
-                ✕ Limpiar
-              </button>
-            )}
           </div>
+        )}
 
-          <button
+        {/* Botones de acción */}
+        <div className="action-buttons">
+          <button 
+            className="btn-generar"
             onClick={generarPartidosGrupos}
-            disabled={!filtroGenero || !filtroCategoria}
-            style={{
-              backgroundColor: (!filtroGenero || !filtroCategoria) ? '#6c757d' : '#28a745',
-              color: 'white',
-              border: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              cursor: (!filtroGenero || !filtroCategoria) ? 'not-allowed' : 'pointer',
-              fontWeight: '500',
-              opacity: (!filtroGenero || !filtroCategoria) ? 0.5 : 1
-            }}
-            title="Genera automáticamente todos los partidos de la fase de grupos para la categoría seleccionada"
+            disabled={!filtroGenero || !filtroNivelEducacional || !filtroCategoria}
           >
-            ⚽ Generar Partidos de Grupos
-          </button>
-
-          <button
-            onClick={generarFasesFinales}
-            disabled={!filtroGenero || !filtroCategoria}
-            style={{
-              backgroundColor: (!filtroGenero || !filtroCategoria) ? '#6c757d' : '#ffc107',
-              color: (!filtroGenero || !filtroCategoria) ? 'white' : '#212529',
-              border: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              cursor: (!filtroGenero || !filtroCategoria) ? 'not-allowed' : 'pointer',
-              fontWeight: '500',
-              opacity: (!filtroGenero || !filtroCategoria) ? 0.5 : 1
-            }}
-            title="Regenera semifinales y final (solo usar si es necesario corregir el bracket automático)"
-          >
-            🔄 Regenerar Fases Finales
+            ⚽ Generar Partidos (Grupos o Ida/Vuelta)
           </button>
           
-          {(filtroGenero || filtroCategoria || filtroGrupos.length > 0) && (
-            <button
-              onClick={() => {
-                setFiltroGenero("");
-                setFiltroCategoria("");
-                setFiltroGrupos([]);
-              }}
-              style={{
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 1rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
-              title="Limpiar todos los filtros y mostrar todos los partidos"
+          {estado.tipo === "analisis_completo" && estado.gruposCompletos && (
+            <button 
+              className="btn-generar-fases"
+              onClick={generarFasesFinalesAutomaticas}
             >
-              🗑️ Limpiar Filtros
+              🏆 Generar Fases Finales Automáticas
             </button>
           )}
         </div>
       </div>
-
-      {/* Formulario de creación de partidos */}
-      <div className="create-match-section">
-        <h2 className="section-title">
-          <span className="section-icon">➕</span>
-          Programar Nuevo Partido
-        </h2>
-
-        <div className="create-match-form">
-          <div className="form-grid">
-            <div className="input-group">
-              <label className="input-label">
-                <span className="label-icon">🏠</span>
-                Equipo Local
-              </label>
-              <select
-                value={newMatch.equipoA}
-                onChange={(e) =>
-                  setNewMatch({ ...newMatch, equipoA: e.target.value })
-                }
-                className="modern-select"
-              >
-                <option value="">Selecciona equipo local</option>
-                {equipos
-                  .filter(eq => {
-                    const pasaGenero = !filtroGenero || eq.genero === filtroGenero;
-                    const pasaCategoria = !filtroCategoria || eq.categoria === filtroCategoria;
-                    return pasaGenero && pasaCategoria;
-                  })
-                  .map((eq, idx) => (
-                    <option key={idx} value={`${eq.curso} ${eq.paralelo}`}>
-                      {eq.genero} - {eq.categoria} - {eq.curso} {eq.paralelo} ({eq.grupo || 'Sin grupo'})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">
-                <span className="label-icon">✈️</span>
-                Equipo Visitante
-              </label>
-              <select
-                value={newMatch.equipoB}
-                onChange={(e) =>
-                  setNewMatch({ ...newMatch, equipoB: e.target.value })
-                }
-                className="modern-select"
-              >
-                <option value="">Selecciona equipo visitante</option>
-                {equipos
-                  .filter(eq => {
-                    const pasaGenero = !filtroGenero || eq.genero === filtroGenero;
-                    const pasaCategoria = !filtroCategoria || eq.categoria === filtroCategoria;
-                    return pasaGenero && pasaCategoria;
-                  })
-                  .map((eq, idx) => (
-                    <option key={idx} value={`${eq.curso} ${eq.paralelo}`}>
-                      {eq.genero} - {eq.categoria} - {eq.curso} {eq.paralelo} ({eq.grupo || 'Sin grupo'})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">
-                <span className="label-icon">📅</span>
-                Fecha
-              </label>
-              <input
-                type="date"
-                value={newMatch.fecha}
-                onChange={(e) =>
-                  setNewMatch({ ...newMatch, fecha: e.target.value })
-                }
-                className="modern-input"
-              />
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">
-                <span className="label-icon">⏰</span>
-                Hora
-              </label>
-              <input
-                type="time"
-                value={newMatch.hora}
-                onChange={(e) =>
-                  setNewMatch({ ...newMatch, hora: e.target.value })
-                }
-                className="modern-input"
-              />
-            </div>
-
-            <button onClick={handleAddMatch} className="create-match-btn">
-              <span className="btn-icon">🎯</span>
-              <span>Programar Partido</span>
+      
+      {/* Pestañas de fases */}
+      {(filtroGenero && filtroNivelEducacional && filtroCategoria) && (
+        <div className="phase-tabs">
+          {fasesExistentes.grupos && (
+            <button 
+              className={`phase-tab grupos ${faseActiva === "grupos" ? "active" : ""}`}
+              onClick={() => setFaseActiva("grupos")}
+            >
+              🏃‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
             </button>
+          )}
+          
+          {fasesExistentes.semifinal && (
+            <button 
+              className={`phase-tab semifinales ${faseActiva === "semifinal" ? "active" : ""}`}
+              onClick={() => setFaseActiva("semifinal")}
+            >
+              🔥 Semifinales ({contarPartidosPorFase("semifinal")})
+            </button>
+          )}
+          
+          {fasesExistentes.final && (
+            <button 
+              className={`phase-tab finales ${faseActiva === "final" ? "active" : ""}`}
+              onClick={() => setFaseActiva("final")}
+            >
+              🏆 Finales ({contarPartidosPorFase("final")})
+            </button>
+          )}
+          
+          {fasesExistentes.ida_vuelta && (
+            <button 
+              className={`phase-tab ida-vuelta ${faseActiva === "ida_vuelta" ? "active" : ""}`}
+              onClick={() => setFaseActiva("ida_vuelta")}
+            >
+              {getTextoIdaVuelta()}
+            </button>
+          )}
+          
+          {Object.values(fasesExistentes).filter(Boolean).length > 1 && (
+            <button 
+              className={`phase-tab todas ${faseActiva === "todas" ? "active" : ""}`}
+              onClick={() => setFaseActiva("todas")}
+            >
+              📋 Todas las Fases ({partidosFiltrados.length})
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Botones de eliminación masiva */}
+      {(filtroGenero && filtroNivelEducacional && filtroCategoria && partidosFiltrados.length > 0) && (
+        <div className="elimination-buttons">
+          <button 
+            className="btn-eliminar-fase"
+            onClick={() => confirmarEliminarGrupo("fase")}
+            title="Eliminar todos los partidos de la fase actual"
+          >
+            🗑️ Eliminar Fase Actual ({contarPartidosPorFase(faseActiva)})
+          </button>
+          <button 
+            className="btn-eliminar-categoria"
+            onClick={() => confirmarEliminarGrupo("categoria")}
+            title="Eliminar todos los partidos de esta categoría"
+          >
+            🗑️ Eliminar Toda la Categoría ({partidosFiltrados.length})
+          </button>
+        </div>
+      )}
+        
+      {/* Lista de partidos */}
+      {partidosFiltrados.length === 0 ? (
+        <div className="no-partidos">
+          {filtroGenero && filtroNivelEducacional && filtroCategoria ? 
+            "No hay partidos para esta categoría" : 
+            "Selecciona los filtros para ver partidos"
+          }
+        </div>
+      ) : (
+        <div className="partidos-container">
+          <div className="partidos-header">
+            🏆 Partidos ({partidosFiltrados.length})
+          </div>
+          <div className="partidos-content">
+            {(() => {
+              // Agrupar partidos por grupo o fase
+              const partidosPorGrupo = {};
+              partidosFiltrados.forEach(match => {
+                let claveGrupo;
+                
+                if (match.fase === "semifinal") {
+                  claveGrupo = "Semifinales";
+                } else if (match.fase === "final") {
+                  claveGrupo = "Final";
+                } else if (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") {
+                  claveGrupo = "Tercer Puesto";
+                } else if (match.fase === "ida") {
+                  claveGrupo = "Partidos de Ida";
+                } else if (match.fase === "vuelta") {
+                  claveGrupo = "Partidos de Vuelta";
+                } else if (match.fase === "desempate") {
+                  claveGrupo = "Desempates";
+                } else {
+                  claveGrupo = match.grupo || "Sin Grupo";
+                }
+                
+                if (!partidosPorGrupo[claveGrupo]) {
+                  partidosPorGrupo[claveGrupo] = [];
+                }
+                partidosPorGrupo[claveGrupo].push(match);
+              });
+
+              return Object.entries(partidosPorGrupo).map(([nombreGrupo, partidos]) => (
+                <div key={nombreGrupo} className="partidos-grupo">
+                  <h3 className="grupo-titulo">
+                    {nombreGrupo} ({partidos.length} {partidos.length === 1 ? 'partido' : 'partidos'})
+                  </h3>
+                  <div className="partidos-grid">
+                    {partidos.map(match => (
+                      <div key={match.id} className="partido-card">
+                        <div className="partido-header">
+                          <span className={`partido-fase ${match.fase?.toUpperCase() || 'GRUPOS'}`}>
+                            {match.fase === "ida" ? "IDA" :
+                             match.fase === "vuelta" ? "VUELTA" :
+                             match.fase === "desempate" ? "DESEMPATE" :
+                             match.fase === "semifinal" ? "SEMIFINAL" :
+                             match.fase === "final" ? "FINAL" :
+                             (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") ? "3ER PUESTO" :
+                             "GRUPOS"}
+                          </span>
+                          <span className={`partido-estado ${match.estado?.toUpperCase() || 'PROGRAMADO'}`}>
+                            {match.estado || 'PROGRAMADO'}
+                          </span>
+                        </div>
+                        
+                        <div className="partido-equipos">
+                          <div className="equipo">
+                            <div className="equipo-nombre">{match.equipoA?.curso} {match.equipoA?.paralelo}</div>
+                            <div className="equipo-score">{match.marcadorA || 0}</div>
+                          </div>
+                          <div className="vs">VS</div>
+                          <div className="equipo">
+                            <div className="equipo-nombre">{match.equipoB?.curso} {match.equipoB?.paralelo}</div>
+                            <div className="equipo-score">{match.marcadorB || 0}</div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#666' }}>
+                          {match.fecha} {match.hora}
+                        </div>
+                        
+                        <div className="partido-actions">
+                          <button 
+                            onClick={() => navegarADetalle(match.id)}
+                            style={{ 
+                              flex: 1,
+                              padding: '8px 12px', 
+                              backgroundColor: '#007bff', 
+                              color: 'white', 
+                              border: 'none', 
+                              borderRadius: '5px', 
+                              cursor: 'pointer' 
+                            }}
+                          >
+                            Ver Detalle
+                          </button>
+                          <button 
+                            className="btn-eliminar"
+                            onClick={() => confirmarEliminarPartido(match)}
+                            title="Eliminar partido"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()
+          }
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Navegador de fases */}
-      <div className="phase-navigation">
-        <div className="phase-controls">
-          <button
-            onClick={() => setFaseActual((f) => Math.max(0, f - 1))}
-            disabled={faseActual === 0}
-            className={`phase-btn prev-btn ${faseActual === 0 ? "disabled" : ""}`}
-          >
-            <span className="btn-icon">←</span>
-          </button>
+      {/* Modal de confirmación para eliminar partido individual */}
+      {showConfirmDelete && partidoAEliminar && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>🗑️ Confirmar Eliminación</h3>
+            <p>¿Estás seguro de que quieres eliminar este partido?</p>
+            <div style={{ margin: '15px 0', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
+              <strong>{partidoAEliminar.equipoA?.curso} {partidoAEliminar.equipoA?.paralelo}</strong>
+              <span> vs </span>
+              <strong>{partidoAEliminar.equipoB?.curso} {partidoAEliminar.equipoB?.paralelo}</strong>
+            </div>
+            <p style={{ color: '#dc3545', fontSize: '14px' }}>Esta acción no se puede deshacer.</p>
+            <div className="modal-buttons">
+              <button 
+                className="btn-confirmar"
+                onClick={() => {
+                  eliminarPartido(partidoAEliminar.id);
+                  setShowConfirmDelete(false);
+                  setPartidoAEliminar(null);
+                }}
+              >
+                Sí, Eliminar
+              </button>
+              <button 
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setPartidoAEliminar(null);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-          <div className="current-phase">
-            <span className="phase-icon">
-              {obtenerIconoFase(fasesArray[faseActual])}
-            </span>
-            <h2 className="phase-title">{fases[faseActual]}</h2>
-            
-            {/* Indicador de fase completa */}
-            {verificarFaseCompleta(fasesArray[faseActual]) && fasesArray[faseActual] !== "finales" && (
-              <div style={{ 
-                background: "#10b981", 
-                color: "white", 
-                padding: "0.25rem 0.75rem", 
-                borderRadius: "12px", 
-                fontSize: "0.8rem",
-                marginTop: "0.5rem",
-                display: "inline-block"
-              }}>
-                ✅ Fase completada - Siguiente fase generada automáticamente
-              </div>
+      {/* Modal de confirmación para eliminación masiva */}
+      {showConfirmDeleteGroup && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>🗑️ Confirmar Eliminación Masiva</h3>
+            {tipoEliminacion === "categoria" ? (
+              <>
+                <p>¿Estás seguro de que quieres eliminar <strong>TODOS</strong> los partidos de esta categoría?</p>
+                <div style={{ margin: '15px 0', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
+                  <strong>Categoría:</strong> {filtroGenero} - {filtroNivelEducacional} - {filtroCategoria}<br/>
+                  <strong>Total de partidos:</strong> {partidosFiltrados.length}
+                </div>
+              </>
+            ) : (
+              <>
+                <p>¿Estás seguro de que quieres eliminar todos los partidos de la fase actual?</p>
+                <div style={{ margin: '15px 0', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
+                  <strong>Fase:</strong> {
+                    faseActiva === "grupos" ? "Fase de Grupos" :
+                    faseActiva === "semifinal" ? "Semifinales" :
+                    faseActiva === "final" ? "Finales" : "Ida y Vuelta"
+                  }<br/>
+                  <strong>Total de partidos:</strong> {contarPartidosPorFase(faseActiva)}
+                </div>
+              </>
             )}
-          </div>
-
-          <button
-            onClick={() =>
-              setFaseActual((f) => Math.min(fases.length - 1, f + 1))
-            }
-            disabled={faseActual === fases.length - 1}
-            className={`phase-btn next-btn ${faseActual === fases.length - 1 ? "disabled" : ""}`}
-          >
-            <span className="btn-icon">→</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Mostrar solo la tabla de la fase actual */}
-      <div className="matches-table-section">
-        <TablaPartidos partidos={partidosPorFase(fasesArray[faseActual])} />
-      </div>
-
-      {/* Modal para ingresar nombre del goleador */}
-      {showGoleadorModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              padding: "2rem",
-              borderRadius: "10px",
-              boxShadow: "0 2px 16px #0002",
-              minWidth: 300,
-            }}
-          >
-            <h3>¿Quién anotó el gol?</h3>
-            <input
-              type="text"
-              value={goleadorNombre}
-              onChange={(e) => setGoleadorNombre(e.target.value)}
-              placeholder="Nombre del goleador"
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                margin: "1rem 0",
-                fontSize: "1rem",
-              }}
-              autoFocus
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "1rem",
-              }}
-            >
-              <button
-                onClick={() => setShowGoleadorModal(false)}
-                style={{
-                  background: "#eee",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "0.5rem 1rem",
-                  cursor: "pointer",
+            <p style={{ color: '#dc3545', fontSize: '14px', fontWeight: 'bold' }}>⚠️ Esta acción no se puede deshacer y eliminará todos los partidos seleccionados.</p>
+            <div className="modal-buttons">
+              <button 
+                className="btn-confirmar"
+                onClick={ejecutarEliminacionMasiva}
+              >
+                Sí, Eliminar Todo
+              </button>
+              <button 
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowConfirmDeleteGroup(false);
+                  setTipoEliminacion("");
                 }}
               >
                 Cancelar
               </button>
-              <button
-                onClick={async () => {
-                  if (!goleadorNombre.trim()) return;
-                  await handleGol(golMatchId, golEquipo, goleadorNombre.trim());
-                  setShowGoleadorModal(false);
-                }}
-                style={{
-                  background: "#22c55e",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "0.5rem 1rem",
-                  cursor: "pointer",
-                }}
-              >
-                Guardar
-              </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Modal para ver y editar goleadores */}
-      {showListaGoleadores && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              padding: "2rem",
-              borderRadius: "10px",
-              boxShadow: "0 2px 16px #0002",
-              minWidth: 350,
-            }}
-          >
-            <h3>Goleadores del partido</h3>
-            <div style={{ marginBottom: 16 }}>
-              <b>
-                Goleadores{" "}
-                {
-                  equipos.find(
-                    (eq) =>
-                      `${eq.curso} ${eq.paralelo}` ===
-                      `${matches.find((m) => m.id === editMatchId)?.equipoA?.curso} ${matches.find((m) => m.id === editMatchId)?.equipoA?.paralelo}`,
-                  )?.curso
-                }{" "}
-                {
-                  equipos.find(
-                    (eq) =>
-                      `${eq.curso} ${eq.paralelo}` ===
-                      `${matches.find((m) => m.id === editMatchId)?.equipoA?.curso} ${matches.find((m) => m.id === editMatchId)?.equipoA?.paralelo}`,
-                  )?.paralelo
-                }
-                :
-              </b>
-              {editGoleadoresA.length > 0 ? (
-                editGoleadoresA.map((g, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      margin: "4px 0",
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={g}
-                      onChange={(e) => {
-                        const nuevos = [...editGoleadoresA];
-                        nuevos[idx] = e.target.value;
-                        setEditGoleadoresA(nuevos);
-                      }}
-                      style={{ flex: 1, padding: "0.2rem" }}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: "#888" }}>Sin goles</div>
-              )}
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <b>
-                Goleadores{" "}
-                {
-                  equipos.find(
-                    (eq) =>
-                      `${eq.curso} ${eq.paralelo}` ===
-                      `${matches.find((m) => m.id === editMatchId)?.equipoB?.curso} ${matches.find((m) => m.id === editMatchId)?.equipoB?.paralelo}`,
-                  )?.curso
-                }{" "}
-                {
-                  equipos.find(
-                    (eq) =>
-                      `${eq.curso} ${eq.paralelo}` ===
-                      `${matches.find((m) => m.id === editMatchId)?.equipoB?.curso} ${matches.find((m) => m.id === editMatchId)?.equipoB?.paralelo}`,
-                  )?.paralelo
-                }
-                :
-              </b>
-              {editGoleadoresB.length > 0 ? (
-                editGoleadoresB.map((g, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      margin: "4px 0",
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={g}
-                      onChange={(e) => {
-                        const nuevos = [...editGoleadoresB];
-                        nuevos[idx] = e.target.value;
-                        setEditGoleadoresB(nuevos);
-                      }}
-                      style={{ flex: 1, padding: "0.2rem" }}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: "#888" }}>Sin goles</div>
-              )}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "1rem",
-              }}
-            >
-              <button
-                onClick={() => setShowListaGoleadores(false)}
-                style={{
-                  background: "#eee",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "0.5rem 1rem",
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveGoleadoresEdit}
-                style={{
-                  background: "#22c55e",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "0.5rem 1rem",
-                  cursor: "pointer",
-                }}
-              >
-                Guardar Cambios
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmación para eliminar grupo */}
-      {showConfirmDelete && (
-        <div className="modal-overlay">
-          <div className="confirmation-modal">
-            <div className="modal-icon">⚠️</div>
-            <h3 className="modal-title">¿Estás seguro?</h3>
-            <p className="modal-text">
-              ¿Seguro que quieres eliminar <strong>todos los partidos</strong>{" "}
-              del grupo <strong>{grupoAEliminar}</strong>?
-              <br />
-              Esta acción no se puede deshacer.
-            </p>
-            <div className="modal-actions">
-              <button
-                onClick={() => setShowConfirmDelete(false)}
-                className="cancel-btn"
-              >
-                <span className="btn-icon">❌</span>
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeleteGroupMatches}
-                className="confirm-delete-btn"
-              >
-                <span className="btn-icon">🗑️</span>
-                Sí, eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-        </>
       )}
     </div>
   );
 }
+
+// ==================== FUNCIONES EXPORTADAS PARA COMPATIBILIDAD ====================
+
+// Función para verificar y generar partido de desempate si es necesario
+const verificarYGenerarDesempate = async (partidoFinalizado, showToast) => {
+  try {
+    // Solo procesar si el partido es de ida o vuelta
+    if (partidoFinalizado.fase !== "ida" && partidoFinalizado.fase !== "vuelta") {
+      return;
+    }
+
+    console.log(`🔍 Verificando desempate para partido de ${partidoFinalizado.fase}`);
+
+    // Obtener todos los partidos de la misma categoría
+    const { getDocs, query, collection, where } = await import("firebase/firestore");
+    const { db } = await import("../firebase/config");
+
+    const q = query(
+      collection(db, "matches"),
+      where("disciplina", "==", partidoFinalizado.disciplina),
+      where("genero", "==", partidoFinalizado.genero),
+      where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
+      where("categoria", "==", partidoFinalizado.categoria),
+      where("grupo", "==", partidoFinalizado.grupo)
+    );
+
+    const snapshot = await getDocs(q);
+    const todosLosPartidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Filtrar partidos de ida y vuelta finalizados
+    const partidosIdaVuelta = todosLosPartidos.filter(p => 
+      (p.fase === "ida" || p.fase === "vuelta") && p.estado === "finalizado"
+    );
+
+    // Si ambos partidos (ida y vuelta) están finalizados
+    if (partidosIdaVuelta.length === 2) {
+      const partidoIda = partidosIdaVuelta.find(p => p.fase === "ida");
+      const partidoVuelta = partidosIdaVuelta.find(p => p.fase === "vuelta");
+
+      if (partidoIda && partidoVuelta) {
+        // Calcular resultado agregado
+        const resultadoAgregado = calcularResultadoAgregado(partidoIda, partidoVuelta);
+        
+        if (resultadoAgregado.empate) {
+          // Verificar si ya existe un partido de desempate
+          const desempateExistente = todosLosPartidos.find(p => p.fase === "desempate");
+          
+          if (!desempateExistente) {
+            console.log("⚖️ Empate detectado, generando partido de desempate...");
+            await generarPartidoDesempate(partidoIda, partidoVuelta);
+            
+            if (showToast && typeof showToast === 'function') {
+              showToast("⚖️ ¡Empate en ida y vuelta! Se generó partido de desempate automáticamente.", "info");
+            }
+          }
+        } else {
+          console.log("🏆 Ya hay un ganador en el resultado agregado, no se necesita desempate");
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error("Error al verificar desempate:", error);
+  }
+};
+
+// Función para calcular el resultado agregado de ida y vuelta
+const calcularResultadoAgregado = (partidoIda, partidoVuelta) => {
+  // Identificar qué equipos jugaron (pueden estar en diferente orden)
+  const equipoAOriginal = `${partidoIda.equipoA.curso} ${partidoIda.equipoA.paralelo}`;
+  const equipoBOriginal = `${partidoIda.equipoB.curso} ${partidoIda.equipoB.paralelo}`;
+  
+  const equipoAVuelta = `${partidoVuelta.equipoA.curso} ${partidoVuelta.equipoA.paralelo}`;
+  const equipoBVuelta = `${partidoVuelta.equipoB.curso} ${partidoVuelta.equipoB.paralelo}`;
+
+  let golesEquipoA = 0;
+  let golesEquipoB = 0;
+
+  // Sumar goles del partido de ida
+  golesEquipoA += partidoIda.marcadorA || 0;
+  golesEquipoB += partidoIda.marcadorB || 0;
+
+  // Sumar goles del partido de vuelta (considerando que pueden estar intercambiados)
+  if (equipoAOriginal === equipoAVuelta) {
+    // Mismo orden
+    golesEquipoA += partidoVuelta.marcadorA || 0;
+    golesEquipoB += partidoVuelta.marcadorB || 0;
+  } else {
+    // Orden intercambiado
+    golesEquipoA += partidoVuelta.marcadorB || 0;
+    golesEquipoB += partidoVuelta.marcadorA || 0;
+  }
+
+  console.log(`📊 Resultado agregado: ${equipoAOriginal}: ${golesEquipoA}, ${equipoBOriginal}: ${golesEquipoB}`);
+
+  return {
+    equipoA: equipoAOriginal,
+    equipoB: equipoBOriginal,
+    golesA: golesEquipoA,
+    golesB: golesEquipoB,
+    empate: golesEquipoA === golesEquipoB
+  };
+};
+
+// Función para generar partido de desempate
+const generarPartidoDesempate = async (partidoIda, partidoVuelta) => {
+  try {
+    const { addDoc, collection } = await import("firebase/firestore");
+    const { db } = await import("../firebase/config");
+
+    // Usar los equipos del partido de ida en su orden original
+    await addDoc(collection(db, "matches"), {
+      equipoA: partidoIda.equipoA,
+      equipoB: partidoIda.equipoB,
+      grupo: partidoIda.grupo,
+      fase: "desempate",
+      estado: "programado",
+      disciplina: partidoIda.disciplina,
+      categoria: partidoIda.categoria,
+      genero: partidoIda.genero,
+      nivelEducacional: partidoIda.nivelEducacional,
+      marcadorA: 0,
+      marcadorB: 0,
+      fecha: "",
+      hora: "",
+      goleadoresA: [],
+      goleadoresB: [],
+      observaciones: "Partido de desempate generado automáticamente por empate en ida y vuelta"
+    });
+
+    console.log("⚖️ Partido de desempate generado exitosamente");
+
+  } catch (error) {
+    console.error("Error al generar partido de desempate:", error);
+  }
+};
+
+// Función para verificar y generar semifinales para múltiples grupos
+const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, showToast) => {
+  try {
+    // Solo procesar si el partido es de fase de grupos
+    if (partidoFinalizado.fase !== "grupos" && partidoFinalizado.fase) {
+      console.log("🔍 Partido no es de grupos, saltando verificación de semifinales");
+      return;
+    }
+
+    console.log("🔍 Verificando si se necesitan generar semifinales para múltiples grupos...");
+    
+    // Validar que todos los campos necesarios estén presentes
+    const camposRequeridos = ['disciplina', 'genero', 'nivelEducacional', 'categoria'];
+    const camposFaltantes = camposRequeridos.filter(campo => !partidoFinalizado[campo]);
+    
+    if (camposFaltantes.length > 0) {
+      console.log(`❌ Campos faltantes en partidoFinalizado: ${camposFaltantes.join(', ')}`);
+      console.log("📋 Datos del partido:", partidoFinalizado);
+      return;
+    }
+
+    console.log(`✅ Campos validados - Disciplina: ${partidoFinalizado.disciplina}, Género: ${partidoFinalizado.genero}, Nivel: ${partidoFinalizado.nivelEducacional}, Categoría: ${partidoFinalizado.categoria}`);
+
+    // Obtener todos los partidos de la misma categoría
+    const { getDocs, query, collection, where } = await import("firebase/firestore");
+    const { db } = await import("../firebase/config");
+
+    const q = query(
+      collection(db, "matches"),
+      where("disciplina", "==", partidoFinalizado.disciplina),
+      where("genero", "==", partidoFinalizado.genero),
+      where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
+      where("categoria", "==", partidoFinalizado.categoria)
+    );
+
+    const snapshot = await getDocs(q);
+    const todosLosPartidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Filtrar solo partidos de grupos
+    const partidosGrupos = todosLosPartidos.filter(p => 
+      p.fase === "grupos" || !p.fase
+    );
+
+    // Verificar si ya existen semifinales
+    const semifinalesExistentes = todosLosPartidos.filter(p => p.fase === "semifinal");
+    if (semifinalesExistentes.length > 0) {
+      console.log("🏆 Ya existen semifinales, no se generan nuevas");
+      return;
+    }
+
+    // Agrupar partidos por grupo
+    const partidosPorGrupo = {};
+    partidosGrupos.forEach(partido => {
+      const grupo = partido.grupo;
+      if (!partidosPorGrupo[grupo]) {
+        partidosPorGrupo[grupo] = [];
+      }
+      partidosPorGrupo[grupo].push(partido);
+    });
+
+    const grupos = Object.keys(partidosPorGrupo);
+    console.log(`📊 Grupos encontrados: ${grupos.length} - ${grupos.join(', ')}`);
+
+    // Solo proceder si hay múltiples grupos (2 o más)
+    if (grupos.length < 2) {
+      console.log("🔍 Solo hay un grupo o ninguno, no se necesitan semifinales entre grupos");
+      return;
+    }
+
+    // Verificar que TODOS los grupos estén completos
+    let todosGruposCompletos = true;
+    const equiposPorGrupo = {};
+
+    for (const grupo of grupos) {
+      const partidosGrupo = partidosPorGrupo[grupo];
+      const partidosFinalizados = partidosGrupo.filter(p => p.estado === "finalizado");
+      
+      // Obtener equipos únicos del grupo
+      const equiposGrupo = new Set();
+      partidosGrupo.forEach(partido => {
+        equiposGrupo.add(`${partido.equipoA.curso} ${partido.equipoA.paralelo}`);
+        equiposGrupo.add(`${partido.equipoB.curso} ${partido.equipoB.paralelo}`);
+      });
+      
+      const numEquipos = equiposGrupo.size;
+      const partidosEsperados = (numEquipos * (numEquipos - 1)) / 2; // Combinaciones n(n-1)/2
+      
+      console.log(`📋 Grupo ${grupo}: ${partidosFinalizados.length}/${partidosEsperados} partidos finalizados (${numEquipos} equipos)`);
+      
+      if (partidosFinalizados.length < partidosEsperados) {
+        console.log(`⏳ Grupo ${grupo} aún no está completo`);
+        todosGruposCompletos = false;
+        break;
+      }
+
+      // Obtener clasificación del grupo
+      equiposPorGrupo[grupo] = {
+        equipos: Array.from(equiposGrupo),
+        partidos: partidosGrupo,
+        clasificacion: calcularClasificacionGrupo(partidosGrupo, Array.from(equiposGrupo))
+      };
+    }
+
+    if (!todosGruposCompletos) {
+      console.log("⏳ No todos los grupos están completos, esperando...");
+      return;
+    }
+
+    console.log("🎯 ¡TODOS LOS GRUPOS ESTÁN COMPLETOS! Generando semifinales...");
+
+    // Generar semifinales cruzadas
+    await generarSemifinalesCruzadasMultiplesGrupos(equiposPorGrupo, partidoFinalizado, showToast);
+
+  } catch (error) {
+    console.error("Error al verificar semifinales múltiples grupos:", error);
+  }
+};
+
+// Función para calcular la clasificación de un grupo
+const calcularClasificacionGrupo = (partidos, equipos) => {
+  const stats = {};
+  
+  // Inicializar estadísticas
+  equipos.forEach(equipo => {
+    stats[equipo] = {
+      nombre: equipo,
+      puntos: 0,
+      goles_favor: 0,
+      goles_contra: 0,
+      diferencia: 0,
+      partidos_jugados: 0,
+      victorias: 0,
+      empates: 0,
+      derrotas: 0
+    };
+  });
+
+  // Calcular estadísticas de partidos finalizados
+  partidos
+    .filter(partido => partido.estado === "finalizado")
+    .forEach(partido => {
+      const equipoA = `${partido.equipoA.curso} ${partido.equipoA.paralelo}`;
+      const equipoB = `${partido.equipoB.curso} ${partido.equipoB.paralelo}`;
+      const golesA = partido.marcadorA || 0;
+      const golesB = partido.marcadorB || 0;
+
+      if (stats[equipoA] && stats[equipoB]) {
+        // Actualizar estadísticas equipo A
+        stats[equipoA].goles_favor += golesA;
+        stats[equipoA].goles_contra += golesB;
+        stats[equipoA].partidos_jugados++;
+
+        // Actualizar estadísticas equipo B
+        stats[equipoB].goles_favor += golesB;
+        stats[equipoB].goles_contra += golesA;
+        stats[equipoB].partidos_jugados++;
+
+        // Determinar resultado
+        if (golesA > golesB) {
+          stats[equipoA].puntos += 3;
+          stats[equipoA].victorias++;
+          stats[equipoB].derrotas++;
+        } else if (golesB > golesA) {
+          stats[equipoB].puntos += 3;
+          stats[equipoB].victorias++;
+          stats[equipoA].derrotas++;
+        } else {
+          stats[equipoA].puntos += 1;
+          stats[equipoB].puntos += 1;
+          stats[equipoA].empates++;
+          stats[equipoB].empates++;
+        }
+      }
+    });
+
+  // Calcular diferencia de goles
+  Object.values(stats).forEach(equipo => {
+    equipo.diferencia = equipo.goles_favor - equipo.goles_contra;
+  });
+
+  // Ordenar por puntos, diferencia de goles, goles a favor
+  return Object.values(stats).sort((a, b) => {
+    if (b.puntos !== a.puntos) return b.puntos - a.puntos;
+    if (b.diferencia !== a.diferencia) return b.diferencia - a.diferencia;
+    return b.goles_favor - a.goles_favor;
+  });
+};
+
+// Función para generar semifinales cruzadas entre múltiples grupos
+const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partidoBase, showToast) => {
+  try {
+    const { addDoc, collection } = await import("firebase/firestore");
+    const { db } = await import("../firebase/config");
+
+    const grupos = Object.keys(equiposPorGrupo);
+    console.log(`🏆 Generando semifinales cruzadas para ${grupos.length} grupos`);
+
+    // Si son exactamente 2 grupos, hacer semifinales cruzadas
+    if (grupos.length === 2) {
+      const [grupo1, grupo2] = grupos;
+      const clasificacion1 = equiposPorGrupo[grupo1].clasificacion;
+      const clasificacion2 = equiposPorGrupo[grupo2].clasificacion;
+
+      console.log(`📊 Clasificación ${grupo1}:`, clasificacion1.map(e => `${e.nombre} (${e.puntos}pts)`));
+      console.log(`📊 Clasificación ${grupo2}:`, clasificacion2.map(e => `${e.nombre} (${e.puntos}pts)`));
+
+      // Tomar los primeros 2 de cada grupo (o todos si hay menos)
+      const clasificados1 = clasificacion1.slice(0, 2);
+      const clasificados2 = clasificacion2.slice(0, 2);
+
+      // Generar semifinales cruzadas: 1°A vs 2°B y 1°B vs 2°A
+      if (clasificados1.length >= 1 && clasificados2.length >= 1) {
+        // Semifinal 1: 1° del Grupo 1 vs 2° del Grupo 2 (si existe)
+        const equipo1_1 = clasificados1[0];
+        const equipo2_2 = clasificados2[1] || clasificados2[0]; // Si solo hay 1 clasificado del grupo 2
+
+        const [curso1_1, paralelo1_1] = equipo1_1.nombre.split(' ');
+        const [curso2_2, paralelo2_2] = equipo2_2.nombre.split(' ');
+
+        await addDoc(collection(db, "matches"), {
+          equipoA: {
+            curso: curso1_1,
+            paralelo: paralelo1_1,
+            genero: partidoBase.genero,
+            categoria: partidoBase.categoria,
+            nivelEducacional: partidoBase.nivelEducacional
+          },
+          equipoB: {
+            curso: curso2_2,
+            paralelo: paralelo2_2,
+            genero: partidoBase.genero,
+            categoria: partidoBase.categoria,
+            nivelEducacional: partidoBase.nivelEducacional
+          },
+          grupo: `Semifinales - ${partidoBase.categoria}`,
+          fase: "semifinal",
+          estado: "programado",
+          disciplina: partidoBase.disciplina,
+          categoria: partidoBase.categoria,
+          genero: partidoBase.genero,
+          nivelEducacional: partidoBase.nivelEducacional,
+          marcadorA: 0,
+          marcadorB: 0,
+          fecha: "",
+          hora: "",
+          goleadoresA: [],
+          goleadoresB: [],
+          observaciones: `Semifinal 1: 1° ${grupo1} vs 2° ${grupo2}`
+        });
+
+        console.log(`🏆 Semifinal 1 creada: ${equipo1_1.nombre} vs ${equipo2_2.nombre}`);
+      }
+
+      if (clasificados1.length >= 2 && clasificados2.length >= 1) {
+        // Semifinal 2: 1° del Grupo 2 vs 2° del Grupo 1
+        const equipo2_1 = clasificados2[0];
+        const equipo1_2 = clasificados1[1];
+
+        const [curso2_1, paralelo2_1] = equipo2_1.nombre.split(' ');
+        const [curso1_2, paralelo1_2] = equipo1_2.nombre.split(' ');
+
+        await addDoc(collection(db, "matches"), {
+          equipoA: {
+            curso: curso2_1,
+            paralelo: paralelo2_1,
+            genero: partidoBase.genero,
+            categoria: partidoBase.categoria,
+            nivelEducacional: partidoBase.nivelEducacional
+          },
+          equipoB: {
+            curso: curso1_2,
+            paralelo: paralelo1_2,
+            genero: partidoBase.genero,
+            categoria: partidoBase.categoria,
+            nivelEducacional: partidoBase.nivelEducacional
+          },
+          grupo: `Semifinales - ${partidoBase.categoria}`,
+          fase: "semifinal",
+          estado: "programado",
+          disciplina: partidoBase.disciplina,
+          categoria: partidoBase.categoria,
+          genero: partidoBase.genero,
+          nivelEducacional: partidoBase.nivelEducacional,
+          marcadorA: 0,
+          marcadorB: 0,
+          fecha: "",
+          hora: "",
+          goleadoresA: [],
+          goleadoresB: [],
+          observaciones: `Semifinal 2: 1° ${grupo2} vs 2° ${grupo1}`
+        });
+
+        console.log(`🏆 Semifinal 2 creada: ${equipo2_1.nombre} vs ${equipo1_2.nombre}`);
+      }
+
+      if (showToast && typeof showToast === 'function') {
+        showToast("🏆 ¡Semifinales generadas automáticamente! Los grupos están completos.", "success");
+      }
+
+      console.log("✅ Semifinales cruzadas generadas exitosamente");
+    } else {
+      console.log(`⚠️ Número de grupos no soportado para semifinales automáticas: ${grupos.length}`);
+    }
+
+  } catch (error) {
+    console.error("Error al generar semifinales cruzadas:", error);
+  }
+};
+
+// Función para verificar y generar final cuando se completan las semifinales
+const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToast) => {
+  try {
+    // Solo procesar si el partido es de semifinal
+    if (partidoFinalizado.fase !== "semifinal") {
+      console.log("🔍 Partido no es de semifinal, saltando verificación de final");
+      return;
+    }
+
+    console.log("🏆 Verificando si se debe generar final tras completar semifinal...");
+    
+    // Validar que todos los campos necesarios estén presentes
+    const camposRequeridos = ['disciplina', 'genero', 'nivelEducacional', 'categoria'];
+    const camposFaltantes = camposRequeridos.filter(campo => !partidoFinalizado[campo]);
+    
+    if (camposFaltantes.length > 0) {
+      console.log(`❌ Campos faltantes en partidoFinalizado: ${camposFaltantes.join(', ')}`);
+      return;
+    }
+
+    // Obtener todas las semifinales de la misma categoría
+    const { getDocs, query, collection, where, addDoc } = await import("firebase/firestore");
+    const { db } = await import("../firebase/config");
+
+    const qSemifinales = query(
+      collection(db, "matches"),
+      where("disciplina", "==", partidoFinalizado.disciplina),
+      where("genero", "==", partidoFinalizado.genero),
+      where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
+      where("categoria", "==", partidoFinalizado.categoria),
+      where("fase", "==", "semifinal")
+    );
+
+    const snapshotSemifinales = await getDocs(qSemifinales);
+    const semifinales = snapshotSemifinales.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    console.log(`🔍 Semifinales encontradas: ${semifinales.length}`, semifinales.map(s => ({
+      id: s.id,
+      estado: s.estado,
+      observaciones: s.observaciones,
+      marcadorA: s.marcadorA,
+      marcadorB: s.marcadorB
+    })));
+
+    // Verificar si todas las semifinales están finalizadas
+    const semifinalesFinalizadas = semifinales.filter(s => s.estado === "finalizado");
+    
+    if (semifinalesFinalizadas.length < 2) {
+      console.log(`⏳ Solo ${semifinalesFinalizadas.length}/2 semifinales finalizadas. Esperando...`);
+      return;
+    }
+
+    console.log(`✅ Todas las semifinales (${semifinalesFinalizadas.length}) están finalizadas. Generando final y tercer puesto...`);
+
+    // Verificar si ya existe una final para esta categoría
+    const qFinal = query(
+      collection(db, "matches"),
+      where("disciplina", "==", partidoFinalizado.disciplina),
+      where("genero", "==", partidoFinalizado.genero),
+      where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
+      where("categoria", "==", partidoFinalizado.categoria),
+      where("fase", "==", "final")
+    );
+
+    const snapshotFinal = await getDocs(qFinal);
+    if (!snapshotFinal.empty) {
+      console.log("🏆 Final ya existe para esta categoría");
+      return;
+    }
+
+    // Obtener ganadores y perdedores de semifinales
+    const resultadosSemifinales = semifinalesFinalizadas.map(semifinal => {
+      const ganador = semifinal.marcadorA > semifinal.marcadorB ? 
+        { equipo: semifinal.equipoA, marcador: semifinal.marcadorA } : 
+        { equipo: semifinal.equipoB, marcador: semifinal.marcadorB };
+      
+      const perdedor = semifinal.marcadorA > semifinal.marcadorB ? 
+        { equipo: semifinal.equipoB, marcador: semifinal.marcadorB } : 
+        { equipo: semifinal.equipoA, marcador: semifinal.marcadorA };
+
+      return { ganador, perdedor, semifinal };
+    });
+
+    console.log("🏆 Resultados semifinales:", resultadosSemifinales);
+
+    // Crear la final (ganador semifinal 1 vs ganador semifinal 2)
+    const finalData = {
+      disciplina: partidoFinalizado.disciplina,
+      categoria: partidoFinalizado.categoria,
+      genero: partidoFinalizado.genero,
+      nivelEducacional: partidoFinalizado.nivelEducacional,
+      fase: "final",
+      grupo: "", // Final no tiene grupo específico
+      equipoA: resultadosSemifinales[0].ganador.equipo,
+      equipoB: resultadosSemifinales[1].ganador.equipo,
+      fecha: "",
+      hora: "",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      goleadoresA: [],
+      goleadoresB: [],
+      observaciones: "Final generada automáticamente tras completar semifinales"
+    };
+
+    // Crear el tercer puesto (perdedor semifinal 1 vs perdedor semifinal 2)
+    const tercerPuestoData = {
+      disciplina: partidoFinalizado.disciplina,
+      categoria: partidoFinalizado.categoria,
+      genero: partidoFinalizado.genero,
+      nivelEducacional: partidoFinalizado.nivelEducacional,
+      fase: "tercerPuesto",
+      grupo: "", // Tercer puesto no tiene grupo específico
+      equipoA: resultadosSemifinales[0].perdedor.equipo,
+      equipoB: resultadosSemifinales[1].perdedor.equipo,
+      fecha: "",
+      hora: "",
+      estado: "programado",
+      marcadorA: 0,
+      marcadorB: 0,
+      goleadoresA: [],
+      goleadoresB: [],
+      observaciones: "Tercer puesto generado automáticamente tras completar semifinales"
+    };
+
+    // Guardar la final
+    await addDoc(collection(db, "matches"), finalData);
+    console.log("🏆 Final generada automáticamente");
+
+    // Guardar el tercer puesto
+    await addDoc(collection(db, "matches"), tercerPuestoData);
+    console.log("🥉 Tercer puesto generado automáticamente");
+
+    if (showToast && typeof showToast === 'function') {
+      showToast("🏆 Final y tercer puesto generados automáticamente tras completar semifinales", "success");
+    }
+
+  } catch (error) {
+    console.error("Error al generar final desde semifinales:", error);
+    if (showToast && typeof showToast === 'function') {
+      showToast("❌ Error al generar final automática", "error");
+    }
+  }
+};
+
+// Función exportada para que AdminMatchDetail pueda verificar fases finales
+export const verificarYGenerarFasesFinalesExterna = async (partidoFinalizado, showToast) => {
+  try {
+    console.log("🔄 Verificación externa de fases finales desde AdminMatchDetail");
+    console.log("🏆 Partido finalizado:", partidoFinalizado);
+    
+    // 1. Verificar si es necesario generar partido de desempate para ida/vuelta
+    await verificarYGenerarDesempate(partidoFinalizado, showToast);
+    
+    // 2. Verificar si es necesario generar semifinales para múltiples grupos
+    await verificarYGenerarSemifinalesMultiplesGrupos(partidoFinalizado, showToast);
+    
+    // 3. Verificar si es necesario generar final cuando se completan semifinales
+    await verificarYGenerarFinalDesdeSemifinales(partidoFinalizado, showToast);
+    
+    if (showToast && typeof showToast === 'function') {
+      showToast("✅ Partido finalizado. Se verificaron automáticamente todas las fases siguientes.", "info");
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error en verificación externa:", error);
+    if (showToast && typeof showToast === 'function') {
+      showToast("❌ Error al verificar fases automáticas", "error");
+    }
+    return false;
+  }
+};

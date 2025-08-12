@@ -111,6 +111,25 @@ export default function AdminBasquetMatchDetail() {
     fetchJugadores();
   }, [match]);
 
+  // Función para verificar si los equipos están definidos (no son TBD)
+  const equiposDefinidos = () => {
+    if (!match) return false;
+    
+    const equipoAEsValido = match.equipoA && 
+      match.equipoA.curso && 
+      !match.equipoA.curso.includes("TBD") &&
+      match.equipoA.paralelo &&
+      !match.equipoA.paralelo.includes("TBD");
+      
+    const equipoBEsValido = match.equipoB && 
+      match.equipoB.curso && 
+      !match.equipoB.curso.includes("TBD") &&
+      match.equipoB.paralelo &&
+      !match.equipoB.paralelo.includes("TBD");
+      
+    return equipoAEsValido && equipoBEsValido;
+  };
+
   // Función para anotar puntos
   const anotarPuntos = async (equipo) => {
     if (!jugadorInput.trim()) {
@@ -366,22 +385,31 @@ export default function AdminBasquetMatchDetail() {
       <div className="partido-controles">
         {(match.estado === "pendiente" || match.estado === "programado") && (
           <>
-            <button 
-              onClick={() => {
-                console.log("🏀 Botón Iniciar Partido clickeado");
-                console.log("🏀 Estado actual del partido:", match.estado);
-                console.log("🏀 Role del usuario:", localStorage.getItem('userRole'));
-                iniciarPartido();
-              }}
-              className="control-btn iniciar-btn"
-            >
-              <span className="btn-icon">▶️</span>
-              Iniciar Partido
-            </button>
-            <div className="basquet-privilege-info">
-              <span className="privilege-icon">🛡️</span>
-              <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
-            </div>
+            {equiposDefinidos() ? (
+              <>
+                <button 
+                  onClick={() => {
+                    console.log("🏀 Botón Iniciar Partido clickeado");
+                    console.log("🏀 Estado actual del partido:", match.estado);
+                    console.log("🏀 Role del usuario:", localStorage.getItem('userRole'));
+                    iniciarPartido();
+                  }}
+                  className="control-btn iniciar-btn"
+                >
+                  <span className="btn-icon">▶️</span>
+                  Iniciar Partido
+                </button>
+                <div className="basquet-privilege-info">
+                  <span className="privilege-icon">🛡️</span>
+                  <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
+                </div>
+              </>
+            ) : (
+              <div className="basquet-privilege-info">
+                <span className="privilege-icon">⏳</span>
+                <span className="privilege-text">Este partido no se puede iniciar hasta que se conozcan los equipos participantes</span>
+              </div>
+            )}
           </>
         )}
         

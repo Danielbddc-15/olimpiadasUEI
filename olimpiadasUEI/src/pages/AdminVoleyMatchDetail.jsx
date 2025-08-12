@@ -102,6 +102,25 @@ export default function AdminVoleyMatchDetail() {
     fetchJugadores();
   }, [match]);
 
+  // Función para verificar si los equipos están definidos (no son TBD)
+  const equiposDefinidos = () => {
+    if (!match) return false;
+    
+    const equipoAEsValido = match.equipoA && 
+      match.equipoA.curso && 
+      !match.equipoA.curso.includes("TBD") &&
+      match.equipoA.paralelo &&
+      !match.equipoA.paralelo.includes("TBD");
+      
+    const equipoBEsValido = match.equipoB && 
+      match.equipoB.curso && 
+      !match.equipoB.curso.includes("TBD") &&
+      match.equipoB.paralelo &&
+      !match.equipoB.paralelo.includes("TBD");
+      
+    return equipoAEsValido && equipoBEsValido;
+  };
+
   // Mapeo de fases para mostrar nombres legibles
   const fasesNombres = {
     "grupos1": "Fase de Grupos 1",
@@ -393,21 +412,30 @@ export default function AdminVoleyMatchDetail() {
         <div className="admin-status-actions">
           {(match.estado === "pendiente" || match.estado === "programado") && (
             <>
-              <button
-                onClick={() => {
-                  console.log("🚀 Botón Iniciar Partido clickeado");
-                  console.log("🚀 Estado actual del partido:", match.estado);
-                  console.log("🚀 Role del usuario:", localStorage.getItem('userRole'));
-                  cambiarEstadoPartido("en curso");
-                }}
-                className="admin-btn admin-btn-start"
-              >
-                🚀 Iniciar Partido
-              </button>
-              <div className="admin-privilege-info">
-                <span className="privilege-icon">🛡️</span>
-                <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
-              </div>
+              {equiposDefinidos() ? (
+                <>
+                  <button
+                    onClick={() => {
+                      console.log("🚀 Botón Iniciar Partido clickeado");
+                      console.log("🚀 Estado actual del partido:", match.estado);
+                      console.log("🚀 Role del usuario:", localStorage.getItem('userRole'));
+                      cambiarEstadoPartido("en curso");
+                    }}
+                    className="admin-btn admin-btn-start"
+                  >
+                    🚀 Iniciar Partido
+                  </button>
+                  <div className="admin-privilege-info">
+                    <span className="privilege-icon">🛡️</span>
+                    <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
+                  </div>
+                </>
+              ) : (
+                <div className="admin-privilege-info">
+                  <span className="privilege-icon">⏳</span>
+                  <span className="privilege-text">Este partido no se puede iniciar hasta que se conozcan los equipos participantes</span>
+                </div>
+              )}
             </>
           )}
           {match.estado === "en curso" && (

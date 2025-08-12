@@ -388,10 +388,237 @@ export default function AdminStandings() {
         console.log(`Fases existentes para ${grupo}:`, Array.from(fasesExistentes));
         
         // ⚠️  SISTEMA LEGACY DESHABILITADO - Ahora se usa generación automática centralizada
-        // La generación automática de fases finales se maneja desde:
-        // - AdminMatches.jsx (verificarYGenerarFasesFinalesPostPartidoConEstado) 
-        // - AdminMatchDetail.jsx (generarFasesFinalesAutomaticas)
-        console.log(`✅ Sistema legacy deshabilitado para ${grupo} - generación automática centralizada activa`);
+        // Verificar si todos los equipos tienen al menos 2 partidos jugados y finalizados
+        const todosConDosPartidos = standings.every(team => team.pj >= 2);
+        
+        console.log(`${grupo}: Todos con 2+ partidos: ${todosConDosPartidos} - Sistema legacy deshabilitado`);
+        
+        // FASE 2 (grupos3): DESHABILITADO - Se genera automáticamente desde AdminMatches/AdminMatchDetail
+        // SISTEMA LEGACY COMPLETAMENTE DESHABILITADO
+        /*
+        if (todosConDosPartidos && !fasesExistentes.has('grupos3')) {
+          console.log(`Generando grupos3 para ${grupo} - enfrentamientos por posición en tabla`);
+          
+          // Verificar que todos los equipos existen en la base de datos
+          const equiposValidados = [];
+          for (const team of standings) {
+            const equipoExiste = equipos.find(eq => 
+              `${eq.curso} ${eq.paralelo}` === team.nombre && eq.grupo === grupo
+            );
+            if (equipoExiste) {
+              equiposValidados.push(team);
+            } else {
+              console.warn(`Equipo no encontrado en BD: ${team.nombre} del ${grupo}`);
+            }
+          }
+          
+          console.log(`Equipos validados para ${grupo}:`, equiposValidados.map(t => t.nombre));
+          
+          // Generar enfrentamientos según posición: 1vs2, 3vs4, 5vs6, etc.
+          const emparejamientos = [];
+          for (let i = 0; i < equiposValidados.length - 1; i += 2) {
+            if (equiposValidados[i + 1]) { // Verificar que existe el segundo equipo
+              emparejamientos.push([i, i + 1]);
+            }
+          }
+          
+          console.log(`Emparejamientos para ${grupo}:`, emparejamientos.map(([a, b]) => 
+            `${equiposValidados[a]?.nombre} vs ${equiposValidados[b]?.nombre}`
+          ));
+          
+          for (const [idxA, idxB] of emparejamientos) {
+            const equipoA = equiposValidados[idxA];
+            const equipoB = equiposValidados[idxB];
+            if (!equipoA || !equipoB) continue;
+            
+            // Doble verificación: que el partido no exista ya
+            const partidoExiste = matches.some(m => 
+              m.grupo === grupo && 
+              m.fase === 'grupos3' &&
+              ((m.equipoA.curso === equipoA.nombre.split(" ")[0] && 
+                m.equipoA.paralelo === equipoA.nombre.split(" ")[1] &&
+                m.equipoB.curso === equipoB.nombre.split(" ")[0] && 
+                m.equipoB.paralelo === equipoB.nombre.split(" ")[1]) ||
+               (m.equipoA.curso === equipoB.nombre.split(" ")[0] && 
+                m.equipoA.paralelo === equipoB.nombre.split(" ")[1] &&
+                m.equipoB.curso === equipoA.nombre.split(" ")[0] && 
+                m.equipoB.paralelo === equipoA.nombre.split(" ")[1]))
+            );
+            
+            if (!partidoExiste) {
+              await addDoc(collection(db, "matches"), {
+                equipoA: { 
+                  curso: equipoA.nombre.split(" ")[0], 
+                  paralelo: equipoA.nombre.split(" ")[1] 
+                },
+                equipoB: { 
+                  curso: equipoB.nombre.split(" ")[0], 
+                  paralelo: equipoB.nombre.split(" ")[1] 
+                },
+                disciplina: discipline,
+                marcadorA: 0,
+                marcadorB: 0,
+                estado: "pendiente",
+                fecha: null,
+                hora: null,
+                grupo: grupo,
+                fase: "grupos3",
+                goleadoresA: [],
+                goleadoresB: [],
+              });
+            }
+          }
+        }
+        */
+        
+        // SEMIFINALES: DESHABILITADO - Se genera automáticamente desde AdminMatches/AdminMatchDetail
+        /*
+        const partidosGrupos3 = partidosGrupo.filter(m => m.fase === 'grupos3' && m.estado === 'finalizado');
+        const totalPartidosGrupos3Esperados = Math.floor(standings.length / 2);
+        
+        if (partidosGrupos3.length >= totalPartidosGrupos3Esperados && !fasesExistentes.has('semifinal')) {
+        */
+          // Solo los 4 primeros equipos pasan a semifinales
+          const equiposClasificados = standings.slice(0, 4);
+          
+          // Validar que los equipos clasificados existen en la base de datos
+          const equiposClasificadosValidados = [];
+          for (const team of equiposClasificados) {
+            const equipoExiste = equipos.find(eq => 
+              `${eq.curso} ${eq.paralelo}` === team.nombre && eq.grupo === grupo
+            );
+            if (equipoExiste) {
+              equiposClasificadosValidados.push(team);
+            } else {
+              console.warn(`Equipo clasificado no encontrado en BD: ${team.nombre} del ${grupo}`);
+            }
+          }
+          
+          console.log(`Generando semifinales para ${grupo} con los 4 primeros validados:`, 
+            equiposClasificadosValidados.map(t => t.nombre)
+          );
+          
+          if (equiposClasificadosValidados.length >= 4) {
+            // Semifinales: 1vs4 y 2vs3
+            const emparejamientosSemi = [[0, 3], [1, 2]];
+            
+            for (const [idxA, idxB] of emparejamientosSemi) {
+              const equipoA = equiposClasificadosValidados[idxA];
+              const equipoB = equiposClasificadosValidados[idxB];
+              if (!equipoA || !equipoB) continue;
+              
+              // Verificar que el partido de semifinal no exista ya
+              const semiExiste = matches.some(m => 
+                m.grupo === grupo && 
+                m.fase === 'semifinal' &&
+                ((m.equipoA.curso === equipoA.nombre.split(" ")[0] && 
+                  m.equipoA.paralelo === equipoA.nombre.split(" ")[1] &&
+                  m.equipoB.curso === equipoB.nombre.split(" ")[0] && 
+                  m.equipoB.paralelo === equipoB.nombre.split(" ")[1]) ||
+                 (m.equipoA.curso === equipoB.nombre.split(" ")[0] && 
+                  m.equipoA.paralelo === equipoB.nombre.split(" ")[1] &&
+                  m.equipoB.curso === equipoA.nombre.split(" ")[0] && 
+                  m.equipoB.paralelo === equipoA.nombre.split(" ")[1]))
+              );
+              
+              if (!semiExiste) {
+                await addDoc(collection(db, "matches"), {
+                  equipoA: { 
+                    curso: equipoA.nombre.split(" ")[0], 
+                    paralelo: equipoA.nombre.split(" ")[1] 
+                  },
+                  equipoB: { 
+                    curso: equipoB.nombre.split(" ")[0], 
+                    paralelo: equipoB.nombre.split(" ")[1] 
+                  },
+                  disciplina: discipline,
+                  marcadorA: 0,
+                  marcadorB: 0,
+                  estado: "pendiente",
+                  fecha: null,
+                  hora: null,
+                  grupo: grupo,
+                  fase: "semifinal",
+                  goleadoresA: [],
+                  goleadoresB: [],
+                });
+              }
+            }
+          }
+        }
+        
+        // FINAL: Ganadores de semifinales
+        const partidosSemi = partidosGrupo.filter(m => m.fase === 'semifinal' && m.estado === 'finalizado');
+        if (partidosSemi.length >= 2 && !fasesExistentes.has('final')) {
+          // Obtener ganadores de semifinales
+          const ganadoresSemi = partidosSemi.map(match => {
+            if (match.marcadorA > match.marcadorB) {
+              return `${match.equipoA.curso} ${match.equipoA.paralelo}`;
+            } else {
+              return `${match.equipoB.curso} ${match.equipoB.paralelo}`;
+            }
+          });
+          
+          console.log(`Generando final para ${grupo} con finalistas:`, ganadoresSemi);
+          
+          if (ganadoresSemi.length >= 2) {
+            // Validar que ambos finalistas existen en la base de datos
+            const equipoA = standings.find(t => t.nombre === ganadoresSemi[0]);
+            const equipoB = standings.find(t => t.nombre === ganadoresSemi[1]);
+            
+            const equipoAExiste = equipoA && equipos.find(eq => 
+              `${eq.curso} ${eq.paralelo}` === equipoA.nombre && eq.grupo === grupo
+            );
+            const equipoBExiste = equipoB && equipos.find(eq => 
+              `${eq.curso} ${eq.paralelo}` === equipoB.nombre && eq.grupo === grupo
+            );
+            
+            if (equipoAExiste && equipoBExiste) {
+              // Verificar que el partido de final no exista ya
+              const finalExiste = matches.some(m => 
+                m.grupo === grupo && 
+                m.fase === 'final' &&
+                ((m.equipoA.curso === equipoA.nombre.split(" ")[0] && 
+                  m.equipoA.paralelo === equipoA.nombre.split(" ")[1] &&
+                  m.equipoB.curso === equipoB.nombre.split(" ")[0] && 
+                  m.equipoB.paralelo === equipoB.nombre.split(" ")[1]) ||
+                 (m.equipoA.curso === equipoB.nombre.split(" ")[0] && 
+                  m.equipoA.paralelo === equipoB.nombre.split(" ")[1] &&
+                  m.equipoB.curso === equipoA.nombre.split(" ")[0] && 
+                  m.equipoB.paralelo === equipoA.nombre.split(" ")[1]))
+              );
+              
+              if (!finalExiste) {
+                await addDoc(collection(db, "matches"), {
+                  equipoA: { 
+                    curso: equipoA.nombre.split(" ")[0], 
+                    paralelo: equipoA.nombre.split(" ")[1] 
+                  },
+                  equipoB: { 
+                    curso: equipoB.nombre.split(" ")[0], 
+                    paralelo: equipoB.nombre.split(" ")[1] 
+                  },
+                  disciplina: discipline,
+                  marcadorA: 0,
+                  marcadorB: 0,
+                  estado: "pendiente",
+                  fecha: null,
+                  hora: null,
+                  grupo: grupo,
+                  fase: "final",
+                  goleadoresA: [],
+                  goleadoresB: [],
+                });
+              }
+            } else {
+              console.warn(`Finalistas no válidos para ${grupo}:`, ganadoresSemi);
+            }
+          }
+        }
+        */
+        
+        // ✅ Sistema legacy deshabilitado - generación automática centralizada activa
+        console.log(`Sistema legacy deshabilitado para ${grupo} - generación automática desde AdminMatches/AdminMatchDetail activa`);
       }
     });
   }, [matches, equipos, discipline, filtroGenero, filtroCategoria]);
