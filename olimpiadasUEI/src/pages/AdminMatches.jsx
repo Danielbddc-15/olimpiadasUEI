@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { db } from "../firebase/config";
 import {
   collection,
@@ -1059,24 +1059,27 @@ export default function AdminMatches() {
         >
           ← Volver al Panel
         </button>
-        <button 
+        <button
           className="nav-button equipos"
-          onClick={() => navigate(`/admin/equipos?discipline=${discipline}`)}
+          onClick={() => navigate(`/admin/${discipline}/equipos`)}
         >
           📋 Equipos
         </button>
-        <button className="nav-button partidos">
+        <button
+          className="nav-button partidos"
+          onClick={() => navigate(`/admin/${discipline}/partidos`)}
+        >
           ⚽ Partidos
         </button>
-        <button 
+        <button
           className="nav-button posiciones"
-          onClick={() => navigate(`/admin/posiciones?discipline=${discipline}`)}
+          onClick={() => navigate(`/admin/${discipline}/tabla`)}
         >
           🏆 Posiciones
         </button>
-        <button 
+        <button
           className="nav-button horarios"
-          onClick={() => navigate(`/admin/horarios?discipline=${discipline}`)}
+          onClick={() => navigate(`/admin/${discipline}/horarios`)}
         >
           📅 Horarios
         </button>
@@ -1308,10 +1311,12 @@ export default function AdminMatches() {
                             {match.fase === "ida" ? "IDA" :
                              match.fase === "vuelta" ? "VUELTA" :
                              match.fase === "desempate" ? "DESEMPATE" :
-                             match.fase === "semifinal" ? "SEMIFINAL" :
-                             match.fase === "final" ? "FINAL" :
+                             match.fase === "semifinal" || match.fase === "semifinales" ? "SEMIFINAL" :
+                             match.fase === "final" || match.fase === "finales" ? "FINAL" :
                              (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") ? "3ER PUESTO" :
-                             "GRUPOS"}
+                             match.fase === "grupos3" ? "FASE DE GRUPOS" :
+                             match.fase === "grupos2" ? "FASE DE GRUPOS" :
+                             "FASE DE GRUPOS"}
                           </span>
                           <span className={`partido-estado ${match.estado?.toUpperCase() || 'PROGRAMADO'}`}>
                             {match.estado || 'PROGRAMADO'}
@@ -1330,21 +1335,24 @@ export default function AdminMatches() {
                           </div>
                         </div>
                         
-                        <div style={{ textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#666' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
                           {match.fecha} {match.hora}
                         </div>
                         
                         <div className="partido-actions">
-                          <button 
+                          <button
                             onClick={() => navegarADetalle(match.id)}
-                            style={{ 
+                            style={{
                               flex: 1,
-                              padding: '8px 12px', 
-                              backgroundColor: '#007bff', 
-                              color: 'white', 
-                              border: 'none', 
-                              borderRadius: '5px', 
-                              cursor: 'pointer' 
+                              padding: '6px 12px',
+                              backgroundColor: '#667eea',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              transition: 'all 0.3s ease'
                             }}
                           >
                             Ver Detalle
@@ -1613,7 +1621,7 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
       return;
     }
 
-    console.log(`✅ Campos validados - Disciplina: ${partidoFinalizado.disciplina}, Género: ${partidoFinalizado.genero}, Nivel: ${partidoFinalizado.nivelEducacional}, Categoría: ${partidoFinalizado.categoria}`);
+    console.log(`✅ Campos validados - Disciplina: ${partidoFinalizado.disciplina}, G��nero: ${partidoFinalizado.genero}, Nivel: ${partidoFinalizado.nivelEducacional}, Categoría: ${partidoFinalizado.categoria}`);
 
     // Obtener todos los partidos de la misma categoría
     const { getDocs, query, collection, where } = await import("firebase/firestore");
@@ -1804,7 +1812,7 @@ const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partid
 
       // Generar semifinales cruzadas: 1°A vs 2°B y 1°B vs 2°A
       if (clasificados1.length >= 1 && clasificados2.length >= 1) {
-        // Semifinal 1: 1° del Grupo 1 vs 2° del Grupo 2 (si existe)
+        // Semifinal 1: 1�� del Grupo 1 vs 2° del Grupo 2 (si existe)
         const equipo1_1 = clasificados1[0];
         const equipo2_2 = clasificados2[1] || clasificados2[0]; // Si solo hay 1 clasificado del grupo 2
 

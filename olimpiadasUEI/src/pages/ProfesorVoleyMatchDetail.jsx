@@ -145,45 +145,20 @@ export default function ProfesorVoleyMatchDetail() {
     return reglasJuego.puntosPorSet[setIndex] || (esFinal ? 5 : 20);
   };
 
-  // Validar si se puede iniciar el partido (solo para profesores)
+  // Validar si se puede iniciar el partido (sin restricciones para profesores)
   const puedeIniciarPartido = () => {
     const userRole = localStorage.getItem('userRole');
     
-    // Si es admin, puede iniciar siempre
-    if (userRole === 'admin') {
+    // Tanto admin como profesor pueden iniciar cualquier partido
+    if (userRole === 'admin' || userRole === 'profesor') {
       return { puede: true, mensaje: '' };
     }
     
-    // Para profesores, validar hora
+    // Para otros roles (usuarios públicos, etc.), aplicar restricciones básicas
     if (!match.fecha || !match.hora) {
       return { 
         puede: false, 
-        mensaje: 'Este partido no tiene fecha y hora programada. Solo un administrador puede iniciarlo.' 
-      };
-    }
-    
-    // Crear fecha del partido
-    const fechaPartido = new Date(`${match.fecha}T${match.hora}`);
-    const ahora = new Date();
-    
-    // Calcular diferencia en minutos
-    const diferenciaMinutos = (fechaPartido.getTime() - ahora.getTime()) / (1000 * 60);
-    
-    // Permitir iniciar 30 minutos antes del partido
-    if (diferenciaMinutos > 30) {
-      const horasRestantes = Math.floor(diferenciaMinutos / 60);
-      const minutosRestantes = Math.floor(diferenciaMinutos % 60);
-      return { 
-        puede: false, 
-        mensaje: `Solo puedes iniciar el partido 30 minutos antes de la hora programada. Tiempo restante: ${horasRestantes}h ${minutosRestantes}m` 
-      };
-    }
-    
-    // Si ya pasó mucho tiempo (más de 2 horas después), también restringir
-    if (diferenciaMinutos < -120) {
-      return { 
-        puede: false, 
-        mensaje: 'Este partido debió haberse jugado hace más de 2 horas. Contacta a un administrador.' 
+        mensaje: 'Este partido no tiene fecha y hora programada.' 
       };
     }
     

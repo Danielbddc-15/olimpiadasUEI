@@ -23,6 +23,24 @@ export default function AdminHorarios() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
 
+  // Estados de filtros
+  const [filtroGenero, setFiltroGenero] = useState(() => {
+    return localStorage.getItem(`olimpiadas_horarios_filtro_genero_${discipline}`) || "";
+  });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem(`olimpiadas_horarios_filtro_nivel_educacional_${discipline}`) || "";
+  });
+  const [filtroCategoria, setFiltroCategoria] = useState(() => {
+    return localStorage.getItem(`olimpiadas_horarios_filtro_categoria_${discipline}`) || "";
+  });
+  const [faseActiva, setFaseActiva] = useState(() => {
+    return localStorage.getItem(`olimpiadas_horarios_fase_activa_${discipline}`) || "todas";
+  });
+
+  // Estados para datos de los filtros
+  const [equipos, setEquipos] = useState([]);
+  const [filteredMatches, setFilteredMatches] = useState([]);
+
   // Funciones de navegación
   const goToTeams = () => {
     navigate(`/admin/${discipline}/equipos`);
@@ -65,6 +83,25 @@ export default function AdminHorarios() {
     '16:15'
   ];
 
+  // Cargar equipos para filtros
+  useEffect(() => {
+    const fetchEquipos = async () => {
+      try {
+        const q = query(
+          collection(db, "equipos"),
+          where("disciplina", "==", discipline)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setEquipos(data);
+      } catch (error) {
+        console.error("Error cargando equipos:", error);
+      }
+    };
+
+    fetchEquipos();
+  }, [discipline]);
+
   // Obtener partidos en tiempo real
   useEffect(() => {
     setLoading(true);
@@ -73,7 +110,7 @@ export default function AdminHorarios() {
       where("disciplina", "==", discipline),
       where("estado", "in", ["pendiente", "programado"])
     );
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       try {
         const data = snapshot.docs.map((doc) => ({
@@ -87,13 +124,69 @@ export default function AdminHorarios() {
         setLoading(false);
       }
     });
-    
+
     return () => unsubscribe();
   }, [discipline]);
 
+  // Aplicar filtros a los partidos
+  useEffect(() => {
+    let filtered = matches;
+
+    // Filtro por género
+    if (filtroGenero) {
+      filtered = filtered.filter((partido) => {
+        const equipoA = equipos.find(
+          (eq) => eq.curso === partido.equipoA.curso && eq.paralelo === partido.equipoA.paralelo
+        );
+        const equipoB = equipos.find(
+          (eq) => eq.curso === partido.equipoB.curso && eq.paralelo === partido.equipoB.paralelo
+        );
+        return (equipoA && equipoA.genero === filtroGenero) || (equipoB && equipoB.genero === filtroGenero);
+      });
+    }
+
+    // Filtro por nivel educacional
+    if (filtroNivelEducacional) {
+      filtered = filtered.filter((partido) => {
+        const equipoA = equipos.find(
+          (eq) => eq.curso === partido.equipoA.curso && eq.paralelo === partido.equipoA.paralelo
+        );
+        const equipoB = equipos.find(
+          (eq) => eq.curso === partido.equipoB.curso && eq.paralelo === partido.equipoB.paralelo
+        );
+        return (equipoA && equipoA.nivelEducacional === filtroNivelEducacional) ||
+               (equipoB && equipoB.nivelEducacional === filtroNivelEducacional);
+      });
+    }
+
+    // Filtro por categoría
+    if (filtroCategoria) {
+      filtered = filtered.filter((partido) => {
+        const equipoA = equipos.find(
+          (eq) => eq.curso === partido.equipoA.curso && eq.paralelo === partido.equipoA.paralelo
+        );
+        const equipoB = equipos.find(
+          (eq) => eq.curso === partido.equipoB.curso && eq.paralelo === partido.equipoB.paralelo
+        );
+        return (equipoA && equipoA.categoria === filtroCategoria) ||
+               (equipoB && equipoB.categoria === filtroCategoria);
+      });
+    }
+
+    // Filtro por fase
+    if (faseActiva !== "todas") {
+      filtered = filtered.filter((partido) => {
+        const fase = partido.fase || "grupos1";
+        return fase === faseActiva;
+      });
+    }
+
+    setFilteredMatches(filtered);
+  }, [matches, equipos, filtroGenero, filtroNivelEducacional, filtroCategoria, faseActiva]);
+
   // Organizar partidos por horarios
   useEffect(() => {
-    if (matches.length === 0) return;
+    if (filteredMatches.length === 0) return;
 
     const horarios = {};
     
@@ -106,7 +199,7 @@ export default function AdminHorarios() {
     });
 
     // Colocar partidos que ya tienen fecha y hora asignada
-    matches.forEach(partido => {
+    filteredMatches.forEach(partido => {
       if (partido.fecha && partido.hora) {
         const dia = partido.fecha;
         const hora = partido.hora;
@@ -121,7 +214,7 @@ export default function AdminHorarios() {
     });
 
     // Colocar partidos sin asignar automáticamente
-    const partidosSinAsignar = matches.filter(m => !m.fecha || !m.hora);
+    const partidosSinAsignar = filteredMatches.filter(m => !m.fecha || !m.hora);
     
     let diaIndex = 0;
     let horaIndex = 0;
@@ -194,7 +287,61 @@ export default function AdminHorarios() {
     });
 
     setHorariosPorDia(horarios);
-  }, [matches]);
+  }, [filteredMatches]);
+
+  // Funciones de filtros
+  const limpiarFiltros = () => {
+    setFiltroGenero("");
+    setFiltroNivelEducacional("");
+    setFiltroCategoria("");
+    setFaseActiva("todas");
+
+    localStorage.removeItem(`olimpiadas_horarios_filtro_genero_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_filtro_nivel_educacional_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_filtro_categoria_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_fase_activa_${discipline}`);
+  };
+
+  // Guardar filtros en localStorage
+  useEffect(() => {
+    if (filtroGenero) {
+      localStorage.setItem(`olimpiadas_horarios_filtro_genero_${discipline}`, filtroGenero);
+    }
+    if (filtroNivelEducacional) {
+      localStorage.setItem(`olimpiadas_horarios_filtro_nivel_educacional_${discipline}`, filtroNivelEducacional);
+    }
+    if (filtroCategoria) {
+      localStorage.setItem(`olimpiadas_horarios_filtro_categoria_${discipline}`, filtroCategoria);
+    }
+    if (faseActiva) {
+      localStorage.setItem(`olimpiadas_horarios_fase_activa_${discipline}`, faseActiva);
+    }
+  }, [filtroGenero, filtroNivelEducacional, filtroCategoria, faseActiva, discipline]);
+
+  // Limpiar filtros dependientes
+  useEffect(() => {
+    if (!filtroGenero) {
+      setFiltroNivelEducacional("");
+      setFiltroCategoria("");
+    }
+  }, [filtroGenero]);
+
+  useEffect(() => {
+    if (!filtroNivelEducacional) {
+      setFiltroCategoria("");
+    }
+  }, [filtroNivelEducacional]);
+
+  // Extraer opciones únicas para filtros
+  const generosDisponibles = [...new Set(equipos.map(eq => eq.genero).filter(Boolean))];
+  const nivelesDisponibles = filtroGenero
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.nivelEducacional).filter(Boolean))]
+    : [...new Set(equipos.map(eq => eq.nivelEducacional).filter(Boolean))];
+  const categoriasDisponibles = filtroNivelEducacional
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero && eq.nivelEducacional === filtroNivelEducacional).map(eq => eq.categoria).filter(Boolean))]
+    : filtroGenero
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.categoria).filter(Boolean))]
+    : [...new Set(equipos.map(eq => eq.categoria).filter(Boolean))];
 
   // Función para obtener el tipo de fase de un partido
   const getTipoFase = (partido) => {
@@ -452,6 +599,87 @@ export default function AdminHorarios() {
         </button>
       </div>
 
+      {/* Filtros */}
+      <div className="filters-container">
+        <h3>📊 Filtros:</h3>
+
+        <div className="filters-row">
+          <div className="filter-group">
+            <label>🚻 Género:</label>
+            <select
+              value={filtroGenero}
+              onChange={(e) => setFiltroGenero(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Todos los géneros</option>
+              {generosDisponibles.map((genero) => (
+                <option key={genero} value={genero}>
+                  {genero}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>🎓 Nivel:</label>
+            <select
+              value={filtroNivelEducacional}
+              onChange={(e) => setFiltroNivelEducacional(e.target.value)}
+              className="filter-select"
+              disabled={!filtroGenero}
+            >
+              <option value="">Todos los niveles</option>
+              {nivelesDisponibles.map((nivel) => (
+                <option key={nivel} value={nivel}>
+                  {nivel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>🏷️ Categoría:</label>
+            <select
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+              className="filter-select"
+              disabled={!filtroNivelEducacional}
+            >
+              <option value="">Todas las categorías</option>
+              {categoriasDisponibles.map((categoria) => (
+                <option key={categoria} value={categoria}>
+                  {categoria}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>🏆 Fase:</label>
+            <select
+              value={faseActiva}
+              onChange={(e) => setFaseActiva(e.target.value)}
+              className="filter-select"
+            >
+              <option value="todas">Todas las fases</option>
+              <option value="grupos1">Fase de Grupos 1</option>
+              <option value="grupos3">Posicionamiento</option>
+              <option value="semifinal">Semifinales</option>
+              <option value="final">Finales</option>
+              <option value="ida_vuelta">Ida y Vuelta</option>
+            </select>
+          </div>
+
+          <button
+            onClick={limpiarFiltros}
+            className="clear-filters-btn"
+            title="Limpiar todos los filtros"
+          >
+            🗑️ Limpiar
+          </button>
+        </div>
+      </div>
+
       {/* Controles */}
       <div className="horarios-controls">
         <div className="controls-info">
@@ -498,7 +726,7 @@ export default function AdminHorarios() {
           <div className="loading-spinner"></div>
           <p className="loading-text">Cargando horarios...</p>
         </div>
-      ) : matches.length === 0 ? (
+      ) : filteredMatches.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📅</div>
           <h3>No hay partidos pendientes</h3>

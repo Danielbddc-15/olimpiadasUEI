@@ -19,6 +19,62 @@ export default function ProfesorStandings() {
   const [standingsPorGrupo, setStandingsPorGrupo] = useState({});
   const [loading, setLoading] = useState(true);
   const location = useLocation();
+  
+  // Estados para filtros
+  const [filtroGenero, setFiltroGenero] = useState("");
+  const [filtroNivel, setFiltroNivel] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [categorias, setCategorias] = useState([]);
+
+  // Funciones para manejar filtros
+  const handleFiltroGeneroChange = (genero) => {
+    setFiltroGenero(genero);
+    setFiltroNivel(""); // Limpiar nivel al cambiar género
+    setFiltroCategoria(""); // Limpiar categoría al cambiar género
+  };
+
+  const handleFiltroNivelChange = (nivel) => {
+    setFiltroNivel(nivel);
+    setFiltroCategoria(""); // Limpiar categoría al cambiar nivel
+  };
+
+  const handleFiltroCategoriaChange = (categoria) => {
+    setFiltroCategoria(categoria);
+  };
+
+  // Obtener categorías desde Firestore
+  const obtenerCategorias = async () => {
+    try {
+      const q = query(
+        collection(db, "categorias"),
+        where("disciplina", "==", discipline)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCategorias(data);
+    } catch (error) {
+      console.error("Error obteniendo categorías:", error);
+    }
+  };
+
+  // Cargar categorías al iniciar
+  useEffect(() => {
+    obtenerCategorias();
+  }, [discipline]);
+
+  // Obtener opciones de filtro dinámicas
+  const generosDisponibles = [...new Set(categorias.map(cat => cat.genero))].filter(Boolean);
+  
+  const nivelesDisponibles = filtroGenero 
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero).map(cat => cat.nivelEducacional))].filter(Boolean)
+    : [];
+  
+  const categoriasDisponibles = (filtroGenero && filtroNivel)
+    ? categorias.filter(cat => cat.genero === filtroGenero && cat.nivelEducacional === filtroNivel).map(cat => cat.categoria)
+    : [];
 
   // Obtener partidos en tiempo real
   useEffect(() => {
@@ -71,8 +127,35 @@ export default function ProfesorStandings() {
     console.log("Todos los equipos:", equipos);
     console.log("Todos los partidos:", matches);
 
+    // Aplicar filtros
+    let equiposFiltrados = equipos;
+    
+    if (filtroGenero || filtroNivel || filtroCategoria) {
+      // Filtrar partidos que cumplan con los criterios seleccionados
+      const partidosFiltrados = matches.filter(partido => {
+        const pasaGenero = !filtroGenero || partido.genero === filtroGenero;
+        const pasaNivel = !filtroNivel || partido.nivelEducacional === filtroNivel;
+        const pasaCategoria = !filtroCategoria || partido.categoria === filtroCategoria;
+        return pasaGenero && pasaNivel && pasaCategoria;
+      });
+
+      // Obtener equipos únicos de los partidos filtrados
+      const equiposEnPartidos = new Set();
+      partidosFiltrados.forEach(partido => {
+        equiposEnPartidos.add(`${partido.equipoA.curso}_${partido.equipoA.paralelo}`);
+        equiposEnPartidos.add(`${partido.equipoB.curso}_${partido.equipoB.paralelo}`);
+      });
+
+      // Filtrar equipos que aparecen en los partidos filtrados
+      equiposFiltrados = equipos.filter(equipo => 
+        equiposEnPartidos.has(`${equipo.curso}_${equipo.paralelo}`)
+      );
+    }
+
+    console.log("Equipos filtrados:", equiposFiltrados);
+
     // Filtrar solo equipos que realmente pertenecen a grupos válidos (Grupo 1, Grupo 2, etc.)
-    const equiposConGrupoValido = equipos.filter(
+    const equiposConGrupoValido = equiposFiltrados.filter(
       (equipo) =>
         equipo.grupo &&
         (equipo.grupo.includes("Grupo") || equipo.grupo.includes("grupo")),
@@ -471,7 +554,7 @@ export default function ProfesorStandings() {
         }
       }
     });
-  }, [matches, equipos, discipline]);
+  }, [matches, equipos, discipline, filtroGenero, filtroNivel, filtroCategoria]);
 
   const createTeamEntry = (nombre, grupo) => ({
     nombre,
@@ -500,6 +583,78 @@ export default function ProfesorStandings() {
               ? "Vóley"
               : "Básquet"}
         </p>
+      </div>
+
+      {/* Filtros */}
+      <div className="filter-section">
+        <div className="filter-container">
+          <div className="filter-group">
+            <label className="filter-label">
+              <span className="filter-icon">⚥</span>
+              Género
+            </label>
+            <select 
+              value={filtroGenero} 
+              onChange={(e) => handleFiltroGeneroChange(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Todos los géneros</option>
+              {generosDisponibles.map((genero) => (
+                <option key={genero} value={genero}>{genero}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">
+              <span className="filter-icon">🎓</span>
+              Nivel Educacional
+            </label>
+            <select 
+              value={filtroNivel} 
+              onChange={(e) => handleFiltroNivelChange(e.target.value)}
+              className="filter-select"
+              disabled={!filtroGenero}
+            >
+              <option value="">Todos los niveles</option>
+              {nivelesDisponibles.map((nivel) => (
+                <option key={nivel} value={nivel}>{nivel}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label className="filter-label">
+              <span className="filter-icon">🏆</span>
+              Categoría
+            </label>
+            <select 
+              value={filtroCategoria} 
+              onChange={(e) => handleFiltroCategoriaChange(e.target.value)}
+              className="filter-select"
+              disabled={!filtroNivel}
+            >
+              <option value="">Todas las categorías</option>
+              {categoriasDisponibles.map((categoria) => (
+                <option key={categoria} value={categoria}>{categoria}</option>
+              ))}
+            </select>
+          </div>
+
+          {(filtroGenero || filtroNivel || filtroCategoria) && (
+            <button 
+              onClick={() => {
+                setFiltroGenero("");
+                setFiltroNivel("");
+                setFiltroCategoria("");
+              }}
+              className="clear-filters-btn"
+            >
+              <span className="clear-icon">🗑️</span>
+              Limpiar filtros
+            </button>
+          )}
+        </div>
       </div>
       {/* Navegación moderna entre secciones */}
       <div className="profesor-navigation">
