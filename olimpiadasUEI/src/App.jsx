@@ -25,11 +25,18 @@ import ProfesorStandings from "./pages/ProfesorStandings";
 import ProfesorHorarios from "./pages/ProfesorHorarios";
 import ProfesorHome from "./pages/ProfesorHome";
 import ProfesorMatchDetail from "./pages/ProfesorMatchDetail";
+import ProfesorTeams from "./pages/ProfesorTeams";
 import CategoriasAdmin from "./components/CategoriasAdmin";
+
+// Notification system
+import { NotificationProvider } from "./context/NotificationContext";
+import NotificationContainer from "./components/CustomNotification";
 
 function App() {
   return (
-    <Router>
+    <NotificationProvider>
+      <Router>
+        <NotificationContainer />
       <Routes>
         {/* Login */}
         <Route path="/" element={<Login />} />
@@ -214,8 +221,17 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/profesor/:discipline/equipos"
+          element={
+            <PrivateRoute allowedRoles={["profesor"]}>
+              <ProfesorTeams />
+            </PrivateRoute>
+          }
+        />
       </Routes>
-    </Router>
+      </Router>
+    </NotificationProvider>
   );
 }
 

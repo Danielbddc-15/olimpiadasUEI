@@ -152,11 +152,19 @@ export default function AdminTeams() {
   // Funciones para manejar filtros persistentes
   const handleFiltroGeneroChange = (genero) => {
     setFiltroGenero(genero);
+    // Limpiar nivel educacional y categoría al cambiar género
+    setFiltroNivelEducacional("");
+    setFiltroCategoria("");
+    
     if (genero) {
       localStorage.setItem('olimpiadas_filtro_genero', genero);
     } else {
       localStorage.removeItem('olimpiadas_filtro_genero');
     }
+    
+    // Limpiar localStorage de nivel y categoría
+    localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
+    localStorage.removeItem('olimpiadas_filtro_categoria');
   };
 
   const handleFiltroNivelEducacionalChange = (nivelEducacional) => {
@@ -928,8 +936,8 @@ export default function AdminTeams() {
 
   // Función para asignar número a jugador
   const asignarNumero = async (jugadorId, numero) => {
-    if (!numero || numero < 1 || numero > 99) {
-      mostrarModalAlerta("⚠️ Número inválido", "El número debe estar entre 1 y 99", "error");
+    if (!numero || numero < 1 || numero > 9999) {
+      mostrarModalAlerta("⚠️ Número inválido", "El número debe estar entre 1 y 9999", "error");
       return;
     }
 
@@ -2165,14 +2173,7 @@ export default function AdminTeams() {
             </label>
             <select
               value={filtroGenero}
-              onChange={e => {
-                handleFiltroGeneroChange(e.target.value);
-                // Limpiar filtros dependientes si cambia el género
-                setFiltroNivelEducacional("");
-                setFiltroCategoria("");
-                localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
-                localStorage.removeItem('olimpiadas_filtro_categoria');
-              }}
+              onChange={e => handleFiltroGeneroChange(e.target.value)}
               className="modern-input"
               style={{minWidth: '140px', maxWidth: '160px'}}
             >
@@ -2196,16 +2197,24 @@ export default function AdminTeams() {
                 localStorage.removeItem('olimpiadas_filtro_categoria');
               }}
               className="modern-input"
-              style={{minWidth: '140px', maxWidth: '180px'}}
+              style={{
+                minWidth: '140px', 
+                maxWidth: '180px',
+                backgroundColor: !filtroGenero ? '#f5f5f5' : '',
+                color: !filtroGenero ? '#999' : '',
+                cursor: !filtroGenero ? 'not-allowed' : 'pointer'
+              }}
+              disabled={!filtroGenero}
             >
-              <option value="">Todos los niveles</option>
-              {nivelesEducacionales
-                .filter(nivel => filtroGenero === "" || 
-                  categorias.some(cat => cat.nivelEducacional === nivel.nombre && cat.genero === filtroGenero)
-                )
-                .map(nivel => (
-                  <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
-                ))}
+              <option value="">{!filtroGenero ? "Selecciona género primero" : "Todos los niveles"}</option>
+              {[...new Set(nivelesEducacionales
+                .filter(nivel => {
+                  if (filtroGenero === "") return true;
+                  return categorias.some(cat => cat.nivelEducacional === nivel.nombre && cat.genero === filtroGenero);
+                })
+                .map(nivel => nivel.nombre))].sort().map(nivel => (
+                <option key={nivel} value={nivel}>{nivel}</option>
+              ))}
             </select>
           </div>
           
@@ -2342,16 +2351,19 @@ export default function AdminTeams() {
                           className="table-select"
                         >
                           <option value="">Sin nivel educacional</option>
-                          {nivelesEducacionales
+                          {[...new Set(nivelesEducacionales
                             .filter(nivel => {
                               // Mostrar nivel si no tiene género especificado O si coincide con el género del equipo
                               return !nivel.genero || !equipo.genero || nivel.genero === equipo.genero;
                             })
-                            .map((nivel) => (
-                              <option key={nivel.id} value={nivel.nombre}>
-                                {nivel.nombre}
-                              </option>
-                            ))}
+                            .map(nivel => nivel.nombre))].sort().map((nombreNivel) => {
+                              const nivel = nivelesEducacionales.find(n => n.nombre === nombreNivel);
+                              return (
+                                <option key={nivel.id} value={nivel.nombre}>
+                                  {nivel.nombre}
+                                </option>
+                              );
+                            })}
                         </select>
                       </td>
                       <td className="table-cell">
@@ -2814,16 +2826,16 @@ export default function AdminTeams() {
                 style={{minWidth: '140px', maxWidth: '180px'}}
               >
                 <option value="">Todos los niveles</option>
-                {nivelesEducacionales
+                {[...new Set(nivelesEducacionales
                   .filter(nivel => filtroGeneroSelector === "" || 
                     categorias.some(cat => cat.nivelEducacional === nivel.nombre && cat.genero === filtroGeneroSelector)
                   )
-                  .filter((nivel, index, array) => 
-                    array.findIndex(n => n.nombre === nivel.nombre) === index
-                  )
-                  .map(nivel => (
-                    <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
-                  ))}
+                  .map(nivel => nivel.nombre))].sort().map(nombreNivel => {
+                    const nivel = nivelesEducacionales.find(n => n.nombre === nombreNivel);
+                    return (
+                      <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                    );
+                  })}
               </select>
             </div>
             
@@ -3109,7 +3121,7 @@ export default function AdminTeams() {
                                 <input
                                   type="number"
                                   min="1"
-                                  max="99"
+                                  max="9999"
                                   value={numeroAsignar}
                                   onChange={(e) => setNumeroAsignar(e.target.value)}
                                   placeholder="Núm."

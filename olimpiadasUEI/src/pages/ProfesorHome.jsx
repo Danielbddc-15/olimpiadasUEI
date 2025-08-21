@@ -68,6 +68,12 @@ export default function ProfesorHome() {
       icon: "📅",
       description: "Organizar partidos por días de la semana",
     },
+    {
+      action: "equipos",
+      label: "Gestionar Equipos",
+      icon: "👥",
+      description: "Administrar equipos y jugadores",
+    },
   ];
 
   return (
