@@ -17,6 +17,7 @@ export default function AdminVoleyMatchDetail() {
   // Estados para gestión de puntos
   const [mostrarInputPunto, setMostrarInputPunto] = useState(null);
   const [puntoInput, setPuntoInput] = useState("");
+  const [numeroJugadorBusqueda, setNumeroJugadorBusqueda] = useState(""); // Nuevo estado para búsqueda por número
 
   // Estados para edición de anotadores
   const [editandoAnotadores, setEditandoAnotadores] = useState(false);
@@ -231,6 +232,31 @@ export default function AdminVoleyMatchDetail() {
     }
   };
 
+  // Función para buscar jugador por número
+  const buscarJugadorPorNumero = (numero, equipo) => {
+    if (!numero) return null;
+    const jugadores = equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB;
+    return jugadores.find(jugador => jugador.numero === parseInt(numero));
+  };
+
+  // Función para asignar punto por número de jugador
+  const asignarPuntoPorNumero = () => {
+    if (!numeroJugadorBusqueda.trim()) {
+      alert("Por favor ingresa un número de jugador");
+      return;
+    }
+
+    const jugadorEncontrado = buscarJugadorPorNumero(numeroJugadorBusqueda, mostrarInputPunto);
+    
+    if (jugadorEncontrado) {
+      setPuntoInput(`#${jugadorEncontrado.numero} ${jugadorEncontrado.nombre}`);
+      setNumeroJugadorBusqueda("");
+      alert(`Jugador encontrado: ${jugadorEncontrado.nombre}`);
+    } else {
+      alert(`No se encontró jugador con número ${numeroJugadorBusqueda}`);
+    }
+  };
+
   // Marcar punto
   const marcarPunto = async (equipo, setActual) => {
     if (!puntoInput.trim()) {
@@ -284,6 +310,7 @@ export default function AdminVoleyMatchDetail() {
 
       // Limpiar input
       setPuntoInput("");
+      setNumeroJugadorBusqueda("");
       setMostrarInputPunto(null);
 
     } catch (error) {
@@ -610,14 +637,44 @@ export default function AdminVoleyMatchDetail() {
             
             {/* Input manual como alternativa */}
             <div className="admin-manual-input">
-              <h4>O escribir manualmente:</h4>
-              <input
-                type="text"
-                value={puntoInput}
-                onChange={(e) => setPuntoInput(e.target.value)}
-                placeholder="Nombre del anotador"
-                className="admin-punto-input"
-              />
+              <h4>O buscar por número de jugador:</h4>
+              <div className="numero-jugador-busqueda">
+                <input
+                  type="number"
+                  placeholder="Número del jugador..."
+                  value={numeroJugadorBusqueda}
+                  onChange={(e) => setNumeroJugadorBusqueda(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      asignarPuntoPorNumero();
+                    }
+                  }}
+                  className="admin-goal-input"
+                  min="1"
+                />
+                <button
+                  onClick={asignarPuntoPorNumero}
+                  className="admin-btn admin-btn-search"
+                  disabled={!numeroJugadorBusqueda.trim()}
+                >
+                  🔍 Buscar
+                </button>
+              </div>
+              
+              {puntoInput && (
+                <div className="jugador-seleccionado">
+                  <span>Jugador seleccionado: <strong>{puntoInput}</strong></span>
+                  <button
+                    onClick={() => {
+                      setPuntoInput("");
+                      setNumeroJugadorBusqueda("");
+                    }}
+                    className="admin-btn admin-btn-clear"
+                  >
+                    ✖ Limpiar
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="admin-modal-actions">
@@ -629,7 +686,11 @@ export default function AdminVoleyMatchDetail() {
                 ✅ Confirmar
               </button>
               <button
-                onClick={() => setMostrarInputPunto(null)}
+                onClick={() => {
+                  setMostrarInputPunto(null);
+                  setPuntoInput("");
+                  setNumeroJugadorBusqueda("");
+                }}
                 className="admin-btn admin-btn-cancel"
               >
                 ❌ Cancelar

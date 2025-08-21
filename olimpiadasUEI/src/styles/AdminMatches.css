@@ -40,14 +40,35 @@
 
 .admin-matches h1 {
   color: white;
+  margin: 0;
   margin-bottom: 2rem;
   font-size: 3rem;
   font-weight: 700;
-  text-align: center;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   letter-spacing: -0.025em;
+  flex: 1;
+}
+
+.matches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .matches-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .admin-matches h1 {
+    font-size: 2.5rem;
+    text-align: center;
+  }
 }
 
 .nav-buttons {
@@ -828,5 +849,362 @@
     gap: 6px;
     margin-top: 8px;
     padding-top: 8px;
+  }
+}
+
+/* Acciones de filtros */
+.filters-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.btn-limpiar-filtros {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-limpiar-filtros:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(255, 107, 107, 0.4);
+  background: linear-gradient(135deg, #fa5252, #e03131);
+}
+
+.btn-limpiar-filtros:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3);
+}
+
+/* Navegación por fases */
+.phase-navigation {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  margin-bottom: 2rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 1;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem 1.5rem;
+}
+
+.phase-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem;
+}
+
+/* Estilos específicos para botones de navegación de fases - asegurar que sean rectangulares */
+.phase-navigation .phase-btn,
+.phase-buttons .phase-btn {
+  color: white !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: 50px !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  border: 2px solid transparent !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 120px !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+}
+
+/* Colores específicos para cada tipo de fase */
+/* FASE DE GRUPOS - Verde */
+.phase-navigation .phase-btn[data-phase="grupos"],
+.phase-buttons .phase-btn:nth-child(1) {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="grupos"]:hover,
+.phase-buttons .phase-btn:nth-child(1):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4) !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="grupos"].active,
+.phase-buttons .phase-btn:nth-child(1).active {
+  background: linear-gradient(135deg, #34d399, #10b981) !important;
+  box-shadow: 0 8px 25px rgba(52, 211, 153, 0.4) !important;
+}
+
+/* SEMIFINALES - Azul */
+.phase-navigation .phase-btn[data-phase="semifinal"],
+.phase-buttons .phase-btn:nth-child(2) {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="semifinal"]:hover,
+.phase-buttons .phase-btn:nth-child(2):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4) !important;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="semifinal"].active,
+.phase-buttons .phase-btn:nth-child(2).active {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+  box-shadow: 0 8px 25px rgba(96, 165, 250, 0.4) !important;
+}
+
+/* FINALES - Dorado */
+.phase-navigation .phase-btn[data-phase="final"],
+.phase-buttons .phase-btn:nth-child(3) {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="final"]:hover,
+.phase-buttons .phase-btn:nth-child(3):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(245, 158, 11, 0.4) !important;
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="final"].active,
+.phase-buttons .phase-btn:nth-child(3).active {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4) !important;
+}
+
+/* TODAS LAS FASES - Púrpura */
+.phase-navigation .phase-btn[data-phase="todas"],
+.phase-buttons .phase-btn:nth-child(4),
+.phase-buttons .phase-btn:last-child {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="todas"]:hover,
+.phase-buttons .phase-btn:nth-child(4):hover,
+.phase-buttons .phase-btn:last-child:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(139, 92, 246, 0.4) !important;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="todas"].active,
+.phase-buttons .phase-btn:nth-child(4).active,
+.phase-buttons .phase-btn:last-child.active {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6) !important;
+  box-shadow: 0 8px 25px rgba(167, 139, 250, 0.4) !important;
+}
+
+/* IDA Y VUELTA - Rojo (para cuando aparezca) */
+.phase-navigation .phase-btn[data-phase="ida_vuelta"],
+.phase-buttons .phase-btn:contains("IDA Y VUELTA") {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="ida_vuelta"]:hover,
+.phase-buttons .phase-btn:contains("IDA Y VUELTA"):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4) !important;
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+}
+
+.phase-navigation .phase-btn[data-phase="ida_vuelta"].active,
+.phase-buttons .phase-btn:contains("IDA Y VUELTA").active {
+  background: linear-gradient(135deg, #f87171, #ef4444) !important;
+  box-shadow: 0 8px 25px rgba(248, 113, 113, 0.4) !important;
+}
+
+.phase-btn {
+  /* Estilos base - se sobrescriben por los específicos arriba */
+  background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: 50px !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3) !important;
+  border: 2px solid transparent !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 120px !important;
+}
+
+
+
+
+@media (max-width: 768px) {
+  .phase-navigation {
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .phase-buttons {
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .phase-btn {
+    padding: 10px 20px !important;
+    font-size: 12px !important;
+    min-width: 100px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .phase-navigation .phase-btn,
+  .phase-buttons .phase-btn {
+    padding: 10px 20px !important;
+    font-size: 12px !important;
+    min-width: 100px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* Mantener colores específicos en responsive */
+  .phase-navigation .phase-btn:nth-child(1),
+  .phase-buttons .phase-btn:nth-child(1) {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+  }
+  
+  .phase-navigation .phase-btn:nth-child(2),
+  .phase-buttons .phase-btn:nth-child(2) {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  }
+  
+  .phase-navigation .phase-btn:nth-child(3),
+  .phase-buttons .phase-btn:nth-child(3) {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  }
+  
+  .phase-navigation .phase-btn:nth-child(4),
+  .phase-buttons .phase-btn:nth-child(4),
+  .phase-navigation .phase-btn:last-child,
+  .phase-buttons .phase-btn:last-child {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  }
+
+  .btn-limpiar-filtros {
+    padding: 10px 20px;
+    font-size: 12px;
+  }
+}
+
+/* Navigation buttons styles */
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.nav-btn.primary {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  background: linear-gradient(135deg, #c82333, #a71e2a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.nav-btn.secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
+}
+
+.nav-btn.secondary:hover {
+  background: linear-gradient(135deg, #5a6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* Header actions container */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Update matches header for better layout */
+.matches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+/* Responsive design for navigation buttons */
+@media (max-width: 768px) {
+  .nav-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .header-actions {
+    gap: 8px;
+  }
+  
+  .nav-btn span:first-child {
+    display: none; /* Hide icons on mobile for space */
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .matches-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    justify-content: center;
   }
 }

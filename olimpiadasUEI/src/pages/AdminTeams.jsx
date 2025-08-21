@@ -68,6 +68,12 @@ export default function AdminTeams() {
   const [filtroGenero, setFiltroGenero] = useState(() => {
     return localStorage.getItem('olimpiadas_filtro_genero') || "";
   });
+
+  // Estados de filtros independientes para el selector de equipos
+  const [filtroGeneroSelector, setFiltroGeneroSelector] = useState("");
+  const [filtroNivelEducacionalSelector, setFiltroNivelEducacionalSelector] = useState("");
+  const [filtroCategoriaSelector, setFiltroCategoriaSelector] = useState("");
+
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [nuevoNombreCategoria, setNuevoNombreCategoria] = useState("");
   const [nivelEducacionalEditando, setNivelEducacionalEditando] = useState(null);
@@ -169,6 +175,11 @@ export default function AdminTeams() {
     } else {
       localStorage.removeItem('olimpiadas_filtro_categoria');
     }
+  };
+
+  // Función específica para manejar cambios de categoría en el selector de equipos
+  const handleFiltroCategoriaChangeSelector = (categoria) => {
+    setFiltroCategoriaSelector(categoria);
   };
 
 
@@ -571,7 +582,7 @@ export default function AdminTeams() {
       }
       
       // Recargar los datos
-      await obtenerNivelesEducacionales();
+      await cargarTodosDatos();
       
     } catch (error) {
       console.error("❌ Error al limpiar duplicados:", error);
@@ -648,6 +659,20 @@ export default function AdminTeams() {
       obtenerJugadores();
     }
   }, [equipoSeleccionado]);
+
+  // useEffect para deseleccionar equipo si no pasa los filtros actuales del selector
+  useEffect(() => {
+    if (equipoSeleccionado) {
+      const pasaGenero = filtroGeneroSelector === "" || equipoSeleccionado.genero === filtroGeneroSelector;
+      const pasaNivelEducacional = filtroNivelEducacionalSelector === "" || equipoSeleccionado.nivelEducacional === filtroNivelEducacionalSelector;
+      const pasaCategoria = filtroCategoriaSelector === "" || equipoSeleccionado.categoria === filtroCategoriaSelector;
+      
+      if (!pasaGenero || !pasaNivelEducacional || !pasaCategoria) {
+        setEquipoSeleccionado(null);
+        setJugadores([]);
+      }
+    }
+  }, [filtroGeneroSelector, filtroNivelEducacionalSelector, filtroCategoriaSelector, equipoSeleccionado]);
 
   const crearEquipo = async () => {
     if (!nuevoEquipo.curso || !nuevoEquipo.paralelo || !nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero) return;
@@ -847,9 +872,7 @@ export default function AdminTeams() {
     await deleteDoc(doc(db, "nivelesEducacionales", nivelEducacionalId));
     
     // Actualizar datos
-    obtenerNivelesEducacionales();
-    obtenerCategorias();
-    obtenerGrupos();
+    cargarTodosDatos();
     
     // Limpiar filtro si se eliminó el nivel filtrado
     if (filtroNivelEducacional === nivelEducacionalNombre) {
@@ -896,10 +919,7 @@ export default function AdminTeams() {
     }
 
     // Refrescar datos
-    obtenerNivelesEducacionales();
-    obtenerCategorias();
-    obtenerGrupos();
-    obtenerEquipos();
+    cargarTodosDatos();
     
     // Limpiar estado de edición
     setNivelEducacionalEditando(null);
@@ -955,7 +975,7 @@ export default function AdminTeams() {
       });
       
       // Actualizar la lista local de niveles educacionales
-      await obtenerNivelesEducacionales();
+      await cargarTodosDatos();
       return true;
     }
     return false;
@@ -1220,10 +1240,7 @@ export default function AdminTeams() {
       }
 
       // Actualizar todas las listas
-      await obtenerNivelesEducacionales();
-      await obtenerCategorias();
-      await obtenerGrupos();
-      await obtenerEquipos();
+      await cargarTodosDatos();
       await obtenerJugadores();
       
       setMostrarProgreso(false);
@@ -1403,7 +1420,7 @@ export default function AdminTeams() {
                 disciplina: discipline,
                 fechaCreacion: new Date().toISOString()
               });
-              await obtenerNivelesEducacionales(); // Actualizar lista
+              await cargarTodosDatos(); // Actualizar lista
             }
           }
 
@@ -1423,8 +1440,7 @@ export default function AdminTeams() {
       }
 
       // Actualizar listas
-      await obtenerEquipos();
-      await obtenerNivelesEducacionales();
+      await cargarTodosDatos();
       
       setMostrarProgreso(false);
       mostrarModalAlerta(
@@ -1577,7 +1593,7 @@ export default function AdminTeams() {
                   fechaCreacion: new Date().toISOString()
                 });
                 setNuevoNivelEducacional("");
-                obtenerNivelesEducacionales();
+                cargarTodosDatos();
                 mostrarModalAlerta("✅ Nivel creado", "Nivel educacional creado exitosamente", "success");
               }}
               className="modern-button"
@@ -1702,9 +1718,13 @@ export default function AdminTeams() {
               style={{minWidth:140, maxWidth:160}}
             >
               <option value="">Todos los niveles</option>
-              {nivelesEducacionales.map(nivel => (
-                <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
-              ))}
+              {nivelesEducacionales
+                .filter((nivel, index, array) => 
+                  array.findIndex(n => n.nombre === nivel.nombre) === index
+                )
+                .map(nivel => (
+                  <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                ))}
             </select>
             <select
               value={filtroGenero}
@@ -2146,10 +2166,12 @@ export default function AdminTeams() {
             <select
               value={filtroGenero}
               onChange={e => {
-                setFiltroGenero(e.target.value);
+                handleFiltroGeneroChange(e.target.value);
                 // Limpiar filtros dependientes si cambia el género
                 setFiltroNivelEducacional("");
                 setFiltroCategoria("");
+                localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
+                localStorage.removeItem('olimpiadas_filtro_categoria');
               }}
               className="modern-input"
               style={{minWidth: '140px', maxWidth: '160px'}}
@@ -2168,9 +2190,10 @@ export default function AdminTeams() {
             <select
               value={filtroNivelEducacional}
               onChange={e => {
-                setFiltroNivelEducacional(e.target.value);
+                handleFiltroNivelEducacionalChange(e.target.value);
                 // Limpiar filtro de categoría si cambia el nivel
                 setFiltroCategoria("");
+                localStorage.removeItem('olimpiadas_filtro_categoria');
               }}
               className="modern-input"
               style={{minWidth: '140px', maxWidth: '180px'}}
@@ -2225,13 +2248,19 @@ export default function AdminTeams() {
                   <th>
                     <div className="th-content">
                       <span className="th-icon">�️</span>
-                      Categoría
+                      Género
                     </div>
                   </th>
                   <th>
                     <div className="th-content">
                       <span className="th-icon">📚</span>
                       Nivel Educacional
+                    </div>
+                  </th>
+                  <th>
+                    <div className="th-content">
+                      <span className="th-icon">⚽</span>
+                      Categoría
                     </div>
                   </th>
                   <th>
@@ -2744,6 +2773,139 @@ export default function AdminTeams() {
           <h3 style={{margin:'0 0 1rem 0', color:'#495057', fontSize:'1.1rem'}}>
             🏆 Seleccionar Equipo para Gestionar
           </h3>
+
+          {/* Filtros para el selector de equipos */}
+          <div style={{marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+              <label style={{fontWeight: '500', color: '#666'}}>
+                <span style={{marginRight: '0.5rem'}}>🚻</span>
+                Filtrar por género:
+              </label>
+              <select
+                value={filtroGeneroSelector}
+                onChange={e => {
+                  setFiltroGeneroSelector(e.target.value);
+                  // Limpiar filtros dependientes si cambia el género
+                  setFiltroNivelEducacionalSelector("");
+                  setFiltroCategoriaSelector("");
+                }}
+                className="modern-input"
+                style={{minWidth: '140px', maxWidth: '160px'}}
+              >
+                <option value="">Todos los géneros</option>
+                <option value="Hombre">Hombre</option>
+                <option value="Mujer">Mujer</option>
+              </select>
+            </div>
+
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+              <label style={{fontWeight: '500', color: '#666'}}>
+                <span style={{marginRight: '0.5rem'}}>🏫</span>
+                Filtrar por nivel:
+              </label>
+              <select
+                value={filtroNivelEducacionalSelector}
+                onChange={e => {
+                  setFiltroNivelEducacionalSelector(e.target.value);
+                  // Limpiar filtro de categoría si cambia el nivel
+                  setFiltroCategoriaSelector("");
+                }}
+                className="modern-input"
+                style={{minWidth: '140px', maxWidth: '180px'}}
+              >
+                <option value="">Todos los niveles</option>
+                {nivelesEducacionales
+                  .filter(nivel => filtroGeneroSelector === "" || 
+                    categorias.some(cat => cat.nivelEducacional === nivel.nombre && cat.genero === filtroGeneroSelector)
+                  )
+                  .filter((nivel, index, array) => 
+                    array.findIndex(n => n.nombre === nivel.nombre) === index
+                  )
+                  .map(nivel => (
+                    <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                  ))}
+              </select>
+            </div>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+              <label style={{fontWeight: '500', color: '#666'}}>
+                <span style={{marginRight: '0.5rem'}}>🏷️</span>
+                Filtrar por categoría:
+              </label>
+              <select
+                value={filtroCategoriaSelector}
+                onChange={e => handleFiltroCategoriaChangeSelector(e.target.value)}
+                className="modern-input"
+                style={{
+                  minWidth: '200px', 
+                  maxWidth: '300px',
+                  backgroundColor: (!filtroGeneroSelector || !filtroNivelEducacionalSelector) ? '#f5f5f5' : '',
+                  color: (!filtroGeneroSelector || !filtroNivelEducacionalSelector) ? '#999' : '',
+                  cursor: (!filtroGeneroSelector || !filtroNivelEducacionalSelector) ? 'not-allowed' : 'pointer'
+                }}
+                disabled={!filtroGeneroSelector || !filtroNivelEducacionalSelector}
+              >
+                <option value="">Todas las categorías</option>
+                {categorias
+                  .filter(categoria => {
+                    if (filtroGeneroSelector && categoria.genero !== filtroGeneroSelector) return false;
+                    if (filtroNivelEducacionalSelector && categoria.nivelEducacional !== filtroNivelEducacionalSelector) return false;
+                    return true;
+                  })
+                  .map(categoria => (
+                    <option key={categoria.id} value={categoria.nombre}>
+                      {categoria.nombre}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Botón para limpiar filtros del selector */}
+            {(filtroGeneroSelector || filtroNivelEducacionalSelector || filtroCategoriaSelector) && (
+              <button
+                onClick={() => {
+                  setFiltroGeneroSelector("");
+                  setFiltroNivelEducacionalSelector("");
+                  setFiltroCategoriaSelector("");
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+                title="Limpiar todos los filtros del selector"
+              >
+                🗑️ Limpiar filtros
+              </button>
+            )}
+          </div>
+          
+          {/* Contador de equipos filtrados para el selector */}
+          <div style={{marginBottom: '1rem'}}>
+            <span style={{
+              fontSize: '0.9rem',
+              color: '#666',
+              background: '#f8f9fa',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '12px',
+              border: '1px solid #dee2e6'
+            }}>
+              {(() => {
+                const equiposFiltradosSelector = equipos.filter(equipo => {
+                  const pasaGenero = filtroGeneroSelector === "" || equipo.genero === filtroGeneroSelector;
+                  const pasaNivelEducacional = filtroNivelEducacionalSelector === "" || equipo.nivelEducacional === filtroNivelEducacionalSelector;
+                  const pasaCategoria = filtroCategoriaSelector === "" || equipo.categoria === filtroCategoriaSelector;
+                  return pasaGenero && pasaNivelEducacional && pasaCategoria;
+                });
+                return `${equiposFiltradosSelector.length} equipos disponibles`;
+              })()}
+            </span>
+          </div>
+
           <select
             value={equipoSeleccionado ? `${equipoSeleccionado.curso}-${equipoSeleccionado.paralelo}-${equipoSeleccionado.categoria}-${equipoSeleccionado.genero || ''}` : ""}
             onChange={(e) => {
@@ -2765,12 +2927,39 @@ export default function AdminTeams() {
             style={{minWidth: '300px', maxWidth: '500px'}}
           >
             <option value="">Selecciona un equipo</option>
-            {equipos.map(equipo => (
-              <option key={equipo.id} value={`${equipo.curso}-${equipo.paralelo}-${equipo.categoria}-${equipo.genero || ''}`}>
-                {equipo.genero ? `${equipo.genero} - ` : ''}{equipo.curso} {equipo.paralelo} - {equipo.categoria} ({equipo.grupo || 'Sin grupo'})
-              </option>
-            ))}
+            {equipos
+              .filter(equipo => {
+                const pasaGenero = filtroGeneroSelector === "" || equipo.genero === filtroGeneroSelector;
+                const pasaNivelEducacional = filtroNivelEducacionalSelector === "" || equipo.nivelEducacional === filtroNivelEducacionalSelector;
+                const pasaCategoria = filtroCategoriaSelector === "" || equipo.categoria === filtroCategoriaSelector;
+                return pasaGenero && pasaNivelEducacional && pasaCategoria;
+              })
+              .map(equipo => (
+                <option key={equipo.id} value={`${equipo.curso}-${equipo.paralelo}-${equipo.categoria}-${equipo.genero || ''}`}>
+                  {equipo.genero ? `${equipo.genero} - ` : ''}{equipo.curso} {equipo.paralelo} - {equipo.categoria} ({equipo.grupo || 'Sin grupo'})
+                </option>
+              ))}
           </select>
+
+          {/* Mensaje cuando no hay equipos que coincidan con los filtros del selector */}
+          {equipos.filter(equipo => {
+            const pasaGenero = filtroGeneroSelector === "" || equipo.genero === filtroGeneroSelector;
+            const pasaNivelEducacional = filtroNivelEducacionalSelector === "" || equipo.nivelEducacional === filtroNivelEducacionalSelector;
+            const pasaCategoria = filtroCategoriaSelector === "" || equipo.categoria === filtroCategoriaSelector;
+            return pasaGenero && pasaNivelEducacional && pasaCategoria;
+          }).length === 0 && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '8px',
+              color: '#856404'
+            }}>
+              <strong>📝 Sin equipos coincidentes</strong><br/>
+              No hay equipos que coincidan con los filtros del selector. Modifica los filtros del selector para ver más equipos.
+            </div>
+          )}
         </div>
 
         {/* Lista de jugadores del equipo seleccionado */}

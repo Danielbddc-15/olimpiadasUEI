@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import PublicTeams from "./PublicTeams";
+import { useParams, useNavigate } from "react-router-dom";
 import PublicStandings from "./PublicStandings";
 import PublicMatches from "./PublicMatches";
 import PublicReport from "./PublicReport";
@@ -8,8 +7,18 @@ import PublicHorarios from "./PublicHorarios";
 import "../styles/PublicTournament.css";
 
 export default function PublicTournament() {
-  const [vista, setVista] = useState("equipos");
+  const [vista, setVista] = useState("posiciones");
   const { discipline } = useParams();
+  const navigate = useNavigate();
+
+  // Funciones de navegación
+  const goToDisciplineSelector = () => {
+    navigate('/selector');
+  };
+
+  const goToLogin = () => {
+    navigate('/');
+  };
 
   return (
     <div className="tournament-container">
@@ -34,16 +43,24 @@ export default function PublicTournament() {
             <p className="tournament-subtitle">Olimpiadas UEI 2025</p>
           </div>
         </div>
+        
+        <div className="tournament-controls">
+          <button 
+            onClick={goToDisciplineSelector}
+            className="nav-btn secondary"
+          >
+            📋 Disciplinas
+          </button>
+          <button 
+            onClick={goToLogin}
+            className="nav-btn primary"
+          >
+            🚪 Salir
+          </button>
+        </div>
 
         <nav className="modern-nav">
           <div className="nav-tabs">
-            <button
-              onClick={() => setVista("equipos")}
-              className={`nav-tab ${vista === "equipos" ? "active" : ""}`}
-            >
-              <span className="tab-icon">👥</span>
-              <span className="tab-text">Equipos</span>
-            </button>
             <button
               onClick={() => setVista("posiciones")}
               className={`nav-tab ${vista === "posiciones" ? "active" : ""}`}
@@ -77,7 +94,6 @@ export default function PublicTournament() {
       </div>
 
       <div className="tournament-content">
-        {vista === "equipos" && <PublicTeams />}
         {vista === "posiciones" && <PublicStandings />}
         {vista === "partidos" && <PublicMatches />}
         {vista === "horarios" && <PublicHorarios />}

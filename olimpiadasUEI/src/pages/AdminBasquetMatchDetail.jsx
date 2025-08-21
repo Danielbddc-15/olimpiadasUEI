@@ -14,6 +14,7 @@ export default function AdminBasquetMatchDetail() {
   
   // Estados para anotar puntos
   const [jugadorInput, setJugadorInput] = useState("");
+  const [numeroJugadorBusqueda, setNumeroJugadorBusqueda] = useState(""); // Nuevo estado para búsqueda por número
   const [mostrarInputJugador, setMostrarInputJugador] = useState(null); // 'A' o 'B'
   const [tipoCanasta, setTipoCanasta] = useState(1); // 1, 2 o 3 puntos
 
@@ -130,6 +131,31 @@ export default function AdminBasquetMatchDetail() {
     return equipoAEsValido && equipoBEsValido;
   };
 
+  // Función para buscar jugador por número
+  const buscarJugadorPorNumero = (numero, equipo) => {
+    if (!numero) return null;
+    const jugadores = equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB;
+    return jugadores.find(jugador => jugador.numero === parseInt(numero));
+  };
+
+  // Función para asignar punto por número de jugador
+  const asignarPuntoPorNumero = () => {
+    if (!numeroJugadorBusqueda.trim()) {
+      alert("Por favor ingresa un número de jugador");
+      return;
+    }
+
+    const jugadorEncontrado = buscarJugadorPorNumero(numeroJugadorBusqueda, mostrarInputJugador);
+    
+    if (jugadorEncontrado) {
+      setJugadorInput(`#${jugadorEncontrado.numero} ${jugadorEncontrado.nombre}`);
+      setNumeroJugadorBusqueda("");
+      alert(`Jugador encontrado: ${jugadorEncontrado.nombre}`);
+    } else {
+      alert(`No se encontró jugador con número ${numeroJugadorBusqueda}`);
+    }
+  };
+
   // Función para anotar puntos
   const anotarPuntos = async (equipo) => {
     if (!jugadorInput.trim()) {
@@ -181,6 +207,7 @@ export default function AdminBasquetMatchDetail() {
 
       // Limpiar inputs
       setJugadorInput("");
+      setNumeroJugadorBusqueda("");
       setMostrarInputJugador(null);
       setTipoCanasta(1);
 
@@ -501,14 +528,44 @@ export default function AdminBasquetMatchDetail() {
                   
                   {/* Input manual */}
                   <div className="manual-input-section">
-                    <h5>O escribir manualmente:</h5>
-                    <input
-                      type="text"
-                      value={jugadorInput}
-                      onChange={(e) => setJugadorInput(e.target.value)}
-                      placeholder="Nombre del jugador"
-                      className="jugador-input"
-                    />
+                    <h5>O buscar por número de jugador:</h5>
+                    <div className="numero-jugador-busqueda">
+                      <input
+                        type="number"
+                        placeholder="Número del jugador..."
+                        value={numeroJugadorBusqueda}
+                        onChange={(e) => setNumeroJugadorBusqueda(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            asignarPuntoPorNumero();
+                          }
+                        }}
+                        className="admin-goal-input"
+                        min="1"
+                      />
+                      <button
+                        onClick={asignarPuntoPorNumero}
+                        className="admin-btn admin-btn-search"
+                        disabled={!numeroJugadorBusqueda.trim()}
+                      >
+                        🔍 Buscar
+                      </button>
+                    </div>
+                    
+                    {jugadorInput && (
+                      <div className="jugador-seleccionado">
+                        <span>Jugador seleccionado: <strong>{jugadorInput}</strong></span>
+                        <button
+                          onClick={() => {
+                            setJugadorInput("");
+                            setNumeroJugadorBusqueda("");
+                          }}
+                          className="admin-btn admin-btn-clear"
+                        >
+                          ✖ Limpiar
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="puntos-selector">
@@ -546,6 +603,7 @@ export default function AdminBasquetMatchDetail() {
                       onClick={() => {
                         setMostrarInputJugador(null);
                         setJugadorInput("");
+                        setNumeroJugadorBusqueda("");
                         setTipoCanasta(1);
                       }}
                       className="cancelar-btn"
@@ -597,14 +655,44 @@ export default function AdminBasquetMatchDetail() {
                   
                   {/* Input manual */}
                   <div className="manual-input-section">
-                    <h5>O escribir manualmente:</h5>
-                    <input
-                      type="text"
-                      value={jugadorInput}
-                      onChange={(e) => setJugadorInput(e.target.value)}
-                      placeholder="Nombre del jugador"
-                      className="jugador-input"
-                    />
+                    <h5>O buscar por número de jugador:</h5>
+                    <div className="numero-jugador-busqueda">
+                      <input
+                        type="number"
+                        placeholder="Número del jugador..."
+                        value={numeroJugadorBusqueda}
+                        onChange={(e) => setNumeroJugadorBusqueda(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            asignarPuntoPorNumero();
+                          }
+                        }}
+                        className="admin-goal-input"
+                        min="1"
+                      />
+                      <button
+                        onClick={asignarPuntoPorNumero}
+                        className="admin-btn admin-btn-search"
+                        disabled={!numeroJugadorBusqueda.trim()}
+                      >
+                        🔍 Buscar
+                      </button>
+                    </div>
+                    
+                    {jugadorInput && (
+                      <div className="jugador-seleccionado">
+                        <span>Jugador seleccionado: <strong>{jugadorInput}</strong></span>
+                        <button
+                          onClick={() => {
+                            setJugadorInput("");
+                            setNumeroJugadorBusqueda("");
+                          }}
+                          className="admin-btn admin-btn-clear"
+                        >
+                          ✖ Limpiar
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="puntos-selector">
@@ -642,6 +730,7 @@ export default function AdminBasquetMatchDetail() {
                       onClick={() => {
                         setMostrarInputJugador(null);
                         setJugadorInput("");
+                        setNumeroJugadorBusqueda("");
                         setTipoCanasta(1);
                       }}
                       className="cancelar-btn"

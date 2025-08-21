@@ -179,8 +179,8 @@ export default function AdminMatches() {
     );
 
     return {
-      grupos: partidosCategoria.some(m => m.fase === "grupos" || !m.fase),
-      semifinal: partidosCategoria.some(m => m.fase === "semifinal"),
+      grupos: partidosCategoria.some(m => m.fase === "grupos"),
+      semifinal: partidosCategoria.some(m => m.fase === "semifinal" || m.fase === "semifinales"),
       final: partidosCategoria.some(m => m.fase === "final" || m.fase === "tercer_puesto" || m.fase === "tercerPuesto"),
       ida_vuelta: partidosCategoria.some(m => m.fase === "ida" || m.fase === "vuelta" || m.fase === "desempate")
     };
@@ -889,7 +889,7 @@ export default function AdminMatches() {
                              match.disciplina === discipline;
         
         if (faseActiva === "grupos") {
-          return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+          return cumpleFiltros && match.fase === "grupos";
         } else if (faseActiva === "semifinal") {
           return cumpleFiltros && match.fase === "semifinal";
         } else if (faseActiva === "final") {
@@ -945,9 +945,9 @@ export default function AdminMatches() {
     
     // Filtrar por fase activa
     if (faseActiva === "grupos") {
-      return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+      return cumpleFiltros && match.fase === "grupos";
     } else if (faseActiva === "semifinal") {
-      return cumpleFiltros && match.fase === "semifinal";
+      return cumpleFiltros && (match.fase === "semifinal" || match.fase === "semifinales");
     } else if (faseActiva === "final") {
       return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
     } else if (faseActiva === "ida_vuelta") {
@@ -967,9 +967,9 @@ export default function AdminMatches() {
                            (!filtroCategoria || match.categoria === filtroCategoria);
       
       if (fase === "grupos") {
-        return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+        return cumpleFiltros && match.fase === "grupos";
       } else if (fase === "semifinal") {
-        return cumpleFiltros && match.fase === "semifinal";
+        return cumpleFiltros && (match.fase === "semifinal" || match.fase === "semifinales");
       } else if (fase === "final") {
         return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
       } else if (fase === "ida_vuelta") {

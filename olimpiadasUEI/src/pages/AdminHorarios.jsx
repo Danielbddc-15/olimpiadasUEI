@@ -23,6 +23,24 @@ export default function AdminHorarios() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
 
+  // Estados para navegación por semanas
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const [totalWeeks, setTotalWeeks] = useState(1);
+  const [weeklySchedules, setWeeklySchedules] = useState({});
+
+  // Estados para configuración de cronograma
+  const [startDay, setStartDay] = useState(() => {
+    return localStorage.getItem(`olimpiadas_horarios_start_day_${discipline}`) || 'lunes';
+  });
+  const [disciplineConfig, setDisciplineConfig] = useState(() => {
+    const saved = localStorage.getItem(`olimpiadas_horarios_discipline_config_${discipline}`);
+    return saved ? JSON.parse(saved) : {
+      futbol: 'todos', // todos los días
+      voley: 'lunes', // día específico para vóley
+      basquet: 'martes' // día específico para básquet
+    };
+  });
+
   // Estados de filtros
   const [filtroGenero, setFiltroGenero] = useState(() => {
     return localStorage.getItem(`olimpiadas_horarios_filtro_genero_${discipline}`) || "";
@@ -61,11 +79,284 @@ export default function AdminHorarios() {
   // Días laborables de la semana
   const diasLaborables = [
     'lunes',
-    'martes', 
+    'martes',
     'miércoles',
     'jueves',
     'viernes'
   ];
+
+  // Funciones para navegación de semanas
+  const calculateTotalWeeks = (matches) => {
+    if (matches.length === 0) return 1;
+
+    // Calcular partidos únicos (sin considerar los ya programados)
+    const partidosPendientes = matches.filter(m => !m.fecha || !m.hora);
+    const partidosProgramados = matches.filter(m => m.fecha && m.hora);
+
+    // Capacidad por semana: 5 días × horarios × equipos únicos por día
+    const slotsPerWeek = diasLaborables.length * horariosDisponibles.length;
+    const equiposUnicos = new Set();
+
+    matches.forEach(match => {
+      const equipoA = `${match.equipoA.curso}_${match.equipoA.paralelo}`;
+      const equipoB = `${match.equipoB.curso}_${match.equipoB.paralelo}`;
+      equiposUnicos.add(equipoA);
+      equiposUnicos.add(equipoB);
+    });
+
+    // Estimar partidos por semana considerando la restricción de un equipo por día
+    const maxPartidosPorSemana = Math.min(slotsPerWeek, Math.floor(equiposUnicos.size / 2) * diasLaborables.length);
+    const weeksNeeded = Math.ceil(matches.length / maxPartidosPorSemana);
+
+    return Math.max(1, weeksNeeded);
+  };
+
+  const goToWeek = (weekNumber) => {
+    if (weekNumber >= 1 && weekNumber <= totalWeeks) {
+      setCurrentWeek(weekNumber);
+    }
+  };
+
+  const goToPreviousWeek = () => {
+    if (currentWeek > 1) {
+      setCurrentWeek(currentWeek - 1);
+    }
+  };
+
+  const goToNextWeek = () => {
+    if (currentWeek < totalWeeks) {
+      setCurrentWeek(currentWeek + 1);
+    }
+  };
+
+  const getWeekLabel = (weekNumber) => {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() + (weekNumber - 1) * 7);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+
+    const formatDate = (date) => {
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit'
+      });
+    };
+
+    return `Semana ${weekNumber} (${formatDate(startDate)} - ${formatDate(endDate)})`;
+  };
+
+  // Funciones para configuración de disciplinas
+  const getDisciplineForDay = (dayName) => {
+    const disciplines = ['futbol']; // Fútbol siempre se juega
+
+    // Verificar qué otras disciplinas se juegan ese día
+    if (disciplineConfig.voley === dayName) {
+      disciplines.push('voley');
+    }
+    if (disciplineConfig.basquet === dayName) {
+      disciplines.push('basquet');
+    }
+
+    return disciplines;
+  };
+
+  const validateDisciplineAssignment = (partido, dia) => {
+    const allowedDisciplines = getDisciplineForDay(dia);
+
+    if (!allowedDisciplines.includes(partido.disciplina)) {
+      return {
+        valid: false,
+        message: `${partido.disciplina} no está programado para ${dia}. Disciplinas permitidas: ${allowedDisciplines.join(', ')}`
+      };
+    }
+
+    return { valid: true };
+  };
+
+  const updateDisciplineConfig = (newConfig) => {
+    // Validar que vóley y básquet no estén en el mismo día
+    if (newConfig.voley === newConfig.basquet && newConfig.voley !== 'ninguno') {
+      alert('Error: Vóley y Básquet no pueden programarse el mismo día');
+      return false;
+    }
+
+    setDisciplineConfig(newConfig);
+    localStorage.setItem(`olimpiadas_horarios_discipline_config_${discipline}`, JSON.stringify(newConfig));
+    return true;
+  };
+
+  const updateStartDay = (newStartDay) => {
+    setStartDay(newStartDay);
+    localStorage.setItem(`olimpiadas_horarios_start_day_${discipline}`, newStartDay);
+  };
+
+  const getOrderedDays = () => {
+    const startIndex = diasLaborables.indexOf(startDay);
+    return [
+      ...diasLaborables.slice(startIndex),
+      ...diasLaborables.slice(0, startIndex)
+    ];
+  };
+
+  // Funciones para rotación progresiva de disciplinas
+  const getAvailableDaysForDiscipline = (disciplineName) => {
+    if (disciplineName === 'futbol') {
+      return getOrderedDays(); // Fútbol se juega todos los días
+    }
+
+    // Para vóley y básquet, obtener los días permitidos
+    const allowedDays = [];
+    getOrderedDays().forEach(day => {
+      const dayDisciplines = getDisciplineForDay(day);
+      if (dayDisciplines.includes(disciplineName)) {
+        allowedDays.push(day);
+      }
+    });
+
+    return allowedDays;
+  };
+
+  const getNextDayForDiscipline = (disciplineName, currentAssignments) => {
+    const availableDays = getAvailableDaysForDiscipline(disciplineName);
+
+    if (availableDays.length === 0) return null;
+
+    // Contar cuántos partidos ya están asignados por día para esta disciplina
+    const dayUsageCount = {};
+    availableDays.forEach(day => {
+      dayUsageCount[day] = 0;
+    });
+
+    // Contar asignaciones actuales
+    Object.values(currentAssignments).forEach(weekSchedule => {
+      availableDays.forEach(day => {
+        if (weekSchedule[day]) {
+          Object.values(weekSchedule[day]).forEach(match => {
+            if (match && match.disciplina === disciplineName) {
+              dayUsageCount[day]++;
+            }
+          });
+        }
+      });
+    });
+
+    // Encontrar el día con menor uso
+    let minUsage = Math.min(...Object.values(dayUsageCount));
+    let nextDay = availableDays.find(day => dayUsageCount[day] === minUsage);
+
+    return nextDay;
+  };
+
+  const assignMatchWithProgression = (matches, allWeeklySchedules) => {
+    // Separar partidos por disciplina
+    const matchesByDiscipline = {
+      futbol: matches.filter(m => m.disciplina === 'futbol'),
+      voley: matches.filter(m => m.disciplina === 'voley'),
+      basquet: matches.filter(m => m.disciplina === 'basquet')
+    };
+
+    const assignmentResults = {
+      assigned: [],
+      unassigned: []
+    };
+
+    // Procesar cada disciplina
+    Object.entries(matchesByDiscipline).forEach(([disciplineName, disciplineMatches]) => {
+      const availableDays = getAvailableDaysForDiscipline(disciplineName);
+
+      if (availableDays.length === 0 || disciplineMatches.length === 0) return;
+
+      let currentWeek = 1;
+      let currentDayIndex = 0;
+      let matchIndex = 0;
+
+      while (matchIndex < disciplineMatches.length && currentWeek <= Object.keys(allWeeklySchedules).length) {
+        const currentDay = availableDays[currentDayIndex];
+
+        // Intentar llenar completamente el día actual antes de pasar al siguiente
+        let dayFilled = false;
+
+        for (let hourIndex = 0; hourIndex < horariosDisponibles.length && matchIndex < disciplineMatches.length; hourIndex++) {
+          const currentHour = horariosDisponibles[hourIndex];
+          const match = disciplineMatches[matchIndex];
+
+          // Verificar que el slot esté libre
+          if (!allWeeklySchedules[currentWeek][currentDay][currentHour]) {
+            // Verificar que los equipos no jueguen más de una vez por día en esa semana
+            const teamsInDay = getTeamsPlayingInDay(allWeeklySchedules[currentWeek][currentDay]);
+            const matchTeams = [
+              `${match.equipoA.curso}_${match.equipoA.paralelo}`,
+              `${match.equipoB.curso}_${match.equipoB.paralelo}`
+            ];
+
+            const hasConflict = matchTeams.some(team => teamsInDay.includes(team));
+
+            if (!hasConflict) {
+              // Asignar el partido
+              allWeeklySchedules[currentWeek][currentDay][currentHour] = {
+                ...match,
+                diaAsignado: currentDay,
+                horaAsignada: currentHour,
+                semanaAsignada: currentWeek
+              };
+
+              assignmentResults.assigned.push({
+                match,
+                day: currentDay,
+                hour: currentHour,
+                week: currentWeek,
+                discipline: disciplineName
+              });
+
+              matchIndex++; // Avanzar al siguiente partido
+              dayFilled = true;
+            }
+          }
+        }
+
+        // Si no se pudo asignar ningún partido en este día/semana, avanzar al siguiente día
+        if (!dayFilled) {
+          currentDayIndex = (currentDayIndex + 1) % availableDays.length;
+
+          // Si completamos un ciclo de días, avanzar a la siguiente semana
+          if (currentDayIndex === 0) {
+            currentWeek++;
+          }
+        } else {
+          // Se llenó el día (o se llenaron algunos slots), pasar al siguiente día en la rotación
+          currentDayIndex = (currentDayIndex + 1) % availableDays.length;
+
+          // Si completamos un ciclo de días, avanzar a la siguiente semana
+          if (currentDayIndex === 0) {
+            currentWeek++;
+          }
+        }
+      }
+
+      // Marcar partidos no asignados
+      while (matchIndex < disciplineMatches.length) {
+        assignmentResults.unassigned.push({
+          match: disciplineMatches[matchIndex],
+          discipline: disciplineName,
+          reason: 'No hay más semanas/slots disponibles'
+        });
+        matchIndex++;
+      }
+    });
+
+    return assignmentResults;
+  };
+
+  const getTeamsPlayingInDay = (daySchedule) => {
+    const teams = [];
+    Object.values(daySchedule).forEach(match => {
+      if (match) {
+        teams.push(`${match.equipoA.curso}_${match.equipoA.paralelo}`);
+        teams.push(`${match.equipoB.curso}_${match.equipoB.paralelo}`);
+      }
+    });
+    return teams;
+  };
 
   // Horarios disponibles (intervalos de 45 minutos)
   const horariosDisponibles = [
@@ -184,110 +475,143 @@ export default function AdminHorarios() {
     setFilteredMatches(filtered);
   }, [matches, equipos, filtroGenero, filtroNivelEducacional, filtroCategoria, faseActiva]);
 
-  // Organizar partidos por horarios
+  // Calcular total de semanas y organizar partidos
   useEffect(() => {
-    if (filteredMatches.length === 0) return;
+    if (filteredMatches.length === 0) {
+      setTotalWeeks(1);
+      setWeeklySchedules({});
+      setHorariosPorDia({});
+      return;
+    }
 
-    const horarios = {};
-    
-    // Inicializar estructura de horarios
-    diasLaborables.forEach(dia => {
-      horarios[dia] = {};
-      horariosDisponibles.forEach(hora => {
-        horarios[dia][hora] = null;
+    // Calcular total de semanas necesarias
+    const weeksNeeded = calculateTotalWeeks(filteredMatches);
+    setTotalWeeks(weeksNeeded);
+
+    // Obtener días ordenados según día de inicio
+    const orderedDays = getOrderedDays();
+
+    // Crear estructura para todas las semanas
+    const allWeeklySchedules = {};
+
+    for (let week = 1; week <= weeksNeeded; week++) {
+      const weekSchedule = {};
+      orderedDays.forEach(dia => {
+        weekSchedule[dia] = {};
+        horariosDisponibles.forEach(hora => {
+          weekSchedule[dia][hora] = null;
+        });
       });
-    });
+      allWeeklySchedules[week] = weekSchedule;
+    }
 
-    // Colocar partidos que ya tienen fecha y hora asignada
-    filteredMatches.forEach(partido => {
-      if (partido.fecha && partido.hora) {
-        const dia = partido.fecha;
-        const hora = partido.hora;
-        if (horarios[dia] && horarios[dia][hora] !== undefined) {
-          horarios[dia][hora] = {
-            ...partido,
-            diaAsignado: dia,
-            horaAsignada: hora
-          };
-        }
-      }
-    });
+    // Distribuir partidos por semanas
+    let currentWeekForAssignment = 1;
+    const equiposUsadosPorSemana = {};
 
-    // Colocar partidos sin asignar automáticamente
-    const partidosSinAsignar = filteredMatches.filter(m => !m.fecha || !m.hora);
-    
-    let diaIndex = 0;
-    let horaIndex = 0;
-    const equiposUsadosPorDia = {};
-
-    // Función para verificar si un equipo ya juega en un día
-    const equipoYaJuegaEnDia = (partido, dia) => {
-      if (!equiposUsadosPorDia[dia]) {
-        equiposUsadosPorDia[dia] = new Set();
-        // Agregar equipos que ya están programados ese día
-        Object.values(horarios[dia]).forEach(p => {
+    // Función para verificar si un equipo ya juega en una semana específica
+    const equipoYaJuegaEnSemana = (partido, semana, dia) => {
+      const weekKey = `${semana}_${dia}`;
+      if (!equiposUsadosPorSemana[weekKey]) {
+        equiposUsadosPorSemana[weekKey] = new Set();
+        // Agregar equipos que ya están programados ese día en esa semana
+        Object.values(allWeeklySchedules[semana][dia]).forEach(p => {
           if (p) {
             const equipoA = `${p.equipoA.curso} ${p.equipoA.paralelo}`;
             const equipoB = `${p.equipoB.curso} ${p.equipoB.paralelo}`;
-            equiposUsadosPorDia[dia].add(equipoA);
-            equiposUsadosPorDia[dia].add(equipoB);
+            equiposUsadosPorSemana[weekKey].add(equipoA);
+            equiposUsadosPorSemana[weekKey].add(equipoB);
           }
         });
       }
-      
+
       const equipoA = `${partido.equipoA.curso} ${partido.equipoA.paralelo}`;
       const equipoB = `${partido.equipoB.curso} ${partido.equipoB.paralelo}`;
-      
-      return equiposUsadosPorDia[dia].has(equipoA) || equiposUsadosPorDia[dia].has(equipoB);
+
+      return equiposUsadosPorSemana[weekKey].has(equipoA) || equiposUsadosPorSemana[weekKey].has(equipoB);
     };
 
-    // Función para marcar equipos como usados en un día
-    const marcarEquiposUsados = (partido, dia) => {
-      if (!equiposUsadosPorDia[dia]) {
-        equiposUsadosPorDia[dia] = new Set();
+    // Función para marcar equipos como usados en una semana específica
+    const marcarEquiposUsadosEnSemana = (partido, semana, dia) => {
+      const weekKey = `${semana}_${dia}`;
+      if (!equiposUsadosPorSemana[weekKey]) {
+        equiposUsadosPorSemana[weekKey] = new Set();
       }
-      
+
       const equipoA = `${partido.equipoA.curso} ${partido.equipoA.paralelo}`;
       const equipoB = `${partido.equipoB.curso} ${partido.equipoB.paralelo}`;
-      
-      equiposUsadosPorDia[dia].add(equipoA);
-      equiposUsadosPorDia[dia].add(equipoB);
+
+      equiposUsadosPorSemana[weekKey].add(equipoA);
+      equiposUsadosPorSemana[weekKey].add(equipoB);
     };
 
-    // Asignar partidos sin programar
-    partidosSinAsignar.forEach(partido => {
-      let asignado = false;
-      let intentos = 0;
-      const maxIntentos = diasLaborables.length * horariosDisponibles.length;
+    // Primero, colocar partidos que ya tienen fecha y hora asignada
+    filteredMatches.forEach(partido => {
+      if (partido.fecha && partido.hora && partido.semana) {
+        const dia = partido.fecha;
+        const hora = partido.hora;
+        const semana = partido.semana;
 
-      while (!asignado && intentos < maxIntentos) {
-        const dia = diasLaborables[diaIndex];
-        const hora = horariosDisponibles[horaIndex];
-
-        if (!horarios[dia][hora] && !equipoYaJuegaEnDia(partido, dia)) {
-          horarios[dia][hora] = {
+        if (allWeeklySchedules[semana] && allWeeklySchedules[semana][dia] &&
+            allWeeklySchedules[semana][dia][hora] !== undefined) {
+          allWeeklySchedules[semana][dia][hora] = {
             ...partido,
             diaAsignado: dia,
-            horaAsignada: hora
+            horaAsignada: hora,
+            semanaAsignada: semana
           };
-          marcarEquiposUsados(partido, dia);
-          asignado = true;
+          marcarEquiposUsadosEnSemana(partido, semana, dia);
         }
-
-        horaIndex++;
-        if (horaIndex >= horariosDisponibles.length) {
-          horaIndex = 0;
-          diaIndex++;
-          if (diaIndex >= diasLaborables.length) {
-            diaIndex = 0;
-          }
-        }
-        intentos++;
       }
     });
 
-    setHorariosPorDia(horarios);
-  }, [filteredMatches]);
+    // Luego, asignar partidos sin programar usando rotación progresiva
+    const partidosSinAsignar = filteredMatches.filter(m => !m.fecha || !m.hora || !m.semana);
+
+    if (partidosSinAsignar.length > 0) {
+      const assignmentResults = assignMatchWithProgression(partidosSinAsignar, allWeeklySchedules);
+
+      // Log de resultados para debugging
+      console.log('Resultados de asignación progresiva:', {
+        asignados: assignmentResults.assigned.length,
+        sinAsignar: assignmentResults.unassigned.length
+      });
+
+      // Agrupar asignaciones por disciplina y día para mostrar el patrón
+      const groupedByDiscipline = {};
+      assignmentResults.assigned.forEach(a => {
+        if (!groupedByDiscipline[a.discipline]) {
+          groupedByDiscipline[a.discipline] = {};
+        }
+        const dayKey = `${a.day} (Sem. ${a.week})`;
+        if (!groupedByDiscipline[a.discipline][dayKey]) {
+          groupedByDiscipline[a.discipline][dayKey] = [];
+        }
+        groupedByDiscipline[a.discipline][dayKey].push(`${a.hour}: ${a.match.equipoA.curso}${a.match.equipoA.paralelo} vs ${a.match.equipoB.curso}${a.match.equipoB.paralelo}`);
+      });
+
+      console.log('Patrón de llenado por disciplina:', groupedByDiscipline);
+
+      // Mostrar partidos no asignados si los hay
+      if (assignmentResults.unassigned.length > 0) {
+        console.warn('Partidos sin asignar:', assignmentResults.unassigned);
+      }
+    }
+
+    setWeeklySchedules(allWeeklySchedules);
+
+    // Establecer horarios para la semana actual
+    if (allWeeklySchedules[currentWeek]) {
+      setHorariosPorDia(allWeeklySchedules[currentWeek]);
+    }
+  }, [filteredMatches, startDay, disciplineConfig]);
+
+  // Actualizar horarios cuando cambie la semana actual
+  useEffect(() => {
+    if (weeklySchedules[currentWeek]) {
+      setHorariosPorDia(weeklySchedules[currentWeek]);
+    }
+  }, [currentWeek, weeklySchedules]);
 
   // Funciones de filtros
   const limpiarFiltros = () => {
@@ -373,22 +697,30 @@ export default function AdminHorarios() {
     
     if (!draggedMatch) return;
 
+    // Validar que la disciplina puede jugar en este día
+    const disciplineValidation = validateDisciplineAssignment(draggedMatch, targetDia);
+    if (!disciplineValidation.valid) {
+      alert(disciplineValidation.message);
+      setDraggedMatch(null);
+      return;
+    }
+
     // Verificar si ya hay un partido en ese horario
     const partidoEnTarget = horariosPorDia[targetDia]?.[targetHora];
-    
+
     // Verificar restricción: un equipo por día
     const equiposEnDia = Object.values(horariosPorDia[targetDia] || {})
       .filter(p => p && p.id !== draggedMatch.id)
       .map(p => [`${p.equipoA.curso} ${p.equipoA.paralelo}`, `${p.equipoB.curso} ${p.equipoB.paralelo}`])
       .flat();
-    
+
     const equiposDraggedMatch = [
       `${draggedMatch.equipoA.curso} ${draggedMatch.equipoA.paralelo}`,
       `${draggedMatch.equipoB.curso} ${draggedMatch.equipoB.paralelo}`
     ];
-    
+
     const conflicto = equiposDraggedMatch.some(equipo => equiposEnDia.includes(equipo));
-    
+
     if (conflicto && !partidoEnTarget) {
       alert('Uno de los equipos ya tiene un partido programado ese día');
       setDraggedMatch(null);
@@ -402,12 +734,14 @@ export default function AdminHorarios() {
         await updateDoc(doc(db, "matches", draggedMatch.id), {
           fecha: targetDia,
           hora: targetHora,
+          semana: currentWeek,
           estado: "programado"
         });
 
         await updateDoc(doc(db, "matches", partidoEnTarget.id), {
           fecha: draggedMatch.diaAsignado || null,
           hora: draggedMatch.horaAsignada || null,
+          semana: draggedMatch.semanaAsignada || null,
           estado: draggedMatch.diaAsignado ? "programado" : "pendiente"
         });
       } else {
@@ -415,6 +749,7 @@ export default function AdminHorarios() {
         await updateDoc(doc(db, "matches", draggedMatch.id), {
           fecha: targetDia,
           hora: targetHora,
+          semana: currentWeek,
           estado: "programado"
         });
       }
@@ -437,21 +772,28 @@ export default function AdminHorarios() {
   const assignTimeManually = async (dia, hora) => {
     if (!selectedMatch) return;
 
+    // Validar que la disciplina puede jugar en este día
+    const disciplineValidation = validateDisciplineAssignment(selectedMatch, dia);
+    if (!disciplineValidation.valid) {
+      alert(disciplineValidation.message);
+      return;
+    }
+
     // Verificar conflictos
     const partidoEnTarget = horariosPorDia[dia]?.[hora];
-    
+
     const equiposEnDia = Object.values(horariosPorDia[dia] || {})
       .filter(p => p && p.id !== selectedMatch.id)
       .map(p => [`${p.equipoA.curso} ${p.equipoA.paralelo}`, `${p.equipoB.curso} ${p.equipoB.paralelo}`])
       .flat();
-    
+
     const equiposSelectedMatch = [
       `${selectedMatch.equipoA.curso} ${selectedMatch.equipoA.paralelo}`,
       `${selectedMatch.equipoB.curso} ${selectedMatch.equipoB.paralelo}`
     ];
-    
+
     const conflicto = equiposSelectedMatch.some(equipo => equiposEnDia.includes(equipo));
-    
+
     if (conflicto && !partidoEnTarget) {
       alert('Uno de los equipos ya tiene un partido programado ese día');
       return;
@@ -463,18 +805,21 @@ export default function AdminHorarios() {
         await updateDoc(doc(db, "matches", selectedMatch.id), {
           fecha: dia,
           hora: hora,
+          semana: currentWeek,
           estado: "programado"
         });
 
         await updateDoc(doc(db, "matches", partidoEnTarget.id), {
           fecha: selectedMatch.diaAsignado || null,
           hora: selectedMatch.horaAsignada || null,
+          semana: selectedMatch.semanaAsignada || null,
           estado: selectedMatch.diaAsignado ? "programado" : "pendiente"
         });
       } else {
         await updateDoc(doc(db, "matches", selectedMatch.id), {
           fecha: dia,
           hora: hora,
+          semana: currentWeek,
           estado: "programado"
         });
       }
@@ -529,6 +874,7 @@ export default function AdminHorarios() {
         await updateDoc(doc(db, "matches", partido.id), {
           fecha: dia,
           hora: partido.hora,
+          semana: currentWeek,
           estado: "programado"
         });
       }
@@ -680,6 +1026,233 @@ export default function AdminHorarios() {
         </div>
       </div>
 
+      {/* Configuración de Cronograma */}
+      <div className="schedule-config-container">
+        <h3>⚙️ Configuración del Cronograma:</h3>
+
+        <div className="config-row">
+          <div className="config-group">
+            <label>📅 Día de inicio de la semana:</label>
+            <select
+              value={startDay}
+              onChange={(e) => updateStartDay(e.target.value)}
+              className="config-select"
+            >
+              {diasLaborables.map((dia) => (
+                <option key={dia} value={dia}>
+                  {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="config-group">
+            <label>🏐 Día para Vóley:</label>
+            <select
+              value={disciplineConfig.voley}
+              onChange={(e) => {
+                const newConfig = { ...disciplineConfig, voley: e.target.value };
+                updateDisciplineConfig(newConfig);
+              }}
+              className="config-select"
+            >
+              <option value="ninguno">No programar</option>
+              {diasLaborables.map((dia) => (
+                <option key={dia} value={dia} disabled={disciplineConfig.basquet === dia}>
+                  {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                  {disciplineConfig.basquet === dia ? ' (ocupado por básquet)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="config-group">
+            <label>🏀 Día para Básquet:</label>
+            <select
+              value={disciplineConfig.basquet}
+              onChange={(e) => {
+                const newConfig = { ...disciplineConfig, basquet: e.target.value };
+                updateDisciplineConfig(newConfig);
+              }}
+              className="config-select"
+            >
+              <option value="ninguno">No programar</option>
+              {diasLaborables.map((dia) => (
+                <option key={dia} value={dia} disabled={disciplineConfig.voley === dia}>
+                  {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                  {disciplineConfig.voley === dia ? ' (ocupado por vóley)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="discipline-schedule-preview">
+          <h4>📋 Vista previa de la programación semanal:</h4>
+          <div className="weekly-preview">
+            {getOrderedDays().map(dia => {
+              const disciplines = getDisciplineForDay(dia);
+              return (
+                <div key={dia} className="day-preview">
+                  <span className="day-name">{dia.charAt(0).toUpperCase() + dia.slice(1)}</span>
+                  <div className="day-disciplines">
+                    {disciplines.map(discipline => (
+                      <span key={discipline} className={`discipline-badge ${discipline}`}>
+                        {discipline === 'futbol' ? '⚽' : discipline === 'voley' ? '🏐' : '🏀'}
+                        {discipline.charAt(0).toUpperCase() + discipline.slice(1)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="validation-status">
+            {disciplineConfig.voley === disciplineConfig.basquet && disciplineConfig.voley !== 'ninguno' ? (
+              <div className="validation-error">
+                ❌ Error: Vóley y Básquet no pueden programarse el mismo día
+              </div>
+            ) : (
+              <div className="validation-success">
+                ✅ Configuración válida - Vóley y Básquet en días diferentes
+              </div>
+            )}
+          </div>
+
+          <div className="rotation-explanation">
+            <h4>🔄 Rotación Progresiva por Disciplina:</h4>
+            <div className="rotation-info">
+              <div className="rotation-discipline">
+                <span className="discipline-badge futbol">⚽ Fútbol</span>
+                <span className="rotation-pattern">Todos los días (sin rotación)</span>
+              </div>
+
+              {disciplineConfig.voley !== 'ninguno' && (
+                <div className="rotation-discipline">
+                  <span className="discipline-badge voley">🏐 Vóley</span>
+                  <span className="rotation-pattern">
+                    {(() => {
+                      const availableDays = getAvailableDaysForDiscipline('voley');
+                      return availableDays.length > 0
+                        ? `${availableDays.join(' → ')} → (repite ciclo)`
+                        : 'No configurado';
+                    })()}
+                  </span>
+                </div>
+              )}
+
+              {disciplineConfig.basquet !== 'ninguno' && (
+                <div className="rotation-discipline">
+                  <span className="discipline-badge basquet">🏀 Básquet</span>
+                  <span className="rotation-pattern">
+                    {(() => {
+                      const availableDays = getAvailableDaysForDiscipline('basquet');
+                      return availableDays.length > 0
+                        ? `${availableDays.join(' → ')} → (repite ciclo)`
+                        : 'No configurado';
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="rotation-note">
+              <strong>💡 Cómo funciona la rotación:</strong> Los partidos se asignan llenando
+              completamente todos los horarios de un día antes de pasar al siguiente. Por ejemplo,
+              si vóley está configurado para Lunes-Miércoles-Viernes:
+              <br/>
+              <strong>Paso 1:</strong> Se llenan TODOS los horarios del Lunes con partidos de vóley
+              <br/>
+              <strong>Paso 2:</strong> Se llenan TODOS los horarios del Miércoles con los siguientes partidos de vóley
+              <br/>
+              <strong>Paso 3:</strong> Se llenan TODOS los horarios del Viernes, y así sucesivamente.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navegación por Semanas */}
+      {totalWeeks > 1 && (
+        <div className="week-navigation">
+          <div className="week-navigation-header">
+            <h3>📅 Navegación por Semanas</h3>
+            <div className="week-summary">
+              Total: {totalWeeks} semana{totalWeeks > 1 ? 's' : ''}
+            </div>
+          </div>
+
+          <div className="week-controls">
+            <button
+              className="week-nav-btn prev-btn"
+              onClick={goToPreviousWeek}
+              disabled={currentWeek === 1}
+              title="Semana anterior"
+            >
+              ← Anterior
+            </button>
+
+            <div className="week-selector">
+              <select
+                value={currentWeek}
+                onChange={(e) => goToWeek(parseInt(e.target.value))}
+                className="week-select"
+              >
+                {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(week => (
+                  <option key={week} value={week}>
+                    {getWeekLabel(week)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              className="week-nav-btn next-btn"
+              onClick={goToNextWeek}
+              disabled={currentWeek === totalWeeks}
+              title="Siguiente semana"
+            >
+              Siguiente →
+            </button>
+          </div>
+
+          <div className="week-tabs">
+            {Array.from({ length: Math.min(totalWeeks, 10) }, (_, i) => {
+              const week = i + 1;
+              if (totalWeeks <= 10) {
+                return (
+                  <button
+                    key={week}
+                    className={`week-tab ${currentWeek === week ? 'active' : ''}`}
+                    onClick={() => goToWeek(week)}
+                  >
+                    S{week}
+                  </button>
+                );
+              }
+              return null;
+            })}
+
+            {totalWeeks > 10 && (
+              <div className="week-indicator">
+                Semana {currentWeek} de {totalWeeks}
+              </div>
+            )}
+          </div>
+
+          <div className="week-info">
+            <div className="current-week-info">
+              <span className="week-label">📍 {getWeekLabel(currentWeek)}</span>
+              <span className="week-stats">
+                {Object.values(horariosPorDia).reduce((total, dia) =>
+                  total + Object.values(dia).filter(partido => partido !== null).length, 0
+                )} partidos programados
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controles */}
       <div className="horarios-controls">
         <div className="controls-info">
@@ -734,100 +1307,110 @@ export default function AdminHorarios() {
         </div>
       ) : (
         <div className="horarios-grid">
-          {diasLaborables.map(dia => (
-            <div key={dia} className="dia-column">
-              <div className="dia-header">
-                <h3 className="dia-title">
-                  <span className="dia-icon">📅</span>
-                  {dia.charAt(0).toUpperCase() + dia.slice(1)}
-                </h3>
-                <button 
-                  className="confirm-day-btn"
-                  onClick={() => confirmarHorariosDia(dia)}
-                  disabled={!Object.values(horariosPorDia[dia] || {}).some(p => p)}
-                >
-                  <span className="btn-icon">✅</span>
-                  Confirmar día
-                </button>
-              </div>
+          {getOrderedDays().map(dia => {
+            const allowedDisciplines = getDisciplineForDay(dia);
+            return (
+              <div key={dia} className="dia-column">
+                <div className="dia-header">
+                  <h3 className="dia-title">
+                    <span className="dia-icon">📅</span>
+                    {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                  </h3>
+                  <div className="allowed-disciplines">
+                    {allowedDisciplines.map(discipline => (
+                      <span key={discipline} className={`discipline-icon ${discipline}`}>
+                        {discipline === 'futbol' ? '⚽' : discipline === 'voley' ? '🏐' : '🏀'}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    className="confirm-day-btn"
+                    onClick={() => confirmarHorariosDia(dia)}
+                    disabled={!Object.values(horariosPorDia[dia] || {}).some(p => p)}
+                  >
+                    <span className="btn-icon">✅</span>
+                    Confirmar día
+                  </button>
+                </div>
 
-              <div className="horarios-lista">
-                {horariosDisponibles.map(hora => {
-                  const partido = horariosPorDia[dia]?.[hora];
-                  return (
-                    <div 
-                      key={hora} 
-                      className="horario-slot"
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, dia, hora)}
-                    >
-                      <div className="hora-label">{hora}</div>
-                      {partido ? (
-                        <div 
-                          className={`partido-card ${selectedMatches.has(partido.id) ? 'selected' : ''}`}
-                          draggable={true}
-                          onDragStart={(e) => handleDragStart(e, partido)}
-                          onClick={() => toggleSelectPartido(partido.id)}
-                        >
-                          <div className="partido-header">
-                            <div 
-                              className="fase-badge"
-                              style={{ backgroundColor: getTipoFase(partido).color }}
-                            >
-                              <span className="fase-icon">{getTipoFase(partido).icon}</span>
-                              <span className="fase-text">{getTipoFase(partido).tipo}</span>
+                <div className="horarios-lista">
+                  {horariosDisponibles.map(hora => {
+                    const partido = horariosPorDia[dia]?.[hora];
+                    return (
+                      <div
+                        key={hora}
+                        className="horario-slot"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, dia, hora)}
+                      >
+                        <div className="hora-label">{hora}</div>
+                        {partido ? (
+                          <div
+                            className={`partido-card ${selectedMatches.has(partido.id) ? 'selected' : ''}`}
+                            draggable={true}
+                            onDragStart={(e) => handleDragStart(e, partido)}
+                            onClick={() => toggleSelectPartido(partido.id)}
+                          >
+                            <div className="partido-header">
+                              <div
+                                className="fase-badge"
+                                style={{ backgroundColor: getTipoFase(partido).color }}
+                              >
+                                <span className="fase-icon">{getTipoFase(partido).icon}</span>
+                                <span className="fase-text">{getTipoFase(partido).tipo}</span>
+                              </div>
+                              <button
+                                className="time-select-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openTimeSelector(partido);
+                                }}
+                                title="Seleccionar horario manualmente"
+                              >
+                                🕒
+                              </button>
                             </div>
-                            <button 
-                              className="time-select-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openTimeSelector(partido);
-                              }}
-                              title="Seleccionar horario manualmente"
-                            >
-                              🕒
-                            </button>
+
+                            <div className="partido-equipos">
+                              <div className="equipo">
+                                <span className="equipo-icon">🏫</span>
+                                <span className="equipo-nombre">
+                                  {partido.equipoA.curso} {partido.equipoA.paralelo}
+                                </span>
+                              </div>
+                              <div className="vs-divider">VS</div>
+                              <div className="equipo">
+                                <span className="equipo-icon">🏫</span>
+                                <span className="equipo-nombre">
+                                  {partido.equipoB.curso} {partido.equipoB.paralelo}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="partido-info">
+                              <div className="info-item">
+                                <span className="info-icon">🏆</span>
+                                <span>{partido.grupo}</span>
+                              </div>
+                              <div className="info-item">
+                                <span className="info-icon">⚡</span>
+                                <span>{partido.estado}</span>
+                              </div>
+                            </div>
                           </div>
-                          
-                          <div className="partido-equipos">
-                            <div className="equipo">
-                              <span className="equipo-icon">🏫</span>
-                              <span className="equipo-nombre">
-                                {partido.equipoA.curso} {partido.equipoA.paralelo}
-                              </span>
-                            </div>
-                            <div className="vs-divider">VS</div>
-                            <div className="equipo">
-                              <span className="equipo-icon">🏫</span>
-                              <span className="equipo-nombre">
-                                {partido.equipoB.curso} {partido.equipoB.paralelo}
-                              </span>
-                            </div>
+                        ) : (
+                          <div className="slot-vacio">
+                            <span className="vacio-text">Libre</span>
+                            <span className="drop-hint">Suelta aquí</span>
                           </div>
-                          
-                          <div className="partido-info">
-                            <div className="info-item">
-                              <span className="info-icon">🏆</span>
-                              <span>{partido.grupo}</span>
-                            </div>
-                            <div className="info-item">
-                              <span className="info-icon">⚡</span>
-                              <span>{partido.estado}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="slot-vacio">
-                          <span className="vacio-text">Libre</span>
-                          <span className="drop-hint">Suelta aquí</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

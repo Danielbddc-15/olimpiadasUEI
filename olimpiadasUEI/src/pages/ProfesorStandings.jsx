@@ -73,8 +73,12 @@ export default function ProfesorStandings() {
     : [];
   
   const categoriasDisponibles = (filtroGenero && filtroNivel)
-    ? categorias.filter(cat => cat.genero === filtroGenero && cat.nivelEducacional === filtroNivel).map(cat => cat.categoria)
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero && cat.nivelEducacional === filtroNivel).map(cat => cat.nombre))].filter(Boolean)
     : [];
+
+  // Debug logs
+  console.log("Categorias disponibles:", categoriasDisponibles);
+  console.log("Filtros actuales:", { filtroGenero, filtroNivel, filtroCategoria });
 
   // Obtener partidos en tiempo real
   useEffect(() => {
@@ -127,49 +131,62 @@ export default function ProfesorStandings() {
     console.log("Todos los equipos:", equipos);
     console.log("Todos los partidos:", matches);
 
-    // Aplicar filtros
-    let equiposFiltrados = equipos;
-    
-    if (filtroGenero || filtroNivel || filtroCategoria) {
-      // Filtrar partidos que cumplan con los criterios seleccionados
-      const partidosFiltrados = matches.filter(partido => {
-        const pasaGenero = !filtroGenero || partido.genero === filtroGenero;
-        const pasaNivel = !filtroNivel || partido.nivelEducacional === filtroNivel;
-        const pasaCategoria = !filtroCategoria || partido.categoria === filtroCategoria;
-        return pasaGenero && pasaNivel && pasaCategoria;
-      });
-
-      // Obtener equipos únicos de los partidos filtrados
-      const equiposEnPartidos = new Set();
-      partidosFiltrados.forEach(partido => {
-        equiposEnPartidos.add(`${partido.equipoA.curso}_${partido.equipoA.paralelo}`);
-        equiposEnPartidos.add(`${partido.equipoB.curso}_${partido.equipoB.paralelo}`);
-      });
-
-      // Filtrar equipos que aparecen en los partidos filtrados
-      equiposFiltrados = equipos.filter(equipo => 
-        equiposEnPartidos.has(`${equipo.curso}_${equipo.paralelo}`)
-      );
+    // ✅ NO MOSTRAR NADA SI NO ESTÁN TODOS LOS FILTROS SELECCIONADOS
+    if (!filtroGenero || !filtroNivel || !filtroCategoria) {
+      console.log("Filtros incompletos - no mostrar tabla");
+      setStandingsPorGrupo({});
+      return;
     }
+
+    // Aplicar filtros (ahora todos son requeridos)
+    const partidosFiltrados = matches.filter(partido => {
+      const pasaGenero = partido.genero === filtroGenero;
+      const pasaNivel = partido.nivelEducacional === filtroNivel;
+      const pasaCategoria = partido.categoria === filtroCategoria;
+      return pasaGenero && pasaNivel && pasaCategoria;
+    });
+
+    // Obtener equipos únicos de los partidos filtrados
+    const equiposEnPartidos = new Set();
+    partidosFiltrados.forEach(partido => {
+      equiposEnPartidos.add(`${partido.equipoA.curso}_${partido.equipoA.paralelo}`);
+      equiposEnPartidos.add(`${partido.equipoB.curso}_${partido.equipoB.paralelo}`);
+    });
+
+    // Filtrar equipos que aparecen en los partidos filtrados y que coinciden con los filtros
+    const equiposFiltrados = equipos.filter(equipo => 
+      equiposEnPartidos.has(`${equipo.curso}_${equipo.paralelo}`) &&
+      equipo.genero === filtroGenero &&
+      equipo.nivelEducacional === filtroNivel &&
+      equipo.categoria === filtroCategoria
+    );
 
     console.log("Equipos filtrados:", equiposFiltrados);
 
-    // Filtrar solo equipos que realmente pertenecen a grupos válidos (Grupo 1, Grupo 2, etc.)
-    const equiposConGrupoValido = equiposFiltrados.filter(
+    // Verificar si hay equipos con grupos múltiples válidos
+    const equiposConGrupoMultiple = equiposFiltrados.filter(
       (equipo) =>
         equipo.grupo &&
-        (equipo.grupo.includes("Grupo") || equipo.grupo.includes("grupo")),
+        (equipo.grupo.includes("Grupo") || equipo.grupo.includes("grupo"))
     );
 
-    console.log("Equipos con grupo válido:", equiposConGrupoValido);
+    console.log("Equipos con grupo múltiple:", equiposConGrupoMultiple);
 
-    // Agrupar equipos por grupo
+    // Agrupar equipos por grupo o crear un grupo único
     const equiposPorGrupo = {};
-    equiposConGrupoValido.forEach((equipo) => {
-      const grupo = equipo.grupo;
-      if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
-      equiposPorGrupo[grupo].push(equipo);
-    });
+    
+    if (equiposConGrupoMultiple.length > 0) {
+      // Si hay equipos con grupos múltiples, agrupar por grupo
+      equiposConGrupoMultiple.forEach((equipo) => {
+        const grupo = equipo.grupo;
+        if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
+        equiposPorGrupo[grupo].push(equipo);
+      });
+    } else {
+      // Si no hay grupos múltiples, crear una tabla única con todos los equipos filtrados
+      const nombreGrupo = filtroCategoria; // Usar el nombre de la categoría como nombre del grupo
+      equiposPorGrupo[nombreGrupo] = equiposFiltrados;
+    }
 
     console.log("Equipos agrupados:", equiposPorGrupo);
 
@@ -189,22 +206,34 @@ export default function ProfesorStandings() {
 
       console.log(`Tabla inicial para ${grupo}:`, table);
 
-      // Filtrar partidos que corresponden específicamente a este grupo
-      const partidosDelGrupo = matches.filter(
-        (match) =>
-          match.estado === "finalizado" &&
-          match.grupo === grupo && // Verificar que el partido sea del grupo correcto
-          equiposGrupo.some(
-            (eq) =>
-              `${eq.curso} ${eq.paralelo}` ===
-              `${match.equipoA.curso} ${match.equipoA.paralelo}`,
-          ) &&
-          equiposGrupo.some(
-            (eq) =>
-              `${eq.curso} ${eq.paralelo}` ===
-              `${match.equipoB.curso} ${match.equipoB.paralelo}`,
-          ),
-      );
+      // Filtrar partidos que corresponden específicamente a este grupo y filtros
+      const partidosDelGrupo = matches.filter((match) => {
+        // Verificar que el partido esté finalizado
+        if (match.estado !== "finalizado") return false;
+        
+        // Verificar filtros básicos
+        if (match.genero !== filtroGenero) return false;
+        if (match.nivelEducacional !== filtroNivel) return false;
+        if (match.categoria !== filtroCategoria) return false;
+        
+        // Verificar que ambos equipos pertenezcan a este grupo
+        const equipoAPertenece = equiposGrupo.some(
+          (eq) => `${eq.curso} ${eq.paralelo}` === `${match.equipoA.curso} ${match.equipoA.paralelo}`
+        );
+        const equipoBPertenece = equiposGrupo.some(
+          (eq) => `${eq.curso} ${eq.paralelo}` === `${match.equipoB.curso} ${match.equipoB.paralelo}`
+        );
+        
+        if (!equipoAPertenece || !equipoBPertenece) return false;
+        
+        // Si hay múltiples grupos, verificar que el partido sea del grupo correcto
+        if (equiposConGrupoMultiple.length > 0) {
+          return match.grupo === grupo;
+        }
+        
+        // Si no hay grupos múltiples, incluir todos los partidos que cumplan los filtros
+        return true;
+      });
 
       console.log(`Partidos válidos para ${grupo}:`, partidosDelGrupo);
 
@@ -599,8 +628,8 @@ export default function ProfesorStandings() {
               className="filter-select"
             >
               <option value="">Todos los géneros</option>
-              {generosDisponibles.map((genero) => (
-                <option key={genero} value={genero}>{genero}</option>
+              {generosDisponibles.map((genero, index) => (
+                <option key={`genero-${index}-${genero}`} value={genero}>{genero}</option>
               ))}
             </select>
           </div>
@@ -617,8 +646,8 @@ export default function ProfesorStandings() {
               disabled={!filtroGenero}
             >
               <option value="">Todos los niveles</option>
-              {nivelesDisponibles.map((nivel) => (
-                <option key={nivel} value={nivel}>{nivel}</option>
+              {nivelesDisponibles.map((nivel, index) => (
+                <option key={`nivel-${index}-${nivel}`} value={nivel}>{nivel}</option>
               ))}
             </select>
           </div>
@@ -635,8 +664,8 @@ export default function ProfesorStandings() {
               disabled={!filtroNivel}
             >
               <option value="">Todas las categorías</option>
-              {categoriasDisponibles.map((categoria) => (
-                <option key={categoria} value={categoria}>{categoria}</option>
+              {categoriasDisponibles.map((categoria, index) => (
+                <option key={`categoria-${index}-${categoria}`} value={categoria}>{categoria}</option>
               ))}
             </select>
           </div>
@@ -692,6 +721,19 @@ export default function ProfesorStandings() {
           <div className="loading-spinner"></div>
           <p className="loading-text">Cargando estadísticas...</p>
         </div>
+      ) : !filtroGenero || !filtroNivel || !filtroCategoria ? (
+        <div className="empty-state">
+          <div className="empty-icon">🔍</div>
+          <h3>Selecciona todos los filtros</h3>
+          <p>
+            Para ver la tabla de posiciones, debes seleccionar:
+          </p>
+          <ul style={{textAlign: 'left', marginTop: '1rem'}}>
+            <li>✅ <strong>Género:</strong> {filtroGenero || '❌ Sin seleccionar'}</li>
+            <li>✅ <strong>Nivel Educacional:</strong> {filtroNivel || '❌ Sin seleccionar'}</li>
+            <li>✅ <strong>Categoría:</strong> {filtroCategoria || '❌ Sin seleccionar'}</li>
+          </ul>
+        </div>
       ) : Object.keys(standingsPorGrupo).length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
@@ -720,39 +762,39 @@ export default function ProfesorStandings() {
                   <thead>
                     <tr>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Posición en la tabla">
                           <span className="th-icon">#</span>
                           Pos
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Nombre del equipo">
                           <span className="th-icon">👥</span>
                           Equipo
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Jugados">
                           <span className="th-icon">⚽</span>
                           PJ
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Ganados">
                           <span className="th-icon">✅</span>
                           PG
                         </div>
                       </th>
                       {discipline === "futbol" && (
                         <th>
-                          <div className="th-content">
+                          <div className="th-content" title="Partidos Empatados">
                             <span className="th-icon">🤝</span>
                             PE
                           </div>
                         </th>
                       )}
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Perdidos">
                           <span className="th-icon">❌</span>
                           PP
                         </div>
@@ -760,28 +802,28 @@ export default function ProfesorStandings() {
                       {discipline === "futbol" && (
                         <>
                           <th>
-                            <div className="th-content">
+                            <div className="th-content" title="Goles a Favor">
                               <span className="th-icon">🥅</span>
                               GF
                             </div>
                           </th>
                           <th>
-                            <div className="th-content">
-                              <span className="th-icon">�</span>
+                            <div className="th-content" title="Diferencia de Goles (Goles a Favor - Goles en Contra)">
+                              <span className="th-icon">📊</span>
                               DG
                             </div>
                           </th>
                         </>
                       )}
                       <th>
-                        <div className="th-content">
-                          <span className="th-icon">�</span>
+                        <div className="th-content" title={discipline === "voley" ? "Puntos en Contra" : "Goles en Contra"}>
+                          <span className="th-icon">🚫</span>
                           {discipline === "voley" ? "PC" : "GC"}
                         </div>
                       </th>
                       {discipline === "futbol" && (
                         <th>
-                          <div className="th-content">
+                          <div className="th-content" title="Puntos Totales (Victoria = 3pts, Empate = 1pt, Derrota = 0pts)">
                             <span className="th-icon">🏆</span>
                             PTS
                           </div>
@@ -792,7 +834,7 @@ export default function ProfesorStandings() {
                   <tbody>
                     {standings.map((team, idx) => (
                       <tr
-                        key={team.nombre}
+                        key={`${grupo}-${team.nombre}-${idx}`}
                         className={`table-row position-${idx + 1} ${team.eliminado ? 'eliminated-team' : ''}`}
                         style={{
                           opacity: team.eliminado ? 0.7 : 1,

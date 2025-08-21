@@ -15,6 +15,7 @@ import AdminMatchDetail from "./pages/AdminMatchDetail";
 import AdminVoleyMatchDetail from "./pages/AdminVoleyMatchDetail";
 import AdminBasquetMatchDetail from "./pages/AdminBasquetMatchDetail";
 import AdminUsers from "./pages/AdminUsers";
+import AdminCronogramas from "./pages/AdminCronogramas";
 import ProfesorVoleyMatchDetail from "./pages/ProfesorVoleyMatchDetail";
 import ProfesorBasquetMatchDetail from "./pages/ProfesorBasquetMatchDetail";
 
@@ -42,6 +43,9 @@ function App() {
         {/* RUTAS PÚBLICAS DE DETALLES DE PARTIDOS */}
         {/* Detalle público de partido - FÚTBOL */}
         <Route path="/public/partido/:matchId" element={<PublicMatchDetail />} />
+        
+        {/* Nuevas rutas públicas con patrón discipline/match */}
+        <Route path="/public/:discipline/match/:matchId" element={<PublicMatchDetail />} />
         
         {/* Detalle público de partido - VÓLEY */}
         <Route path="/public-voley-match-detail/:matchId" element={<PublicVoleyMatchDetail />} />
@@ -138,6 +142,14 @@ function App() {
           element={
             <PrivateRoute allowedRoles={["admin"]}>
               <AdminHorarios />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/cronogramas"
+          element={
+            <PrivateRoute allowedRoles={["admin"]}>
+              <AdminCronogramas />
             </PrivateRoute>
           }
         />

@@ -13,6 +13,7 @@ export default function AdminMatchDetail() {
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [goleadorInput, setGoleadorInput] = useState("");
+  const [numeroJugadorBusqueda, setNumeroJugadorBusqueda] = useState(""); // Nuevo estado para búsqueda por número
   const [mostrarInputGoleador, setMostrarInputGoleador] = useState(null); // 'A' o 'B'
   const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
   const [jugadoresEquipoB, setJugadoresEquipoB] = useState([]);
@@ -124,6 +125,31 @@ export default function AdminMatchDetail() {
     return equipoAEsValido && equipoBEsValido;
   };
 
+  // Función para buscar jugador por número
+  const buscarJugadorPorNumero = (numero, equipo) => {
+    if (!numero) return null;
+    const jugadores = equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB;
+    return jugadores.find(jugador => jugador.numero === parseInt(numero));
+  };
+
+  // Función para asignar gol por número de jugador
+  const asignarGolPorNumero = () => {
+    if (!numeroJugadorBusqueda.trim()) {
+      showToast("Por favor ingresa un número de jugador", "error");
+      return;
+    }
+
+    const jugadorEncontrado = buscarJugadorPorNumero(numeroJugadorBusqueda, mostrarInputGoleador);
+    
+    if (jugadorEncontrado) {
+      setGoleadorInput(`#${jugadorEncontrado.numero} ${jugadorEncontrado.nombre}`);
+      setNumeroJugadorBusqueda("");
+      showToast(`Jugador encontrado: ${jugadorEncontrado.nombre}`, "success");
+    } else {
+      showToast(`No se encontró jugador con número ${numeroJugadorBusqueda}`, "error");
+    }
+  };
+
   // Actualizar marcador y goleadores
   const marcarGol = async (equipo) => {
     if (!goleadorInput.trim()) {
@@ -169,6 +195,7 @@ export default function AdminMatchDetail() {
 
       // Limpiar input
       setGoleadorInput("");
+      setNumeroJugadorBusqueda("");
       setMostrarInputGoleador(null);
 
     } catch (error) {
@@ -937,19 +964,44 @@ export default function AdminMatchDetail() {
             
             {/* Input manual como alternativa */}
             <div className="admin-manual-input">
-              <h4>O escribir manualmente:</h4>
-              <input
-                type="text"
-                placeholder="Nombre del goleador..."
-                value={goleadorInput}
-                onChange={(e) => setGoleadorInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    marcarGol(mostrarInputGoleador);
-                  }
-                }}
-                className="admin-goal-input"
-              />
+              <h4>O buscar por número de jugador:</h4>
+              <div className="numero-jugador-busqueda">
+                <input
+                  type="number"
+                  placeholder="Número del jugador..."
+                  value={numeroJugadorBusqueda}
+                  onChange={(e) => setNumeroJugadorBusqueda(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      asignarGolPorNumero();
+                    }
+                  }}
+                  className="admin-goal-input"
+                  min="1"
+                />
+                <button
+                  onClick={asignarGolPorNumero}
+                  className="admin-btn admin-btn-search"
+                  disabled={!numeroJugadorBusqueda.trim()}
+                >
+                  🔍 Buscar
+                </button>
+              </div>
+              
+              {goleadorInput && (
+                <div className="jugador-seleccionado">
+                  <span>Jugador seleccionado: <strong>{goleadorInput}</strong></span>
+                  <button
+                    onClick={() => {
+                      setGoleadorInput("");
+                      setNumeroJugadorBusqueda("");
+                    }}
+                    className="admin-btn admin-btn-clear"
+                  >
+                    ✖ Limpiar
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="admin-modal-actions">
@@ -964,6 +1016,7 @@ export default function AdminMatchDetail() {
                 onClick={() => {
                   setMostrarInputGoleador(null);
                   setGoleadorInput("");
+                  setNumeroJugadorBusqueda("");
                 }}
                 className="admin-btn admin-btn-cancel"
               >

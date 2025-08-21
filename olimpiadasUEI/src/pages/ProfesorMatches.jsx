@@ -99,7 +99,7 @@ export default function ProfesorMatches() {
     
     // Filtrar por fase activa
     if (faseActiva === "grupos") {
-      return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+      return cumpleFiltros && match.fase === "grupos";
     } else if (faseActiva === "semifinal") {
       return cumpleFiltros && match.fase === "semifinal";
     } else if (faseActiva === "final") {
@@ -153,7 +153,7 @@ export default function ProfesorMatches() {
       }
       
       if (fase === "grupos") {
-        return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+        return cumpleFiltros && match.fase === "grupos";
       } else if (fase === "semifinal") {
         return cumpleFiltros && match.fase === "semifinal";
       } else if (fase === "final") {
@@ -1082,12 +1082,14 @@ export default function ProfesorMatches() {
       {/* Pestañas de fases (copiado de AdminMatches) */}
       {(filtroGenero && filtroNivelEducacional && filtroCategoria) && (
         <div className="phase-tabs">
-          <button 
-            className={`phase-tab grupos ${faseActiva === "grupos" ? "active" : ""}`}
-            onClick={() => setFaseActiva("grupos")}
-          >
-            🏃‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
-          </button>
+          {contarPartidosPorFase("grupos") > 0 && (
+            <button 
+              className={`phase-tab grupos ${faseActiva === "grupos" ? "active" : ""}`}
+              onClick={() => setFaseActiva("grupos")}
+            >
+              🏃‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
+            </button>
+          )}
           
           {contarPartidosPorFase("semifinal") > 0 && (
             <button 

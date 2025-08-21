@@ -99,6 +99,13 @@
   font-weight: 500;
 }
 
+.tournament-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+}
+
 /* Modern navigation */
 .modern-nav {
   padding: 0 1rem 1.5rem;
@@ -839,5 +846,204 @@
   .points-badge {
     background: #000000;
     color: #ffffff;
+  }
+}
+
+/* Tooltip styles for table headers */
+.th-content {
+  position: relative;
+  cursor: help;
+}
+
+.th-content[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(45, 55, 72, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease forwards;
+}
+
+.th-content[title]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(45, 55, 72, 0.95);
+  z-index: 1001;
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile-specific tooltip styles */
+@media (max-width: 768px) {
+  .th-content[title]:active::after,
+  .th-content[title]:focus::after {
+    content: attr(title);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(45, 55, 72, 0.95);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    white-space: normal;
+    max-width: 280px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    opacity: 1;
+  }
+
+  .th-content[title]:active::before,
+  .th-content[title]:focus::before {
+    display: none;
+  }
+
+  .th-content {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Navigation buttons styles */
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.nav-btn.primary {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  background: linear-gradient(135deg, #c82333, #a71e2a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.nav-btn.secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
+}
+
+.nav-btn.secondary:hover {
+  background: linear-gradient(135deg, #5a6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* Header actions container */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tournament-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Update existing headers to use flexbox for proper spacing */
+.tournament-header .tournament-info {
+  flex: 1;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.search-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.matches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive design for navigation buttons */
+@media (max-width: 768px) {
+  .nav-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .header-actions {
+    gap: 8px;
+  }
+  
+  .tournament-controls {
+    gap: 8px;
+  }
+  
+  .nav-btn span:first-child {
+    display: none; /* Hide icons on mobile for space */
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .section-header,
+  .search-header,
+  .matches-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    justify-content: center;
   }
 }

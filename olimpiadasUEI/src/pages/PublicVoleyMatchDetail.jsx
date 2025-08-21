@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
-import "../styles/PublicMatchDetail.css";
+import "../styles/AdminVoleyMatchDetail.css";
 
 export default function PublicVoleyMatchDetail() {
   const { matchId } = useParams();
@@ -188,130 +188,109 @@ export default function PublicVoleyMatchDetail() {
   const anotadoresAAgrupados = agruparAnotadores(match.anotadoresA);
   const anotadoresBAgrupados = agruparAnotadores(match.anotadoresB);
 
+  // Mapeo de fases para mostrar nombres legibles
+  const fasesNombres = {
+    "grupos": "Fase de Grupos",
+    "grupos1": "Fase de Grupos 1", 
+    "grupos3": "Fase de Grupos 3",
+    "semifinal": "Semifinales",
+    "semifinales": "Semifinales",
+    "final": "Finales",
+    "finales": "Finales"
+  };
+
+  // Nombres de equipos
+  const equipoA = match.equipoA ? `${match.equipoA.curso} ${match.equipoA.paralelo}` : "Equipo A";
+  const equipoB = match.equipoB ? `${match.equipoB.curso} ${match.equipoB.paralelo}` : "Equipo B";
+
   return (
-    <div className="public-match-detail-container">
+    <div className="admin-voley-detail-container">
       {/* Header */}
-      <div className="public-detail-header">
-        <button onClick={() => navigate(-1)} className="back-button">
-          <span className="back-icon">←</span>
-          Volver
+      <div className="admin-voley-header">
+        <button onClick={() => navigate(-1)} className="admin-back-button">
+          ← Volver
         </button>
-        <h1 className="page-title">Detalle del Partido de Vóley</h1>
+        <h1 className="admin-voley-title">🏐 Detalle del Partido - Vóley</h1>
+        <div className="admin-voley-info">
+          <span className="admin-voley-group">{match.grupo}</span>
+          <span className="admin-voley-phase">{fasesNombres[match.fase] || "Fase de Grupos"}</span>
+          <span className="admin-voley-rules">{reglasJuego.descripcion}</span>
+        </div>
       </div>
 
-      {/* Información principal del partido */}
-      <div className="match-main-info">
-        <div className="match-header-card">
-          <div className="fase-badge" style={{ backgroundColor: faseInfo.color }}>
-            <span className="fase-icon">{faseInfo.icon}</span>
-            <span className="fase-text">{faseInfo.nombre}</span>
+      {/* Estado del partido */}
+      <div className="admin-voley-status">
+        <div className="admin-status-info">
+          <span className={`admin-status-badge ${match.estado?.replace(' ', '-')}`}>
+            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
+            {match.estado === "en curso" && "🟢 En Curso"}
+            {match.estado === "finalizado" && "✅ Finalizado"}
+          </span>
+        </div>
+      </div>
+
+      {/* Marcador principal */}
+      <div className="admin-voley-scoreboard">
+        <div className="admin-team-section">
+          <div className="admin-team-header">
+            <div className="admin-team-icon">�</div>
+            <h2 className="admin-team-name">{equipoA}</h2>
           </div>
-          <div className="grupo-info">
-            <span className="grupo-icon">🏆</span>
-            <span className="grupo-text">{match.grupo}</span>
-          </div>
+          <div className="admin-team-score">{match.marcadorA ?? 0}</div>
         </div>
 
-        {/* Equipos y marcador */}
-        <div className="teams-score-card">
-          <div className="team-section">
-            <div className="team-info">
-              <div className="team-icon">🏫</div>
-              <div className="team-details">
-                <h3 className="team-name">
-                  {match.equipoA?.curso} {match.equipoA?.paralelo}
-                </h3>
-                <span className="team-label">Equipo A</span>
-              </div>
-            </div>
-            <div className="team-score">{match.marcadorA ?? 0}</div>
-          </div>
-
-          <div className="vs-divider">
-            <span className="vs-text">VS</span>
-          </div>
-
-          <div className="team-section">
-            <div className="team-score">{match.marcadorB ?? 0}</div>
-            <div className="team-info">
-              <div className="team-icon">🏫</div>
-              <div className="team-details">
-                <h3 className="team-name">
-                  {match.equipoB?.curso} {match.equipoB?.paralelo}
-                </h3>
-                <span className="team-label">Equipo B</span>
-              </div>
-            </div>
-          </div>
+        <div className="admin-vs-divider">
+          <span className="admin-vs-text">VS</span>
         </div>
 
-        {/* Estado del partido */}
-        <div className="match-status-card">
-          <div className="status-info">
-            <span 
-              className="status-icon"
-              style={{ color: getEstadoColor(match.estado) }}
-            >
-              {getEstadoIcon(match.estado)}
-            </span>
-            <span 
-              className="status-text"
-              style={{ color: getEstadoColor(match.estado) }}
-            >
-              {match.estado === "finalizado" ? "Finalizado" :
-               match.estado === "en curso" ? "En Curso" :
-               match.estado === "pendiente" ? "Pendiente" : 
-               "Sin estado"}
-            </span>
+        <div className="admin-team-section">
+          <div className="admin-team-header">
+            <div className="admin-team-icon">🏆</div>
+            <h2 className="admin-team-name">{equipoB}</h2>
           </div>
+          <div className="admin-team-score">{match.marcadorB ?? 0}</div>
         </div>
       </div>
 
       {/* Información adicional */}
-      <div className="match-additional-info">
-        <div className="info-grid">
-          <div className="info-card">
-            <div className="info-icon">📅</div>
-            <div className="info-content">
-              <span className="info-label">Fecha</span>
-              <span className="info-value">
-                {match.fecha || "Por definir"}
-              </span>
+      <div className="admin-match-info">
+        <div className="admin-info-grid">
+          <div className="admin-info-card">
+            <div className="admin-info-icon">📅</div>
+            <div className="admin-info-content">
+              <span className="admin-info-label">Fecha</span>
+              <span className="admin-info-value">{match.fecha || "Por definir"}</span>
             </div>
           </div>
-
-          <div className="info-card">
-            <div className="info-icon">🕐</div>
-            <div className="info-content">
-              <span className="info-label">Hora</span>
-              <span className="info-value">
-                {match.hora || "Por definir"}
-              </span>
+          <div className="admin-info-card">
+            <div className="admin-info-icon">🕐</div>
+            <div className="admin-info-content">
+              <span className="admin-info-label">Hora</span>
+              <span className="admin-info-value">{match.hora || "Por definir"}</span>
             </div>
           </div>
-
-          <div className="info-card">
-            <div className="info-icon">🏐</div>
-            <div className="info-content">
-              <span className="info-label">Disciplina</span>
-              <span className="info-value">Vóley</span>
+          <div className="admin-info-card">
+            <div className="admin-info-icon">🏐</div>
+            <div className="admin-info-content">
+              <span className="admin-info-label">Disciplina</span>
+              <span className="admin-info-value">Vóley</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Marcador por Sets */}
+      {/* Tabla de Sets */}
       {match.sets && Object.keys(match.sets).length > 0 && (
-        <div className="sets-section">
-          <h3 className="section-title">
-            <span className="section-icon">🏐</span>
+        <div className="admin-sets-section">
+          <h3 className="admin-section-title">
+            <span className="admin-section-icon">🏐</span>
             Marcador por Sets
           </h3>
-          <div className="sets-table-container">
-            <table className="sets-table">
+          <div className="admin-sets-table-container">
+            <table className="admin-sets-table">
               <thead>
                 <tr>
-                  <th>Equipo</th>
+                  <th className="admin-team-header-cell">Equipo</th>
                   {Object.entries(match.sets)
                     .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
                     .map(([setKey, setData], index) => {
@@ -319,9 +298,9 @@ export default function PublicVoleyMatchDetail() {
                       if (!deberMostrarSet(setNumber - 1, Object.values(match.sets))) return null;
                       
                       return (
-                        <th key={setKey}>
+                        <th key={setKey} className="admin-set-header">
                           Set {setNumber}
-                          {!esFaseGrupos && setNumber >= 4 && " (Decisivo - 15 pts)"}
+                          {!esFaseGrupos && setNumber >= 3 && " (Decisivo)"}
                         </th>
                       );
                     })}
@@ -329,7 +308,7 @@ export default function PublicVoleyMatchDetail() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="team-name">{match.equipoA?.curso} {match.equipoA?.paralelo}</td>
+                  <td className="admin-team-name-cell">{equipoA}</td>
                   {Object.entries(match.sets)
                     .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
                     .map(([setKey, setData], index) => {
@@ -340,17 +319,17 @@ export default function PublicVoleyMatchDetail() {
                       const ganador = ganadorSet(setData, limitePuntos);
                       
                       return (
-                        <td key={setKey} className={`set-score ${ganador === 'A' ? 'winner' : ''}`}>
-                          <div className="set-points">
-                            {setData?.A || 0}
+                        <td key={setKey} className={`admin-set-score ${ganador === 'A' ? 'admin-winner' : ''}`}>
+                          <div className="admin-score-display">
+                            <span className="admin-score-value">{setData?.A || 0}</span>
+                            <span className="admin-score-limit">/{limitePuntos}</span>
                           </div>
-                          <div className="set-limit">/{limitePuntos}</div>
                         </td>
                       );
                     })}
                 </tr>
                 <tr>
-                  <td className="team-name">{match.equipoB?.curso} {match.equipoB?.paralelo}</td>
+                  <td className="admin-team-name-cell">{equipoB}</td>
                   {Object.entries(match.sets)
                     .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
                     .map(([setKey, setData], index) => {
@@ -361,11 +340,11 @@ export default function PublicVoleyMatchDetail() {
                       const ganador = ganadorSet(setData, limitePuntos);
                       
                       return (
-                        <td key={setKey} className={`set-score ${ganador === 'B' ? 'winner' : ''}`}>
-                          <div className="set-points">
-                            {setData?.B || 0}
+                        <td key={setKey} className={`admin-set-score ${ganador === 'B' ? 'admin-winner' : ''}`}>
+                          <div className="admin-score-display">
+                            <span className="admin-score-value">{setData?.B || 0}</span>
+                            <span className="admin-score-limit">/{limitePuntos}</span>
                           </div>
-                          <div className="set-limit">/{limitePuntos}</div>
                         </td>
                       );
                     })}
@@ -377,91 +356,73 @@ export default function PublicVoleyMatchDetail() {
       )}
 
       {/* Anotadores */}
-      {(anotadoresAAgrupados.length > 0 || anotadoresBAgrupados.length > 0) && (
-        <div className="scorers-section">
-          <h3 className="section-title">
-            <span className="section-icon">🏐</span>
-            Anotadores
-          </h3>
-          <div className="scorers-grid">
-            <div className="team-scorers">
-              <h4 className="team-scorers-title">
-                {match.equipoA?.curso} {match.equipoA?.paralelo}
-              </h4>
-              <div className="scorers-list">
-                {anotadoresAAgrupados.length > 0 ? (
-                  anotadoresAAgrupados.map((anotador, index) => (
-                    <div key={index} className="scorer-item">
-                      <span className="scorer-icon">🏐</span>
-                      <span className="scorer-name">
-                        {anotador.nombre} {anotador.cantidad > 1 && `(${anotador.cantidad})`}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <span className="no-scorers">Sin puntos</span>
-                )}
-              </div>
+      <div className="admin-scorers-section">
+        <h3 className="admin-section-title">
+          <span className="admin-section-icon">�‍♂️</span>
+          Anotadores del Partido
+        </h3>
+        <div className="admin-scorers-grid">
+          {/* Anotadores Equipo A */}
+          <div className="admin-team-scorers">
+            <h4 className="admin-team-subtitle">{equipoA}</h4>
+            <div className="admin-scorers-list">
+              {anotadoresAAgrupados.length > 0 ? (
+                anotadoresAAgrupados.map((anotador, index) => (
+                  <div key={index} className="admin-scorer-item">
+                    <span className="admin-player-name">{anotador.nombre}</span>
+                    <span className="admin-point-count">{anotador.cantidad} pts</span>
+                  </div>
+                ))
+              ) : (
+                <p className="admin-no-points">Sin puntos aún</p>
+              )}
             </div>
+          </div>
 
-            <div className="team-scorers">
-              <h4 className="team-scorers-title">
-                {match.equipoB?.curso} {match.equipoB?.paralelo}
-              </h4>
-              <div className="scorers-list">
-                {anotadoresBAgrupados.length > 0 ? (
-                  anotadoresBAgrupados.map((anotador, index) => (
-                    <div key={index} className="scorer-item">
-                      <span className="scorer-icon">🏐</span>
-                      <span className="scorer-name">
-                        {anotador.nombre} {anotador.cantidad > 1 && `(${anotador.cantidad})`}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <span className="no-scorers">Sin puntos</span>
-                )}
-              </div>
+          {/* Anotadores Equipo B */}
+          <div className="admin-team-scorers">
+            <h4 className="admin-team-subtitle">{equipoB}</h4>
+            <div className="admin-scorers-list">
+              {anotadoresBAgrupados.length > 0 ? (
+                anotadoresBAgrupados.map((anotador, index) => (
+                  <div key={index} className="admin-scorer-item">
+                    <span className="admin-player-name">{anotador.nombre}</span>
+                    <span className="admin-point-count">{anotador.cantidad} pts</span>
+                  </div>
+                ))
+              ) : (
+                <p className="admin-no-points">Sin puntos aún</p>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Resultado del partido */}
+      {/* Resultado final */}
       {match.estado === "finalizado" && (
-        <div className="match-result-section">
-          <h3 className="section-title">
-            <span className="section-icon">🏆</span>
+        <div className="admin-result-section">
+          <h3 className="admin-section-title">
+            <span className="admin-section-icon">🏆</span>
             Resultado Final
           </h3>
-          <div className="result-card">
+          <div className="admin-result-card">
             {match.marcadorA > match.marcadorB ? (
-              <div className="winner-announcement">
-                <span className="winner-icon">🎉</span>
-                <span className="winner-text">
-                  Ganador: {match.equipoA?.curso} {match.equipoA?.paralelo}
-                </span>
-                <span className="final-score">
-                  {match.marcadorA} - {match.marcadorB}
-                </span>
+              <div className="admin-winner-announcement">
+                <span className="admin-winner-icon">🎉</span>
+                <span className="admin-winner-text">Ganador: {equipoA}</span>
+                <span className="admin-final-score">{match.marcadorA} - {match.marcadorB}</span>
               </div>
             ) : match.marcadorB > match.marcadorA ? (
-              <div className="winner-announcement">
-                <span className="winner-icon">🎉</span>
-                <span className="winner-text">
-                  Ganador: {match.equipoB?.curso} {match.equipoB?.paralelo}
-                </span>
-                <span className="final-score">
-                  {match.marcadorA} - {match.marcadorB}
-                </span>
+              <div className="admin-winner-announcement">
+                <span className="admin-winner-icon">🎉</span>
+                <span className="admin-winner-text">Ganador: {equipoB}</span>
+                <span className="admin-final-score">{match.marcadorA} - {match.marcadorB}</span>
               </div>
             ) : (
-              <div className="tie-announcement">
-                <span className="tie-icon">🤝</span>
-                <span className="tie-text">Empate</span>
-                <span className="final-score">
-                  {match.marcadorA} - {match.marcadorB}
-                </span>
+              <div className="admin-tie-announcement">
+                <span className="admin-tie-icon">🤝</span>
+                <span className="admin-tie-text">Empate</span>
+                <span className="admin-final-score">{match.marcadorA} - {match.marcadorB}</span>
               </div>
             )}
           </div>

@@ -21,10 +21,14 @@ export default function AdminStandings() {
   const [filtroGenero, setFiltroGenero] = useState(() => {
     return localStorage.getItem('olimpiadas_filtro_genero') || "";
   });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem('olimpiadas_filtro_nivel_educacional') || "";
+  });
   const [filtroCategoria, setFiltroCategoria] = useState(() => {
     return localStorage.getItem('olimpiadas_filtro_categoria') || "";
   });
   const [categorias, setCategorias] = useState([]);
+  const [nivelesEducacionales, setNivelesEducacionales] = useState([]);
 
   // Funciones de navegación
   const goToTeams = () => {
@@ -46,11 +50,24 @@ export default function AdminStandings() {
   // Funciones para manejar filtros persistentes
   const handleFiltroGeneroChange = (genero) => {
     setFiltroGenero(genero);
+    setFiltroNivelEducacional(""); // Limpiar nivel al cambiar género
     setFiltroCategoria(""); // Limpiar categoría al cambiar género
     if (genero) {
       localStorage.setItem('olimpiadas_filtro_genero', genero);
     } else {
       localStorage.removeItem('olimpiadas_filtro_genero');
+    }
+    localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
+    localStorage.removeItem('olimpiadas_filtro_categoria');
+  };
+
+  const handleFiltroNivelEducacionalChange = (nivel) => {
+    setFiltroNivelEducacional(nivel);
+    setFiltroCategoria(""); // Limpiar categoría al cambiar nivel
+    if (nivel) {
+      localStorage.setItem('olimpiadas_filtro_nivel_educacional', nivel);
+    } else {
+      localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
     }
     localStorage.removeItem('olimpiadas_filtro_categoria');
   };
@@ -82,9 +99,28 @@ export default function AdminStandings() {
     }
   };
 
-  // Cargar categorías al iniciar
+  // Obtener niveles educacionales desde Firestore
+  const obtenerNivelesEducacionales = async () => {
+    try {
+      const q = query(
+        collection(db, "nivelesEducacionales"),
+        where("disciplina", "==", discipline)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setNivelesEducacionales(data);
+    } catch (error) {
+      console.error("Error obteniendo niveles educacionales:", error);
+    }
+  };
+
+  // Cargar categorías y niveles al iniciar
   useEffect(() => {
     obtenerCategorias();
+    obtenerNivelesEducacionales();
   }, [discipline]);
 
   // Obtener partidos en tiempo real
@@ -138,31 +174,47 @@ export default function AdminStandings() {
     console.log("Todos los equipos:", equipos);
     console.log("Todos los partidos:", matches);
 
-    // Aplicar filtros de género y categoría
+    // ✅ NO MOSTRAR NADA SI NO ESTÁN TODOS LOS FILTROS SELECCIONADOS
+    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
+      console.log("Filtros incompletos - no mostrar tabla");
+      setStandingsPorGrupo({});
+      return;
+    }
+
+    // Aplicar filtros de género, nivel educacional y categoría
     const equiposFiltrados = equipos.filter(equipo => {
-      const pasaGenero = filtroGenero === "" || equipo.genero === filtroGenero;
-      const pasaCategoria = filtroCategoria === "" || equipo.categoria === filtroCategoria;
-      return pasaGenero && pasaCategoria;
+      const pasaGenero = equipo.genero === filtroGenero;
+      const pasaNivel = equipo.nivelEducacional === filtroNivelEducacional;
+      const pasaCategoria = equipo.categoria === filtroCategoria;
+      return pasaGenero && pasaNivel && pasaCategoria;
     });
 
     console.log("Equipos filtrados:", equiposFiltrados);
 
-    // Filtrar solo equipos que realmente pertenecen a grupos válidos (Grupo 1, Grupo 2, etc.)
-    const equiposConGrupoValido = equiposFiltrados.filter(
+    // Verificar si hay equipos con grupos múltiples válidos
+    const equiposConGrupoMultiple = equiposFiltrados.filter(
       (equipo) =>
         equipo.grupo &&
-        (equipo.grupo.includes("Grupo") || equipo.grupo.includes("grupo")),
+        (equipo.grupo.includes("Grupo") || equipo.grupo.includes("grupo"))
     );
 
-    console.log("Equipos con grupo válido:", equiposConGrupoValido);
+    console.log("Equipos con grupo múltiple:", equiposConGrupoMultiple);
 
-    // Agrupar equipos por grupo
+    // Agrupar equipos por grupo o crear un grupo único
     const equiposPorGrupo = {};
-    equiposConGrupoValido.forEach((equipo) => {
-      const grupo = equipo.grupo;
-      if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
-      equiposPorGrupo[grupo].push(equipo);
-    });
+    
+    if (equiposConGrupoMultiple.length > 0) {
+      // Si hay equipos con grupos múltiples, agrupar por grupo
+      equiposConGrupoMultiple.forEach((equipo) => {
+        const grupo = equipo.grupo;
+        if (!equiposPorGrupo[grupo]) equiposPorGrupo[grupo] = [];
+        equiposPorGrupo[grupo].push(equipo);
+      });
+    } else {
+      // Si no hay grupos múltiples, crear una tabla única con todos los equipos filtrados
+      const nombreGrupo = filtroCategoria; // Usar el nombre de la categoría como nombre del grupo
+      equiposPorGrupo[nombreGrupo] = equiposFiltrados;
+    }
 
     console.log("Equipos agrupados:", equiposPorGrupo);
 
@@ -182,22 +234,34 @@ export default function AdminStandings() {
 
       console.log(`Tabla inicial para ${grupo}:`, table);
 
-      // Filtrar partidos que corresponden específicamente a este grupo
-      const partidosDelGrupo = matches.filter(
-        (match) =>
-          match.estado === "finalizado" &&
-          match.grupo === grupo && // Verificar que el partido sea del grupo correcto
-          equiposGrupo.some(
-            (eq) =>
-              `${eq.curso} ${eq.paralelo}` ===
-              `${match.equipoA.curso} ${match.equipoA.paralelo}`,
-          ) &&
-          equiposGrupo.some(
-            (eq) =>
-              `${eq.curso} ${eq.paralelo}` ===
-              `${match.equipoB.curso} ${match.equipoB.paralelo}`,
-          ),
-      );
+      // Filtrar partidos que corresponden específicamente a este grupo y filtros
+      const partidosDelGrupo = matches.filter((match) => {
+        // Verificar que el partido esté finalizado
+        if (match.estado !== "finalizado") return false;
+        
+        // Verificar filtros básicos
+        if (match.genero !== filtroGenero) return false;
+        if (match.nivelEducacional !== filtroNivelEducacional) return false;
+        if (match.categoria !== filtroCategoria) return false;
+        
+        // Verificar que ambos equipos pertenezcan a este grupo
+        const equipoAPertenece = equiposGrupo.some(
+          (eq) => `${eq.curso} ${eq.paralelo}` === `${match.equipoA.curso} ${match.equipoA.paralelo}`
+        );
+        const equipoBPertenece = equiposGrupo.some(
+          (eq) => `${eq.curso} ${eq.paralelo}` === `${match.equipoB.curso} ${match.equipoB.paralelo}`
+        );
+        
+        if (!equipoAPertenece || !equipoBPertenece) return false;
+        
+        // Si hay múltiples grupos, verificar que el partido sea del grupo correcto
+        if (equiposConGrupoMultiple.length > 0) {
+          return match.grupo === grupo;
+        }
+        
+        // Si no hay grupos múltiples, incluir todos los partidos que cumplan los filtros
+        return true;
+      });
 
       console.log(`Partidos válidos para ${grupo}:`, partidosDelGrupo);
 
@@ -365,11 +429,15 @@ export default function AdminStandings() {
           return 0;
         });
         
-        // Siempre mostrar todos los equipos que han jugado
+        // Mostrar todos los equipos del grupo, incluso si no han jugado
+        // Solo filtrar equipos con partidos si TODOS los equipos han jugado al menos 1 partido
         const equiposConPartidos = result.filter(team => team.pj > 0);
-        if (equiposConPartidos.length > 0) {
+        const todosHanJugado = result.every(team => team.pj > 0);
+        
+        if (todosHanJugado && equiposConPartidos.length > 0) {
           result = equiposConPartidos;
         }
+        // Si no todos han jugado, mostrar todos los equipos para mantener la integridad del grupo
       }
 
       standingsPorGrupoTemp[grupo] = result;
@@ -394,7 +462,7 @@ export default function AdminStandings() {
         console.log(`✅ Sistema legacy deshabilitado para ${grupo} - generación automática centralizada activa`);
       }
     });
-  }, [matches, equipos, discipline, filtroGenero, filtroCategoria]);
+  }, [matches, equipos, discipline, filtroGenero, filtroNivelEducacional, filtroCategoria]);
 
   const createTeamEntry = (nombre, grupo) => ({
     nombre,
@@ -510,27 +578,59 @@ export default function AdminStandings() {
 
           <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
             <label style={{fontWeight: '500', color: '#666', fontSize: '0.9rem'}}>
-              <span style={{marginRight: '0.5rem'}}>🏷️</span>
-              Categoría:
+              <span style={{marginRight: '0.5rem'}}>�</span>
+              Nivel Educacional:
             </label>
             <select
-              value={filtroCategoria}
-              onChange={e => handleFiltroCategoriaChange(e.target.value)}
+              value={filtroNivelEducacional}
+              onChange={e => handleFiltroNivelEducacionalChange(e.target.value)}
               disabled={!filtroGenero}
               style={{
                 padding: '0.5rem',
                 border: '1px solid #ced4da',
                 borderRadius: '6px',
-                minWidth: '200px',
+                minWidth: '180px',
                 fontSize: '0.9rem',
                 backgroundColor: !filtroGenero ? '#f5f5f5' : '',
                 color: !filtroGenero ? '#999' : '',
                 cursor: !filtroGenero ? 'not-allowed' : 'pointer'
               }}
             >
+              <option value="">Todos los niveles</option>
+              {nivelesEducacionales
+                .filter(nivel => !filtroGenero || nivel.genero === filtroGenero)
+                .map(nivel => (
+                  <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                ))}
+            </select>
+          </div>
+
+          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+            <label style={{fontWeight: '500', color: '#666', fontSize: '0.9rem'}}>
+              <span style={{marginRight: '0.5rem'}}>�🏷️</span>
+              Categoría:
+            </label>
+            <select
+              value={filtroCategoria}
+              onChange={e => handleFiltroCategoriaChange(e.target.value)}
+              disabled={!filtroGenero || !filtroNivelEducacional}
+              style={{
+                padding: '0.5rem',
+                border: '1px solid #ced4da',
+                borderRadius: '6px',
+                minWidth: '200px',
+                fontSize: '0.9rem',
+                backgroundColor: (!filtroGenero || !filtroNivelEducacional) ? '#f5f5f5' : '',
+                color: (!filtroGenero || !filtroNivelEducacional) ? '#999' : '',
+                cursor: (!filtroGenero || !filtroNivelEducacional) ? 'not-allowed' : 'pointer'
+              }}
+            >
               <option value="">Todas las categorías</option>
               {categorias
-                .filter(cat => !filtroGenero || cat.genero === filtroGenero)
+                .filter(cat => 
+                  (!filtroGenero || cat.genero === filtroGenero) &&
+                  (!filtroNivelEducacional || cat.nivelEducacional === filtroNivelEducacional)
+                )
                 .map(cat => (
                   <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
                 ))}
@@ -541,7 +641,11 @@ export default function AdminStandings() {
             <button
               onClick={() => {
                 setFiltroGenero("");
+                setFiltroNivelEducacional("");
                 setFiltroCategoria("");
+                localStorage.removeItem('olimpiadas_filtro_genero');
+                localStorage.removeItem('olimpiadas_filtro_nivel_educacional');
+                localStorage.removeItem('olimpiadas_filtro_categoria');
               }}
               style={{
                 backgroundColor: '#6c757d',
@@ -558,7 +662,7 @@ export default function AdminStandings() {
           )}
         </div>
 
-        {(filtroGenero || filtroCategoria) && (
+        {(filtroGenero && filtroNivelEducacional && filtroCategoria) && (
           <div style={{
             marginTop: '1rem',
             padding: '0.75rem',
@@ -567,7 +671,7 @@ export default function AdminStandings() {
             fontSize: '0.9rem',
             color: '#1565c0'
           }}>
-            📊 Mostrando posiciones para: {filtroGenero ? `${filtroGenero}` : 'Todos los géneros'}{filtroCategoria ? ` - ${filtroCategoria}` : ''}
+            📊 Mostrando posiciones para: {filtroGenero} - {filtroNivelEducacional} - {filtroCategoria}
           </div>
         )}
       </div>
@@ -605,53 +709,53 @@ export default function AdminStandings() {
                   <thead>
                     <tr>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Posición en la tabla">
                           <span className="th-icon">#</span>
                           Pos
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Nombre del equipo">
                           <span className="th-icon">👥</span>
                           Equipo
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Jugados">
                           <span className="th-icon">⚽</span>
                           PJ
                         </div>
                       </th>
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Ganados">
                           <span className="th-icon">✅</span>
                           PG
                         </div>
                       </th>
                       {discipline === "futbol" && (
                         <th>
-                          <div className="th-content">
+                          <div className="th-content" title="Partidos Empatados">
                             <span className="th-icon">🤝</span>
                             PE
                           </div>
                         </th>
                       )}
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title="Partidos Perdidos">
                           <span className="th-icon">❌</span>
                           PP
                         </div>
                       </th>
                       {discipline === "futbol" && (
                         <th>
-                          <div className="th-content">
+                          <div className="th-content" title="Goles a Favor">
                             <span className="th-icon">🥅</span>
                             GF
                           </div>
                         </th>
                       )}
                       <th>
-                        <div className="th-content">
+                        <div className="th-content" title={discipline === "voley" ? "Puntos en Contra" : "Goles en Contra"}>
                           <span className="th-icon">🚫</span>
                           {discipline === "voley" ? "PC" : "GC"}
                         </div>
@@ -659,13 +763,13 @@ export default function AdminStandings() {
                       {discipline === "futbol" && (
                         <>
                           <th>
-                            <div className="th-content">
+                            <div className="th-content" title="Diferencia de Goles (Goles a Favor - Goles en Contra)">
                               <span className="th-icon">📊</span>
                               DG
                             </div>
                           </th>
                           <th>
-                            <div className="th-content">
+                            <div className="th-content" title="Puntos Totales (Victoria = 3pts, Empate = 1pt, Derrota = 0pts)">
                               <span className="th-icon">🏆</span>
                               PTS
                             </div>
@@ -677,7 +781,7 @@ export default function AdminStandings() {
                   <tbody>
                     {standings.map((team, idx) => (
                       <tr
-                        key={team.nombre}
+                        key={`${grupo}-${team.nombre}-${idx}`}
                         className={`table-row position-${idx + 1} ${team.eliminado ? 'eliminated-team' : ''}`}
                         style={{
                           opacity: team.eliminado ? 0.7 : 1,

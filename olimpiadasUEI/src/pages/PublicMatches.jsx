@@ -8,11 +8,21 @@ import {
   onSnapshot
 } from "firebase/firestore";
 import { useParams, useNavigate } from "react-router-dom";
-import "../styles/PublicMatches.css";
+import "../styles/AdminMatches.css";
+
 
 export default function PublicMatches() {
   const { discipline } = useParams();
   const navigate = useNavigate();
+  
+  // Funciones de navegación
+  const goToDisciplineSelector = () => {
+    navigate('/selector');
+  };
+
+  const goToLogin = () => {
+    navigate('/');
+  };
   
   // Estados principales
   const [matches, setMatches] = useState([]);
@@ -163,8 +173,8 @@ export default function PublicMatches() {
     );
 
     return {
-      grupos: partidosCategoria.some(m => m.fase === "grupos" || !m.fase),
-      semifinal: partidosCategoria.some(m => m.fase === "semifinal"),
+      grupos: partidosCategoria.some(m => m.fase === "grupos"),
+      semifinal: partidosCategoria.some(m => m.fase === "semifinal" || m.fase === "semifinales"),
       final: partidosCategoria.some(m => m.fase === "final" || m.fase === "tercer_puesto" || m.fase === "tercerPuesto"),
       ida_vuelta: partidosCategoria.some(m => m.fase === "ida" || m.fase === "vuelta" || m.fase === "desempate")
     };
@@ -228,9 +238,9 @@ export default function PublicMatches() {
     
     // Filtrar por fase activa
     if (faseActiva === "grupos") {
-      return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+      return cumpleFiltros && match.fase === "grupos";
     } else if (faseActiva === "semifinal") {
-      return cumpleFiltros && match.fase === "semifinal";
+      return cumpleFiltros && (match.fase === "semifinal" || match.fase === "semifinales");
     } else if (faseActiva === "final") {
       return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
     } else if (faseActiva === "ida_vuelta") {
@@ -285,9 +295,9 @@ export default function PublicMatches() {
       }
       
       if (fase === "grupos") {
-        return cumpleFiltros && (match.fase === "grupos" || !match.fase);
+        return cumpleFiltros && match.fase === "grupos";
       } else if (fase === "semifinal") {
-        return cumpleFiltros && match.fase === "semifinal";
+        return cumpleFiltros && (match.fase === "semifinal" || match.fase === "semifinales");
       } else if (fase === "final") {
         return cumpleFiltros && (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto");
       } else if (fase === "ida_vuelta") {
@@ -404,33 +414,6 @@ export default function PublicMatches() {
     navigate(`/public/${discipline}/match/${partido.id}`);
   };
 
-  // Funciones de navegación de fases
-  const fasesDisponibles = ["grupos", "semifinal", "final", "ida_vuelta"];
-
-  const canNavigateBack = () => {
-    const currentIndex = fasesDisponibles.indexOf(faseActiva);
-    return currentIndex > 0;
-  };
-
-  const canNavigateForward = () => {
-    const currentIndex = fasesDisponibles.indexOf(faseActiva);
-    return currentIndex < fasesDisponibles.length - 1;
-  };
-
-  const navigateToPreviousPhase = () => {
-    const currentIndex = fasesDisponibles.indexOf(faseActiva);
-    if (currentIndex > 0) {
-      setFaseActiva(fasesDisponibles[currentIndex - 1]);
-    }
-  };
-
-  const navigateToNextPhase = () => {
-    const currentIndex = fasesDisponibles.indexOf(faseActiva);
-    if (currentIndex < fasesDisponibles.length - 1) {
-      setFaseActiva(fasesDisponibles[currentIndex + 1]);
-    }
-  };
-
   // Limpiar todos los filtros
   const limpiarFiltros = () => {
     setFiltroGenero("");
@@ -470,221 +453,287 @@ export default function PublicMatches() {
   const categoriasDisponibles = getCategoriasDisponibles();
 
   return (
-    <div className="public-matches-container">
-      {/* Header */}
-      <div className="public-header">
-        <div className="public-header-icon">
-          {discipline === "futbol" ? "⚽" : discipline === "basquet" ? "🏀" : "🏐"}
-        </div>
-        <h1 className="public-title">
-          Partidos de {discipline === "futbol" ? "Fútbol" : discipline === "basquet" ? "Básquet" : "Vóley"}
-        </h1>
-        <p className="public-subtitle">Seguimiento en tiempo real</p>
-      </div>
-
-      {/* Navegación de fases y filtros */}
-      <div className="public-phase-navigation">
-        {/* Controles de navegación de fases */}
-        <div className="public-phase-controls">
+    <div className="admin-matches">
+      <div className="matches-header">
+        <h1>Partidos - {discipline.charAt(0).toUpperCase() + discipline.slice(1)}</h1>
+        <div className="header-actions">
           <button 
-            className={`public-phase-btn ${!canNavigateBack() ? 'disabled' : ''}`}
-            onClick={navigateToPreviousPhase}
-            disabled={!canNavigateBack()}
+            onClick={goToDisciplineSelector}
+            className="nav-btn secondary"
           >
-            <span className="public-btn-icon">←</span>
+            📋 Disciplinas
           </button>
-          
-          <div className="public-current-phase">
-            <span className="public-phase-icon">
-              {faseActiva === "grupos" && "👥"}
-              {faseActiva === "semifinal" && "🏆"}
-              {faseActiva === "final" && "🥇"}
-              {faseActiva === "ida_vuelta" && "🔄"}
-              {faseActiva === "todas" && "🏟️"}
-            </span>
-            <h2 className="public-phase-title">
-              {faseActiva === "grupos" && "Fase de Grupos"}
-              {faseActiva === "semifinal" && "Semifinales"}
-              {faseActiva === "final" && "Finales"}
-              {faseActiva === "ida_vuelta" && "Ida/Vuelta"}
-              {faseActiva === "todas" && "Todas las Fases"}
-            </h2>
-          </div>
-          
           <button 
-            className={`public-phase-btn ${!canNavigateForward() ? 'disabled' : ''}`}
-            onClick={navigateToNextPhase}
-            disabled={!canNavigateForward()}
+            onClick={goToLogin}
+            className="nav-btn primary"
           >
-            <span className="public-btn-icon">→</span>
+            🚪 Salir
           </button>
-        </div>
-
-        {/* Controles de filtros */}
-        <div className="filter-controls">
-          <div className="filters-row">
-            {/* Filtro de Género */}
-            <div className="filter-group">
-              <label className="filter-label">
-                <span>🚻</span>
-                Género:
-              </label>
-              <select
-                value={filtroGenero}
-                onChange={(e) => handleFiltroGeneroChange(e.target.value)}
-                className="modern-select"
-              >
-                <option value="">Todos los géneros</option>
-                {opcionesGenero.map(genero => (
-                  <option key={genero} value={genero}>{genero}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro de Nivel Educacional */}
-            <div className="filter-group">
-              <label className="filter-label">
-                <span>🎓</span>
-                Nivel:
-              </label>
-              <select
-                value={filtroNivelEducacional}
-                onChange={(e) => handleFiltroNivelEducacionalChange(e.target.value)}
-                className="modern-select"
-                disabled={!filtroGenero}
-              >
-                <option value="">Todos los niveles</option>
-                {nivelesDisponibles.map(nivel => (
-                  <option key={nivel} value={nivel}>{nivel}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro de Categoría */}
-            <div className="filter-group">
-              <label className="filter-label">
-                <span>🏆</span>
-                Categoría:
-              </label>
-              <select
-                value={filtroCategoria}
-                onChange={(e) => handleFiltroCategoriaChange(e.target.value)}
-                className="modern-select"
-                disabled={!filtroGenero || !filtroNivelEducacional}
-              >
-                <option value="">Todas las categorías</option>
-                {categoriasDisponibles.map(categoria => (
-                  <option key={categoria} value={categoria}>{categoria}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Botón limpiar */}
-            <div className="filter-group">
-              <label className="filter-label" style={{ opacity: 0 }}>Acciones:</label>
-              <button onClick={limpiarFiltros} className="clear-filters-btn">
-                Limpiar Filtros
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Sección de partidos */}
-      <div className="public-matches-section">
-        {/* Mostrar partidos o estado vacío */}
-        {partidosFiltrados.length === 0 ? (
-          <div className="public-empty-state">
-            <div className="public-empty-icon">📋</div>
-            <h3>No hay partidos disponibles</h3>
-            <p>
-              {!filtroGenero || !filtroNivelEducacional || !filtroCategoria 
-                ? "Selecciona todos los filtros para ver los partidos"
-                : "No hay partidos programados para esta categoría y fase"
+      
+      {/* Contenedor de filtros */}
+      <div className="filters-container">
+        <h3>📊 Filtros:</h3>
+        
+        <div className="filters-row">
+          <div className="filter-group">
+            <label>🚻 Género: </label>
+            <select 
+              value={filtroGenero} 
+              onChange={(e) => handleFiltroGeneroChange(e.target.value)}
+            >
+              <option value="">Selecciona un género</option>
+              {opcionesGenero.map(genero => (
+                <option key={genero} value={genero}>{genero}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>🎓 Nivel Educacional: </label>
+            <select 
+              value={filtroNivelEducacional} 
+              onChange={(e) => handleFiltroNivelEducacionalChange(e.target.value)}
+              disabled={!filtroGenero}
+            >
+              <option value="">Primero selecciona un género</option>
+              {getNivelesDisponibles().map(nivel => (
+                <option key={nivel} value={nivel}>{nivel}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>🏅 Categoría: </label>
+            <select 
+              value={filtroCategoria} 
+              onChange={(e) => handleFiltroCategoriaChange(e.target.value)}
+              disabled={!filtroGenero || !filtroNivelEducacional}
+            >
+              <option value="">Primero selecciona género y nivel educacional</option>
+              {getCategoriasDisponibles().map(categoria => (
+                <option key={categoria} value={categoria}>{categoria}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        {/* Botón para limpiar filtros */}
+        <div className="filters-actions">
+          <button onClick={limpiarFiltros} className="btn-limpiar-filtros">
+            🧹 Limpiar Filtros
+          </button>
+        </div>
+      </div>
+
+      {/* Navegación por fases */}
+      {filtroGenero && filtroNivelEducacional && filtroCategoria && (
+        <div className="phase-navigation">
+          <div className="phase-buttons">
+            {(() => {
+              const fasesExistentes = verificarFasesExistentes();
+              const botonesFases = [];
+
+              if (fasesExistentes.grupos) {
+                const countGrupos = matches.filter(match => 
+                  match.genero === filtroGenero &&
+                  match.nivelEducacional === filtroNivelEducacional &&
+                  match.categoria === filtroCategoria &&
+                  match.fase === "grupos"
+                ).length;
+                botonesFases.push({
+                  key: "grupos",
+                  label: "👥 FASE DE GRUPOS",
+                  count: countGrupos
+                });
               }
-            </p>
-            {(filtroGenero || filtroNivelEducacional || filtroCategoria) && (
-              <button onClick={limpiarFiltros} className="clear-filters-empty-btn">
-                Limpiar Filtros
-              </button>
-            )}
+
+              if (fasesExistentes.semifinal) {
+                const countSemifinal = matches.filter(match => 
+                  match.genero === filtroGenero &&
+                  match.nivelEducacional === filtroNivelEducacional &&
+                  match.categoria === filtroCategoria &&
+                  match.fase === "semifinal"
+                ).length;
+                botonesFases.push({
+                  key: "semifinal",
+                  label: "🏆 SEMIFINALES",
+                  count: countSemifinal
+                });
+              }
+
+              if (fasesExistentes.final) {
+                const countFinal = matches.filter(match => 
+                  match.genero === filtroGenero &&
+                  match.nivelEducacional === filtroNivelEducacional &&
+                  match.categoria === filtroCategoria &&
+                  (match.fase === "final" || match.fase === "tercer_puesto" || match.fase === "tercerPuesto")
+                ).length;
+                botonesFases.push({
+                  key: "final",
+                  label: "🥇 FINALES",
+                  count: countFinal
+                });
+              }
+
+              if (fasesExistentes.ida_vuelta) {
+                const countIdaVuelta = matches.filter(match => 
+                  match.genero === filtroGenero &&
+                  match.nivelEducacional === filtroNivelEducacional &&
+                  match.categoria === filtroCategoria &&
+                  (match.fase === "ida" || match.fase === "vuelta" || match.fase === "desempate")
+                ).length;
+                botonesFases.push({
+                  key: "ida_vuelta",
+                  label: "🔄 IDA Y VUELTA",
+                  count: countIdaVuelta
+                });
+              }
+
+              // Agregar botón "Todas las fases" si hay más de una fase
+              if (botonesFases.length > 1) {
+                const totalPartidos = matches.filter(match => 
+                  match.genero === filtroGenero &&
+                  match.nivelEducacional === filtroNivelEducacional &&
+                  match.categoria === filtroCategoria
+                ).length;
+                botonesFases.push({
+                  key: "todas",
+                  label: "📊 TODAS LAS FASES",
+                  count: totalPartidos
+                });
+              }
+
+              return botonesFases.map(fase => (
+                <button
+                  key={fase.key}
+                  className={`phase-btn ${faseActiva === fase.key ? 'active' : ''}`}
+                  onClick={() => setFaseActiva(fase.key)}
+                >
+                  {fase.label} ({fase.count})
+                </button>
+              ));
+            })()}
           </div>
-        ) : (
-          // Renderizar partidos agrupados
-          Object.entries(partidosAgrupados).map(([grupo, partidos]) => (
-            <div key={grupo} className="public-match-group">
-              <h3 className="public-group-title">
-                {grupo} ({partidos.length} {partidos.length === 1 ? 'partido' : 'partidos'})
-              </h3>
-              <div className="public-matches-grid">
-                {partidos.map((partido) => {
-                  // Usar la misma estructura que ProfesorMatches
-                  const equipoA = partido.equipoA ? `${partido.equipoA.curso} ${partido.equipoA.paralelo}` : "Equipo A";
-                  const equipoB = partido.equipoB ? `${partido.equipoB.curso} ${partido.equipoB.paralelo}` : "Equipo B";
+        </div>
+      )}
+        
+      {/* Lista de partidos */}
+      {partidosFiltrados.length === 0 ? (
+        <div className="no-partidos">
+          {filtroGenero && filtroNivelEducacional && filtroCategoria ? 
+            "No hay partidos para esta categoría" : 
+            "Selecciona los filtros para ver partidos"
+          }
+        </div>
+      ) : (
+        <div className="partidos-container">
+          <div className="partidos-header">
+            🏆 Partidos ({partidosFiltrados.length})
+          </div>
+          <div className="partidos-content">
+            {(() => {
+              // Agrupar partidos por grupo o fase
+              const partidosPorGrupo = {};
+              partidosFiltrados.forEach(match => {
+                let claveGrupo;
+                
+                if (match.fase === "semifinal") {
+                  claveGrupo = "Semifinales";
+                } else if (match.fase === "final") {
+                  claveGrupo = "Final";
+                } else if (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") {
+                  claveGrupo = "Tercer Puesto";
+                } else if (match.fase === "ida") {
+                  claveGrupo = "Partidos de Ida";
+                } else if (match.fase === "vuelta") {
+                  claveGrupo = "Partidos de Vuelta";
+                } else if (match.fase === "desempate") {
+                  claveGrupo = "Desempates";
+                } else {
+                  claveGrupo = match.grupo || "Sin Grupo";
+                }
+                
+                if (!partidosPorGrupo[claveGrupo]) {
+                  partidosPorGrupo[claveGrupo] = [];
+                }
+                partidosPorGrupo[claveGrupo].push(match);
+              });
 
-                  return (
-                    <div 
-                      key={partido.id} 
-                      className="public-match-card"
-                      onClick={() => handleMatchClick(partido)}
-                    >
-                      {/* Teams */}
-                      <div className="public-match-teams">
-                        <div className="public-team">
-                          <span className="public-team-name">{equipoA}</span>
-                        </div>
-                        <div className="public-vs">VS</div>
-                        <div className="public-team">
-                          <span className="public-team-name">{equipoB}</span>
-                        </div>
-                      </div>
-
-                      {/* Score */}
-                      <div className="public-match-score">
-                        <div className="public-score-display">
-                          <span className="public-score-number">
-                            {partido.marcadorA !== undefined ? partido.marcadorA : '-'}
+              return Object.entries(partidosPorGrupo).map(([nombreGrupo, partidos]) => (
+                <div key={nombreGrupo} className="partidos-grupo">
+                  <h3 className="grupo-titulo">
+                    {nombreGrupo} ({partidos.length} {partidos.length === 1 ? 'partido' : 'partidos'})
+                  </h3>
+                  <div className="partidos-grid">
+                    {partidos.map(match => (
+                      <div key={match.id} className="partido-card" onClick={() => handleMatchClick(match)}>
+                        <div className="partido-header">
+                          <span className={`partido-fase ${match.fase?.toUpperCase() || 'GRUPOS'}`}>
+                            {match.fase === "ida" ? "IDA" :
+                             match.fase === "vuelta" ? "VUELTA" :
+                             match.fase === "desempate" ? "DESEMPATE" :
+                             match.fase === "semifinal" || match.fase === "semifinales" ? "SEMIFINAL" :
+                             match.fase === "final" || match.fase === "finales" ? "FINAL" :
+                             (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") ? "3ER PUESTO" :
+                             match.fase === "grupos3" ? "FASE DE GRUPOS" :
+                             match.fase === "grupos2" ? "FASE DE GRUPOS" :
+                             "FASE DE GRUPOS"}
                           </span>
-                          <span className="public-score-separator">:</span>
-                          <span className="public-score-number">
-                            {partido.marcadorB !== undefined ? partido.marcadorB : '-'}
+                          <span className={`partido-estado ${match.estado?.toUpperCase() || 'PROGRAMADO'}`}>
+                            {match.estado || 'PROGRAMADO'}
                           </span>
                         </div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="public-match-status">
-                        <span className={`public-status-badge ${getStatusClass(partido.estado)}`}>
-                          {getStatusText(partido.estado)}
-                        </span>
-                      </div>
-
-                      {/* Schedule */}
-                      {(partido.fechaHora || partido.hora || partido.fecha) && (
-                        <div className="public-match-schedule">
-                          <span className="public-schedule-text">
-                            {partido.fechaHora ? 
-                              new Date(partido.fechaHora.seconds * 1000).toLocaleString() : 
-                              formatearFechaHora(partido.fecha, partido.hora)
-                            }
-                          </span>
+                        
+                        <div className="partido-equipos">
+                          <div className="equipo">
+                            <div className="equipo-nombre">{match.equipoA?.curso} {match.equipoA?.paralelo}</div>
+                            <div className="equipo-score">{match.marcadorA || 0}</div>
+                          </div>
+                          <div className="vs">VS</div>
+                          <div className="equipo">
+                            <div className="equipo-nombre">{match.equipoB?.curso} {match.equipoB?.paralelo}</div>
+                            <div className="equipo-score">{match.marcadorB || 0}</div>
+                          </div>
                         </div>
-                      )}
-
-                      {/* Details */}
-                      <div className="public-match-details">
-                        <span className="public-match-category">
-                          {partido.categoria} - {partido.fase || "Fase de Grupos"}
-                        </span>
+                        
+                        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                          {match.fecha} {match.hora}
+                        </div>
+                        
+                        <div className="partido-actions">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMatchClick(match);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              backgroundColor: '#667eea',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            Ver Detalles
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
