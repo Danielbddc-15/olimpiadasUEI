@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 import { db } from "../firebase/config";
@@ -10,12 +10,7 @@ export default function PublicReport() {
   const [standingsPorGrupo, setStandingsPorGrupo] = useState({});
   const [busqueda, setBusqueda] = useState("");
   const [equipoSeleccionado, setEquipoSeleccionado] = useState(null);
-  
-  // Filtros disponibles
-  const [filtroGenero, setFiltroGenero] = useState("");
-  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
-  
+  const [filtroGrupo, setFiltroGrupo] = useState("todos");
   const { discipline } = useParams();
 
   // Cargar equipos en tiempo real
@@ -134,32 +129,6 @@ export default function PublicReport() {
     setStandingsPorGrupo(standingsPorGrupoTemp);
   }, [matches, equipos]);
 
-  // Funciones para obtener opciones de filtros dinámicamente
-  const getGenerosDisponibles = () => {
-    return [...new Set(equipos.map(equipo => equipo.genero).filter(Boolean))];
-  };
-
-  const getNivelesDisponibles = () => {
-    if (!filtroGenero) return [];
-    return [...new Set(equipos
-      .filter(equipo => equipo.genero === filtroGenero)
-      .map(equipo => equipo.nivelEducacional)
-      .filter(Boolean)
-    )];
-  };
-
-  const getCategoriasDisponibles = () => {
-    if (!filtroGenero || !filtroNivelEducacional) return [];
-    return [...new Set(equipos
-      .filter(equipo => 
-        equipo.genero === filtroGenero && 
-        equipo.nivelEducacional === filtroNivelEducacional
-      )
-      .map(equipo => equipo.categoria)
-      .filter(Boolean)
-    )];
-  };
-
   const createTeamEntry = (nombre, grupo) => ({
     nombre,
     grupo,
@@ -176,40 +145,37 @@ export default function PublicReport() {
   // Componente de reporte por equipo
   function ReporteEquipo({ equipo }) {
     const nombreEquipo = `${equipo.curso} ${equipo.paralelo}`.trim();
-    
-    // Filtrar partidos únicos para este equipo usando useMemo para evitar re-renders innecesarios
-    const partidos = useMemo(() => {
-      const partidosDelEquipo = matches.filter((m) => {
-        // Verificar si este equipo específico (con género, nivel y categoría exactos) participa en el partido
-        const equipoAMatch = m.equipoA?.curso === equipo.curso && 
-                            m.equipoA?.paralelo === equipo.paralelo &&
-                            m.equipoA?.genero === equipo.genero &&
-                            m.equipoA?.nivelEducacional === equipo.nivelEducacional &&
-                            m.equipoA?.categoria === equipo.categoria;
+    const partidos = matches.filter(
+      (m) => {
+        const equipoANombre = `${m.equipoA?.curso || ''} ${m.equipoA?.paralelo || ''}`.trim();
+        const equipoBNombre = `${m.equipoB?.curso || ''} ${m.equipoB?.paralelo || ''}`.trim();
         
-        const equipoBMatch = m.equipoB?.curso === equipo.curso && 
-                            m.equipoB?.paralelo === equipo.paralelo &&
-                            m.equipoB?.genero === equipo.genero &&
-                            m.equipoB?.nivelEducacional === equipo.nivelEducacional &&
-                            m.equipoB?.categoria === equipo.categoria;
+        // Comparación más flexible
+        const match = equipoANombre.toLowerCase() === nombreEquipo.toLowerCase() || 
+                     equipoBNombre.toLowerCase() === nombreEquipo.toLowerCase();
         
-        return equipoAMatch || equipoBMatch;
-      });
-      
-      // Remover duplicados por ID
-      const partidosUnicos = partidosDelEquipo.filter((partido, index, array) => 
-        array.findIndex(p => p.id === partido.id) === index
-      );
-      
-      return partidosUnicos;
-    }, [matches, equipo]);
-
-    const partidosJugados = partidos.filter((m) => m.estado === "finalizado");
-    const partidosPendientes = partidos.filter((m) => 
-      m.estado === "pendiente" || m.estado === "en curso" || 
-      m.estado === "programado" || !m.estado || m.estado === null || 
-      m.estado === undefined || m.estado === ""
+        return match;
+      }
     );
+
+    console.log(`${nombreEquipo} - Total partidos encontrados: ${partidos.length}`);
+
+    const partidosJugados = partidos.filter((m) => {
+      const esJugado = m.estado === "finalizado";
+      return esJugado;
+    });
+    
+    const partidosPendientes = partidos.filter((m) => {
+      const esPendiente = m.estado === "pendiente" || m.estado === "en curso" || 
+                         m.estado === "programado" ||
+                         !m.estado || m.estado === null || m.estado === undefined ||
+                         m.estado === "";
+      return esPendiente;
+    });
+
+    console.log(`${nombreEquipo} - Partidos jugados: ${partidosJugados.length}, Partidos pendientes: ${partidosPendientes.length}`);
+
+    console.log(`${nombreEquipo} - Partidos jugados: ${partidosJugados.length}, Partidos pendientes: ${partidosPendientes.length}`);
 
     let ganados = 0, perdidos = 0, empatados = 0, puntos = 0, anotadores = [];
     partidos.forEach((m) => {
@@ -271,7 +237,7 @@ export default function PublicReport() {
       }
 
       return (
-        <tr key={`${m.id}-${idx}`} style={{ borderBottom: "1px solid #e9ecef" }}>
+        <tr key={idx} style={{ borderBottom: "1px solid #e9ecef" }}>
           <td style={{ padding: "12px 8px", fontWeight: "500" }}>{rival}</td>
           <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>
             {marcador}
@@ -536,8 +502,8 @@ export default function PublicReport() {
             onClick={() => setEquipoSeleccionado(null)}
             className="back-button"
           >
-            <span className="back-icon">◀</span>
-            <span className="back-text">Volver a Equipos</span>
+            <span className="back-icon">←</span>
+            <span>Volver a la lista</span>
           </button>
           <ReporteEquipo equipo={equipoSeleccionado} />
         </>
@@ -566,52 +532,15 @@ export default function PublicReport() {
             </div>
 
             <div className="filter-group">
-              <label className="filter-label">Género:</label>
+              <label className="filter-label">Filtrar por grupo:</label>
               <select
-                value={filtroGenero}
-                onChange={(e) => {
-                  setFiltroGenero(e.target.value);
-                  setFiltroNivelEducacional("");
-                  setFiltroCategoria("");
-                }}
+                value={filtroGrupo}
+                onChange={(e) => setFiltroGrupo(e.target.value)}
                 className="modern-select"
               >
-                <option value="">Todos los géneros</option>
-                {getGenerosDisponibles().map(genero => (
-                  <option key={genero} value={genero}>{genero}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label className="filter-label">Nivel Educacional:</label>
-              <select
-                value={filtroNivelEducacional}
-                onChange={(e) => {
-                  setFiltroNivelEducacional(e.target.value);
-                  setFiltroCategoria("");
-                }}
-                className="modern-select"
-                disabled={!filtroGenero}
-              >
-                <option value="">Todos los niveles</option>
-                {getNivelesDisponibles().map(nivel => (
-                  <option key={nivel} value={nivel}>{nivel}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label className="filter-label">Categoría:</label>
-              <select
-                value={filtroCategoria}
-                onChange={(e) => setFiltroCategoria(e.target.value)}
-                className="modern-select"
-                disabled={!filtroGenero || !filtroNivelEducacional}
-              >
-                <option value="">Todas las categorías</option>
-                {getCategoriasDisponibles().map(categoria => (
-                  <option key={categoria} value={categoria}>{categoria}</option>
+                <option value="todos">Todos los grupos</option>
+                {[...new Set(equipos.map(eq => eq.grupo).filter(Boolean))].map(grupo => (
+                  <option key={grupo} value={grupo}>{grupo}</option>
                 ))}
               </select>
             </div>
@@ -623,10 +552,8 @@ export default function PublicReport() {
                 const matchesBusqueda = `${eq.curso} ${eq.paralelo}`
                   .toLowerCase()
                   .includes(busqueda.toLowerCase());
-                const matchesGenero = !filtroGenero || eq.genero === filtroGenero;
-                const matchesNivel = !filtroNivelEducacional || eq.nivelEducacional === filtroNivelEducacional;
-                const matchesCategoria = !filtroCategoria || eq.categoria === filtroCategoria;
-                return matchesBusqueda && matchesGenero && matchesNivel && matchesCategoria;
+                const matchesGrupo = filtroGrupo === "todos" || eq.grupo === filtroGrupo;
+                return matchesBusqueda && matchesGrupo;
               })
               .map((eq, idx) => (
                 <div

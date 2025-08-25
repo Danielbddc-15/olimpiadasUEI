@@ -13,6 +13,11 @@ export default function ProfesorVoleyMatchDetail() {
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Estados para edición de fecha y hora
+  const [editandoHorario, setEditandoHorario] = useState(false);
+  const [fechaTemporal, setFechaTemporal] = useState("");
+  const [horaTemporal, setHoraTemporal] = useState("");
+
   // Estados para gestión de puntos
   const [mostrarInputPunto, setMostrarInputPunto] = useState(null);
   const [puntoInput, setPuntoInput] = useState("");
@@ -34,6 +39,10 @@ export default function ProfesorVoleyMatchDetail() {
         if (docSnap.exists()) {
           const matchData = { id: docSnap.id, ...docSnap.data() };
           setMatch(matchData);
+          
+          // Inicializar fechas temporales
+          setFechaTemporal(matchData.fecha || "");
+          setHoraTemporal(matchData.hora || "");
           
           // Inicializar valores temporales
           setAnotadoresTemporal({
@@ -443,6 +452,45 @@ export default function ProfesorVoleyMatchDetail() {
       conteo[nombre] = (conteo[nombre] || 0) + 1;
     });
     return conteo;
+  };
+
+  // Función para actualizar fecha y hora
+  const actualizarFechaHora = async () => {
+    try {
+      const updateData = {
+        fecha: fechaTemporal || null,
+        hora: horaTemporal || null,
+        semana: fechaTemporal && horaTemporal ? match.semana || 1 : null,
+        estado: fechaTemporal && horaTemporal ? "programado" : "pendiente"
+      };
+
+      await updateDoc(doc(db, "matches", matchId), updateData);
+      setMatch(prev => ({ 
+        ...prev, 
+        fecha: fechaTemporal || null,
+        hora: horaTemporal || null,
+        estado: fechaTemporal && horaTemporal ? "programado" : "pendiente"
+      }));
+      setEditandoHorario(false);
+      showToast("Fecha y hora actualizadas correctamente", "success");
+    } catch (error) {
+      console.error("Error al actualizar fecha y hora:", error);
+      showToast("Error al actualizar fecha y hora", "error");
+    }
+  };
+
+  const cancelarEdicionHorario = () => {
+    setFechaTemporal(match.fecha || "");
+    setHoraTemporal(match.hora || "");
+    setEditandoHorario(false);
+  };
+
+  // Función para convertir fecha a nombre del día
+  const obtenerNombreDia = (fecha) => {
+    if (!fecha) return "Sin fecha";
+    const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const fechaObj = new Date(fecha);
+    return diasSemana[fechaObj.getDay()];
   };
 
   // Calcular ganador de set
@@ -897,6 +945,113 @@ export default function ProfesorVoleyMatchDetail() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Sección de edición de horarios */}
+      <div className="profesor-voley-schedule-section">
+        <div className="profesor-schedule-header">
+          <h3 className="profesor-section-title">⏰ Programación del Partido</h3>
+          {!editandoHorario ? (
+            <button
+              onClick={() => setEditandoHorario(true)}
+              className="profesor-btn profesor-btn-edit"
+            >
+              ✏️ Editar Horario
+            </button>
+          ) : (
+            <div className="profesor-schedule-actions">
+              <button
+                onClick={actualizarFechaHora}
+                className="profesor-btn profesor-btn-save"
+                disabled={!fechaTemporal || !horaTemporal}
+              >
+                ✅ Guardar
+              </button>
+              <button
+                onClick={cancelarEdicionHorario}
+                className="profesor-btn profesor-btn-cancel"
+              >
+                ❌ Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {editandoHorario ? (
+          <div className="profesor-schedule-edit">
+            <div className="profesor-schedule-controls">
+              <div className="profesor-control-group">
+                <label className="profesor-control-label">
+                  📅 Fecha:
+                </label>
+                <input
+                  type="date"
+                  value={fechaTemporal}
+                  onChange={(e) => setFechaTemporal(e.target.value)}
+                  className="profesor-date-input"
+                />
+              </div>
+
+              <div className="profesor-control-group">
+                <label className="profesor-control-label">
+                  🕐 Hora:
+                </label>
+                <select
+                  value={horaTemporal}
+                  onChange={(e) => setHoraTemporal(e.target.value)}
+                  className="profesor-time-select"
+                >
+                  <option value="">Sin hora</option>
+                  <option value="07:05">07:05</option>
+                  <option value="07:50">07:50</option>
+                  <option value="08:35">08:35</option>
+                  <option value="09:20">09:20</option>
+                  <option value="10:05">10:05</option>
+                  <option value="10:50">10:50</option>
+                  <option value="11:35">11:35</option>
+                  <option value="12:20">12:20</option>
+                  <option value="13:00">13:00</option>
+                </select>
+              </div>
+
+              <div className="profesor-control-group">
+                <label className="profesor-control-label">
+                  📍 Horario:
+                </label>
+                <div className="profesor-schedule-preview">
+                  {fechaTemporal && horaTemporal ? (
+                    <span className="profesor-schedule-value">
+                      {obtenerNombreDia(fechaTemporal).charAt(0).toUpperCase() + obtenerNombreDia(fechaTemporal).slice(1)} {fechaTemporal} a las {horaTemporal}
+                    </span>
+                  ) : (
+                    <span className="profesor-schedule-empty">Sin programar</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="profesor-schedule-display">
+            <div className="profesor-schedule-info">
+              <div className="profesor-schedule-item">
+                <span className="profesor-schedule-label">📅 Fecha:</span>
+                <span className="profesor-schedule-value">
+                  {match.fecha ? `${obtenerNombreDia(match.fecha).charAt(0).toUpperCase() + obtenerNombreDia(match.fecha).slice(1)} ${match.fecha}` : "No programada"}
+                </span>
+              </div>
+              <div className="profesor-schedule-item">
+                <span className="profesor-schedule-label">🕐 Hora:</span>
+                <span className="profesor-schedule-value">{match.hora || "No programada"}</span>
+              </div>
+              <div className="profesor-schedule-item">
+                <span className="profesor-schedule-label">📍 Estado:</span>
+                <span className={`profesor-schedule-status ${match.estado}`}>
+                  {match.fecha && match.hora ? "Programado" : "Pendiente"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Información adicional */}

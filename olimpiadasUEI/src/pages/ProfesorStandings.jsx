@@ -20,42 +20,26 @@ export default function ProfesorStandings() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   
-  // Estados para filtros con persistencia
-  const [filtroGenero, setFiltroGenero] = useState(() => {
-    return localStorage.getItem(`olimpiadas_profesor_standings_filtro_genero_${discipline}`) || "";
-  });
-  const [filtroNivel, setFiltroNivel] = useState(() => {
-    return localStorage.getItem(`olimpiadas_profesor_standings_filtro_nivel_${discipline}`) || "";
-  });
-  const [filtroCategoria, setFiltroCategoria] = useState(() => {
-    return localStorage.getItem(`olimpiadas_profesor_standings_filtro_categoria_${discipline}`) || "";
-  });
+  // Estados para filtros
+  const [filtroGenero, setFiltroGenero] = useState("");
+  const [filtroNivel, setFiltroNivel] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
   const [categorias, setCategorias] = useState([]);
-
-  // Guardar filtros en localStorage
-  const guardarFiltros = (genero, nivel, categoria) => {
-    localStorage.setItem(`olimpiadas_profesor_standings_filtro_genero_${discipline}`, genero);
-    localStorage.setItem(`olimpiadas_profesor_standings_filtro_nivel_${discipline}`, nivel);
-    localStorage.setItem(`olimpiadas_profesor_standings_filtro_categoria_${discipline}`, categoria);
-  };
 
   // Funciones para manejar filtros
   const handleFiltroGeneroChange = (genero) => {
     setFiltroGenero(genero);
     setFiltroNivel(""); // Limpiar nivel al cambiar género
     setFiltroCategoria(""); // Limpiar categoría al cambiar género
-    guardarFiltros(genero, "", "");
   };
 
   const handleFiltroNivelChange = (nivel) => {
     setFiltroNivel(nivel);
     setFiltroCategoria(""); // Limpiar categoría al cambiar nivel
-    guardarFiltros(filtroGenero, nivel, "");
   };
 
   const handleFiltroCategoriaChange = (categoria) => {
     setFiltroCategoria(categoria);
-    guardarFiltros(filtroGenero, filtroNivel, categoria);
   };
 
   // Obtener categorías desde Firestore

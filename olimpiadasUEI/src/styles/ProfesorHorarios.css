@@ -83,6 +83,27 @@
   border-radius: 20px;
 }
 
+.refresh-btn {
+  background: linear-gradient(135deg, #FF9800 0%, #FF6F00 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-btn:hover {
+  background: linear-gradient(135deg, #FF6F00 0%, #E65100 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
 .move-matches-btn {
   background: #FF5722;
   color: white;
@@ -165,8 +186,10 @@
 /* Grid de horarios */
 .horarios-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  margin-top: 2rem;
 }
 
 /* Columna de día */
@@ -176,6 +199,8 @@
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
+  height: fit-content;
+  min-height: 400px;
 }
 
 .dia-header {
@@ -230,16 +255,18 @@
 /* Lista de horarios */
 .horarios-lista {
   padding: 1rem;
-  max-height: 600px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .horario-slot {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1rem;
-  min-height: 80px;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  min-height: 140px;
 }
 
 .hora-label {
@@ -251,18 +278,30 @@
   min-width: 60px;
   text-align: center;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Tarjeta de partido */
 .partido-card {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 15px;
-  padding: 1rem;
+  border-radius: 10px;
+  padding: 0.6rem;
   flex: 1;
   cursor: grab;
   transition: all 0.3s ease;
   border: 2px solid transparent;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 80px;
+  max-height: 200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: auto;
 }
 
 .partido-card:active {
@@ -281,15 +320,17 @@
 }
 
 .partido-header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .partido-actions {
   display: flex;
   gap: 5px;
+  flex-shrink: 0;
 }
 
 .time-select-btn {
@@ -329,55 +370,145 @@
 /* Equipos */
 .partido-equipos {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .equipo {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(0, 0, 0, 0.05);
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240,248,255,0.9));
   border-radius: 8px;
+  flex: 1;
+  text-align: center;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  transition: all 0.2s ease;
+  max-width: 40%;
+}
+
+.equipo:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.equipo-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: center;
 }
 
 .equipo-icon {
-  font-size: 1.1rem;
-}
-
-.equipo-nombre {
-  font-weight: 600;
-  color: #333;
   font-size: 0.9rem;
 }
 
-.vs-divider {
-  text-align: center;
-  font-weight: 700;
-  color: #666;
+.equipo-genero {
   font-size: 0.8rem;
-  margin: 0.2rem 0;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+.equipo-nombre {
+  font-weight: 700;
+  color: #065f46;
+  font-size: 0.75rem;
+  margin: 0.1rem 0;
+  line-height: 1.1;
+}
+
+.equipo-detalles {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.equipo-categoria {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.equipo-genero-texto {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  line-height: 1;
+}
+
+.vs-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.vs-text {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.7rem;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  z-index: 2;
+  position: relative;
+  line-height: 1;
+}
+
+.vs-line {
+  position: absolute;
+  width: 1px;
+  height: 20px;
+  background: linear-gradient(to bottom, #ef4444, #dc2626);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }
 
 /* Información del partido */
 .partido-info {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .partido-info .info-item {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.2rem;
   color: #666;
-  font-size: 0.8rem;
+  font-size: 0.65rem;
+  white-space: nowrap;
 }
 
 .partido-info .info-icon {
-  font-size: 0.9rem;
+  font-size: 0.7rem;
+  flex-shrink: 0;
 }
 
 /* Slot vacío */
@@ -576,19 +707,23 @@
   
   .horarios-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
   .horarios-controls {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
   
   .controls-info {
     justify-content: center;
+    flex-wrap: wrap;
   }
   
   .selection-controls {
     justify-content: center;
+    flex-wrap: wrap;
   }
   
   .profesor-title {
@@ -596,11 +731,439 @@
   }
   
   .horario-slot {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
     gap: 0.5rem;
   }
   
   .hora-label {
-    align-self: flex-start;
+    min-width: 50px;
+    font-size: 0.8rem;
+  }
+  
+  .partido-card {
+    min-height: 100px;
+    padding: 0.75rem;
+  }
+  
+  .slot-vacio {
+    min-height: 100px;
+  }
+  
+  .no-disponible-slot {
+    min-height: 100px;
+  }
+}
+
+/* Estilos para gestión manual de horarios */
+.partido-card {
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.partido-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.partido-card:active {
+  cursor: grabbing;
+}
+
+.partido-card[draggable="true"] {
+  opacity: 1;
+}
+
+.partido-card:hover .btn-remove {
+  opacity: 1;
+}
+
+.btn-remove {
+  background: rgba(244, 67, 54, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.btn-remove:hover {
+  background: #f44336;
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.slot-vacio {
+  min-height: 120px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 1;
+  cursor: pointer;
+}
+
+.slot-vacio:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.slot-vacio .vacio-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.slot-vacio:hover .vacio-text {
+  color: white;
+}
+
+/* Slot no disponible */
+.no-disponible-slot {
+  min-height: 120px;
+  border: 2px solid rgba(244, 67, 54, 0.3);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 67, 54, 0.1);
+  flex: 1;
+}
+
+.no-disponible-slot span {
+  color: rgba(244, 67, 54, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Efectos de drag and drop */
+.slot-vacio[data-drag-over="true"] {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Modal de selección de partidos */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+}
+
+.scheduling-modal {
+  background: white;
+  border-radius: 20px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.scheduling-modal .modal-header {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: none;
+}
+
+.scheduling-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.scheduling-modal .close-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.scheduling-modal .close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.scheduling-modal .modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.search-section {
+  margin-bottom: 1.5rem;
+}
+
+.search-bar {
+  position: relative;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 12px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-bar input:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.clear-search:hover {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.match-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  border-color: #4CAF50;
+}
+
+.match-card.disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.match-card.disabled:hover {
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  border-color: #e0e0e0 !important;
+}
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.discipline-badge {
+  background: #f0f0f0;
+  color: #666;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.team-icon {
+  font-size: 1.2rem;
+}
+
+.team-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.vs-divider {
+  font-weight: bold;
+  color: #666;
+  margin: 0 1rem;
+  font-size: 0.8rem;
+}
+
+.match-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #666;
+}
+
+.info-icon {
+  font-size: 1rem;
+}
+
+.no-matches {
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+  padding: 3rem;
+  background: #f9f9f9;
+  border-radius: 12px;
+  border: 1px dashed #ddd;
+}
+
+/* Indicador de carga para asignación */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  border-radius: 20px;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f0f0f0;
+  border-top: 4px solid #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  margin: 0;
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+/* Estilos para elementos deshabilitados */
+.search-bar input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.clear-search:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsividad del modal */
+@media (max-width: 768px) {
+  .scheduling-modal {
+    width: 95% !important;
+    max-width: none !important;
+    margin: 1rem;
+  }
+  
+  .matches-grid {
+    grid-template-columns: 1fr;
+    max-height: 300px;
+  }
+  
+  .scheduling-modal .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .scheduling-modal .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .match-teams {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .vs-divider {
+    margin: 0;
   }
 }

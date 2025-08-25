@@ -23,6 +23,11 @@ export default function AdminMatchDetail() {
   const [goleadoresTemporal, setGoleadoresTemporal] = useState({ A: [], B: [] });
   const [nuevoGoleador, setNuevoGoleador] = useState({ A: "", B: "" });
 
+  // Estados para edición de fecha y hora
+  const [editandoHorario, setEditandoHorario] = useState(false);
+  const [fechaTemporal, setFechaTemporal] = useState("");
+  const [horaTemporal, setHoraTemporal] = useState("");
+
   // Toast hook
   const { ToastContainer, showToast } = useToast();
 
@@ -41,6 +46,23 @@ export default function AdminMatchDetail() {
             A: [...(matchData.goleadoresA || [])],
             B: [...(matchData.goleadoresB || [])]
           });
+          
+          // Inicializar fecha y hora temporales
+          let fechaInicial = matchData.fechaCompleta || "";
+          if (!fechaInicial && matchData.fecha) {
+            // Convertir día de la semana a fecha aproximada
+            const hoy = new Date();
+            const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            const diaIndex = dias.indexOf(matchData.fecha.toLowerCase());
+            if (diaIndex !== -1) {
+              const fechaApprox = new Date();
+              fechaApprox.setDate(hoy.getDate() + (diaIndex - hoy.getDay()));
+              fechaInicial = fechaApprox.toISOString().split('T')[0];
+            }
+          }
+          
+          setFechaTemporal(fechaInicial);
+          setHoraTemporal(matchData.hora || "");
         } else {
           console.error("Partido no encontrado");
           navigate(-1);
@@ -270,6 +292,61 @@ export default function AdminMatchDetail() {
     });
     setNuevoGoleador({ A: "", B: "" });
     setEditandoGoleadores(false);
+  };
+
+  // Funciones para edición de fecha y hora
+  const actualizarFechaHora = async () => {
+    try {
+      // Convertir fecha a día de la semana si es necesario
+      let diaFormateado = fechaTemporal;
+      if (fechaTemporal && fechaTemporal.includes('-')) {
+        const fecha = new Date(fechaTemporal + 'T00:00:00');
+        const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        diaFormateado = dias[fecha.getDay()];
+      }
+
+      await updateDoc(doc(db, "matches", matchId), {
+        fecha: diaFormateado || null,
+        fechaCompleta: fechaTemporal || null, // Guardamos también la fecha completa
+        hora: horaTemporal || null,
+        semana: fechaTemporal && horaTemporal ? match.semana || 1 : null,
+        estado: fechaTemporal && horaTemporal ? "programado" : "pendiente"
+      });
+
+      setMatch(prev => ({
+        ...prev,
+        fecha: diaFormateado || null,
+        fechaCompleta: fechaTemporal || null,
+        hora: horaTemporal || null,
+        estado: fechaTemporal && horaTemporal ? "programado" : "pendiente"
+      }));
+
+      setEditandoHorario(false);
+      showToast("Horario actualizado correctamente", "success");
+    } catch (error) {
+      console.error("Error actualizando horario:", error);
+      showToast("Error al actualizar el horario", "error");
+    }
+  };
+
+  const cancelarEdicionHorario = () => {
+    // Si hay fecha completa, usarla; si no, convertir día a fecha
+    let fechaInicial = match.fechaCompleta || "";
+    if (!fechaInicial && match.fecha) {
+      // Convertir día de la semana a fecha aproximada (solo para edición)
+      const hoy = new Date();
+      const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      const diaIndex = dias.indexOf(match.fecha.toLowerCase());
+      if (diaIndex !== -1) {
+        const fechaApprox = new Date();
+        fechaApprox.setDate(hoy.getDate() + (diaIndex - hoy.getDay()));
+        fechaInicial = fechaApprox.toISOString().split('T')[0];
+      }
+    }
+    
+    setFechaTemporal(fechaInicial);
+    setHoraTemporal(match.hora || "");
+    setEditandoHorario(false);
   };
 
   // Cambiar estado del partido
@@ -1192,11 +1269,66 @@ export default function AdminMatchDetail() {
         <div className="admin-info-grid">
           <div className="admin-info-item">
             <span className="admin-info-label">📅 Fecha:</span>
-            <span className="admin-info-value">{match.fecha || "No definida"}</span>
+            {editandoHorario ? (
+              <input
+                type="date"
+                value={fechaTemporal} 
+                onChange={(e) => setFechaTemporal(e.target.value)}
+                className="admin-date-input"
+              />
+            ) : (
+              <span className="admin-info-value">
+                {match.fechaCompleta ? 
+                  new Date(match.fechaCompleta + 'T00:00:00').toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  (match.fecha || "No definida")
+                }
+              </span>
+            )}
           </div>
           <div className="admin-info-item">
             <span className="admin-info-label">🕐 Hora:</span>
-            <span className="admin-info-value">{match.hora || "No definida"}</span>
+            {editandoHorario ? (
+              <select 
+                value={horaTemporal} 
+                onChange={(e) => setHoraTemporal(e.target.value)}
+                className="admin-time-select"
+              >
+                <option value="">Sin hora</option>
+                <option value="07:05">07:05</option>
+                <option value="07:50">07:50</option>
+                <option value="08:35">08:35</option>
+                <option value="09:20">09:20</option>
+                <option value="10:05">10:05</option>
+                <option value="10:50">10:50</option>
+                <option value="11:35">11:35</option>
+                <option value="12:20">12:20</option>
+                <option value="13:00">13:00</option>
+              </select>
+            ) : (
+              <span className="admin-info-value">{match.hora || "No definida"}</span>
+            )}
+          </div>
+          <div className="admin-info-item">
+            <span className="admin-info-label">📝 Horario:</span>
+            {editandoHorario ? (
+              <div className="admin-schedule-buttons">
+                <button className="admin-save-btn" onClick={actualizarFechaHora}>
+                  ✅ Guardar
+                </button>
+                <button className="admin-cancel-btn" onClick={cancelarEdicionHorario}>
+                  ❌ Cancelar
+                </button>
+              </div>
+            ) : (
+              <button className="admin-edit-btn" onClick={() => setEditandoHorario(true)}>
+                ✏️ Editar Horario
+              </button>
+            )}
           </div>
           <div className="admin-info-item">
             <span className="admin-info-label">🏟️ Grupo:</span>
