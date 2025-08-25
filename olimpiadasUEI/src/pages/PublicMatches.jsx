@@ -670,63 +670,47 @@ export default function PublicMatches() {
                   <div className="partidos-grid">
                     {partidos.map(match => (
                       <div key={match.id} className="partido-card" onClick={() => handleMatchClick(match)}>
-                        <div className="partido-header">
-                          <span className={`partido-fase ${match.fase?.toUpperCase() || 'GRUPOS'}`}>
-                            {match.fase === "ida" ? "IDA" :
-                             match.fase === "vuelta" ? "VUELTA" :
-                             match.fase === "desempate" ? "DESEMPATE" :
-                             match.fase === "semifinal" || match.fase === "semifinales" ? "SEMIFINAL" :
-                             match.fase === "final" || match.fase === "finales" ? "FINAL" :
-                             (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") ? "3ER PUESTO" :
-                             match.fase === "grupos3" ? "FASE DE GRUPOS" :
-                             match.fase === "grupos2" ? "FASE DE GRUPOS" :
-                             "FASE DE GRUPOS"}
-                          </span>
-                          <span className={`partido-estado ${match.estado?.toUpperCase() || 'PROGRAMADO'}`}>
-                            {match.estado || 'PROGRAMADO'}
-                          </span>
-                        </div>
-                        
+                        {/* Ocultar fase/estado innecesarios */}
+                        {/* <div className="partido-header">...</div> */}
+
                         <div className="partido-equipos">
-                          <div className="equipo">
-                            <div className="equipo-nombre">{match.equipoA?.curso} {match.equipoA?.paralelo}</div>
-                            <div className="equipo-score">{match.marcadorA || 0}</div>
-                          </div>
-                          <div className="vs">VS</div>
-                          <div className="equipo">
-                            <div className="equipo-nombre">{match.equipoB?.curso} {match.equipoB?.paralelo}</div>
-                            <div className="equipo-score">{match.marcadorB || 0}</div>
-                          </div>
-                        </div>
-                        
-                        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
-                          {match.fecha} {match.hora}
-                        </div>
-                        
-                        <div className="partido-actions">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMatchClick(match);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '6px 12px',
-                              backgroundColor: '#667eea',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              transition: 'all 0.3s ease'
-                            }}
-                          >
-                            Ver Detalles
-                          </button>
-                        </div>
-                      </div>
-                    ))}
++     <div className="equipo">
++       {match.equipoA?.curso} {match.equipoA?.paralelo} {match.equipoA?.genero} - {match.marcadorA || 0}
++     </div>
+      <div className="vs">VS</div>
++     <div className="equipo">
++       {match.equipoB?.curso} {match.equipoB?.paralelo} {match.equipoB?.genero} - {match.marcadorB || 0}
++     </div>
+    </div>
+    
+    <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
+      {match.fecha} {match.hora}
+    </div>
+    
+    <div className="partido-actions">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleMatchClick(match);
+        }}
+        style={{
+          flex: 1,
+          padding: '6px 12px',
+          backgroundColor: '#667eea',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: '600',
+          transition: 'all 0.3s ease'
+        }}
+      >
+        Ver Detalles
+      </button>
+    </div>
+  </div>
+))}
                   </div>
                 </div>
               ));
