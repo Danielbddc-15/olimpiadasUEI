@@ -13,6 +13,17 @@ export default function PublicReport() {
   const [filtroGrupo, setFiltroGrupo] = useState("todos");
   const { discipline } = useParams();
 
+  // Estados de filtros avanzados
+  const [filtroGenero, setFiltroGenero] = useState(() => {
+    return localStorage.getItem(`olimpiadas_public_report_filtro_genero_${discipline}`) || "";
+  });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem(`olimpiadas_public_report_filtro_nivel_educacional_${discipline}`) || "";
+  });
+  const [filtroCategoria, setFiltroCategoria] = useState(() => {
+    return localStorage.getItem(`olimpiadas_public_report_filtro_categoria_${discipline}`) || "";
+  });
+
   // Cargar equipos en tiempo real
   useEffect(() => {
     const q = query(
@@ -129,6 +140,63 @@ export default function PublicReport() {
     setStandingsPorGrupo(standingsPorGrupoTemp);
   }, [matches, equipos]);
 
+  // Funciones de filtros
+  const limpiarFiltros = () => {
+    setFiltroGenero("");
+    setFiltroNivelEducacional("");
+    setFiltroCategoria("");
+
+    localStorage.removeItem(`olimpiadas_public_report_filtro_genero_${discipline}`);
+    localStorage.removeItem(`olimpiadas_public_report_filtro_nivel_educacional_${discipline}`);
+    localStorage.removeItem(`olimpiadas_public_report_filtro_categoria_${discipline}`);
+  };
+
+  // Guardar filtros en localStorage
+  useEffect(() => {
+    if (filtroGenero) {
+      localStorage.setItem(`olimpiadas_public_report_filtro_genero_${discipline}`, filtroGenero);
+    }
+    if (filtroNivelEducacional) {
+      localStorage.setItem(`olimpiadas_public_report_filtro_nivel_educacional_${discipline}`, filtroNivelEducacional);
+    }
+    if (filtroCategoria) {
+      localStorage.setItem(`olimpiadas_public_report_filtro_categoria_${discipline}`, filtroCategoria);
+    }
+  }, [filtroGenero, filtroNivelEducacional, filtroCategoria, discipline]);
+
+  // Limpiar filtros dependientes
+  useEffect(() => {
+    if (!filtroGenero) {
+      setFiltroNivelEducacional("");
+      setFiltroCategoria("");
+    }
+  }, [filtroGenero]);
+
+  useEffect(() => {
+    if (!filtroNivelEducacional) {
+      setFiltroCategoria("");
+    }
+  }, [filtroNivelEducacional]);
+
+  // Extraer opciones únicas para filtros
+  const generosDisponibles = [...new Set(equipos.map(eq => eq.genero).filter(Boolean))];
+  const nivelesDisponibles = filtroGenero
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.nivelEducacional).filter(Boolean))]
+    : [...new Set(equipos.map(eq => eq.nivelEducacional).filter(Boolean))];
+  const categoriasDisponibles = filtroNivelEducacional
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero && eq.nivelEducacional === filtroNivelEducacional).map(eq => eq.categoria).filter(Boolean))]
+    : filtroGenero
+    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.categoria).filter(Boolean))]
+    : [...new Set(equipos.map(eq => eq.categoria).filter(Boolean))];
+
+  // Aplicar filtros a los equipos
+  const equiposFiltrados = equipos.filter(equipo => {
+    if (filtroGenero && equipo.genero !== filtroGenero) return false;
+    if (filtroNivelEducacional && equipo.nivelEducacional !== filtroNivelEducacional) return false;
+    if (filtroCategoria && equipo.categoria !== filtroCategoria) return false;
+    return true;
+  });
+
   const createTeamEntry = (nombre, grupo) => ({
     nombre,
     grupo,
@@ -145,35 +213,30 @@ export default function PublicReport() {
   // Componente de reporte por equipo
   function ReporteEquipo({ equipo }) {
     const nombreEquipo = `${equipo.curso} ${equipo.paralelo}`.trim();
-    const partidos = matches.filter(
-      (m) => {
-        const equipoANombre = `${m.equipoA?.curso || ''} ${m.equipoA?.paralelo || ''}`.trim();
-        const equipoBNombre = `${m.equipoB?.curso || ''} ${m.equipoB?.paralelo || ''}`.trim();
-        
-        // Comparación más flexible
-        const match = equipoANombre.toLowerCase() === nombreEquipo.toLowerCase() || 
-                     equipoBNombre.toLowerCase() === nombreEquipo.toLowerCase();
-        
-        return match;
-      }
-    );
+    
+    // Filtrar partidos de forma más precisa
+    const partidos = matches.filter((m) => {
+      // Verificar que el partido sea de la misma disciplina
+      if (m.disciplina !== discipline) return false;
+      
+      // Verificar filtros de género, nivel y categoría si están aplicados
+      if (filtroGenero && m.genero !== filtroGenero) return false;
+      if (filtroNivelEducacional && m.nivelEducacional !== filtroNivelEducacional) return false;
+      if (filtroCategoria && m.categoria !== filtroCategoria) return false;
+      
+      // Verificar que el equipo participe en el partido
+      const equipoANombre = `${m.equipoA?.curso || ''} ${m.equipoA?.paralelo || ''}`.trim();
+      const equipoBNombre = `${m.equipoB?.curso || ''} ${m.equipoB?.paralelo || ''}`.trim();
+      
+      const participaEnPartido = equipoANombre === nombreEquipo || equipoBNombre === nombreEquipo;
+      
+      return participaEnPartido;
+    });
 
     console.log(`${nombreEquipo} - Total partidos encontrados: ${partidos.length}`);
 
-    const partidosJugados = partidos.filter((m) => {
-      const esJugado = m.estado === "finalizado";
-      return esJugado;
-    });
-    
-    const partidosPendientes = partidos.filter((m) => {
-      const esPendiente = m.estado === "pendiente" || m.estado === "en curso" || 
-                         m.estado === "programado" ||
-                         !m.estado || m.estado === null || m.estado === undefined ||
-                         m.estado === "";
-      return esPendiente;
-    });
-
-    console.log(`${nombreEquipo} - Partidos jugados: ${partidosJugados.length}, Partidos pendientes: ${partidosPendientes.length}`);
+    const partidosJugados = partidos.filter((m) => m.estado === "finalizado");
+    const partidosPendientes = partidos.filter((m) => m.estado !== "finalizado");
 
     console.log(`${nombreEquipo} - Partidos jugados: ${partidosJugados.length}, Partidos pendientes: ${partidosPendientes.length}`);
 
@@ -520,6 +583,77 @@ export default function PublicReport() {
           </div>
 
           <div className="filter-controls">
+            <div className="filters-row">
+              <div className="filter-group">
+                <label className="filter-label">🚻 Género:</label>
+                <select
+                  value={filtroGenero}
+                  onChange={(e) => setFiltroGenero(e.target.value)}
+                  className="modern-select"
+                >
+                  <option value="">Todos los géneros</option>
+                  {generosDisponibles.map((genero) => (
+                    <option key={genero} value={genero}>
+                      {genero}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">🎓 Nivel:</label>
+                <select
+                  value={filtroNivelEducacional}
+                  onChange={(e) => setFiltroNivelEducacional(e.target.value)}
+                  className="modern-select"
+                  disabled={!filtroGenero}
+                >
+                  <option value="">Todos los niveles</option>
+                  {nivelesDisponibles.map((nivel) => (
+                    <option key={nivel} value={nivel}>
+                      {nivel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">🏷️ Categoría:</label>
+                <select
+                  value={filtroCategoria}
+                  onChange={(e) => setFiltroCategoria(e.target.value)}
+                  className="modern-select"
+                  disabled={!filtroNivelEducacional}
+                >
+                  <option value="">Todas las categorías</option>
+                  {categoriasDisponibles.map((categoria) => (
+                    <option key={categoria} value={categoria}>
+                      {categoria}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={limpiarFiltros}
+                className="clear-filters-btn"
+                title="Limpiar todos los filtros"
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#dc3545",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "background-color 0.2s"
+                }}
+              >
+                🗑️ Limpiar
+              </button>
+            </div>
+
             <div className="search-input-wrapper">
               <span className="search-icon">🔍</span>
               <input
@@ -539,7 +673,7 @@ export default function PublicReport() {
                 className="modern-select"
               >
                 <option value="todos">Todos los grupos</option>
-                {[...new Set(equipos.map(eq => eq.grupo).filter(Boolean))].map(grupo => (
+                {[...new Set(equiposFiltrados.map(eq => eq.grupo).filter(Boolean))].map(grupo => (
                   <option key={grupo} value={grupo}>{grupo}</option>
                 ))}
               </select>
@@ -547,7 +681,29 @@ export default function PublicReport() {
           </div>
 
           <div className="teams-grid">
-            {equipos
+            {(!filtroGenero || !filtroNivelEducacional || !filtroCategoria) ? (
+              <div className="filter-requirement-message" style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                backgroundColor: '#f8f9fa',
+                border: '2px dashed #dee2e6',
+                borderRadius: '8px',
+                margin: '20px 0',
+                gridColumn: '1 / -1'
+              }}>
+                <h3 style={{ color: '#6c757d', marginBottom: '10px' }}>
+                  📋 Selecciona todos los filtros para ver los equipos
+                </h3>
+                <p style={{ color: '#6c757d', margin: 0 }}>
+                  Debes seleccionar género, nivel educacional y categoría para mostrar los reportes de equipos
+                </p>
+              </div>
+            ) : equiposFiltrados.length === 0 ? (
+              <div className="no-results" style={{ gridColumn: '1 / -1' }}>
+                <div className="no-results-icon">📊</div>
+                <p>No hay equipos disponibles con los filtros seleccionados</p>
+              </div>
+            ) : equiposFiltrados
               .filter((eq) => {
                 const matchesBusqueda = `${eq.curso} ${eq.paralelo}`
                   .toLowerCase()
@@ -567,6 +723,11 @@ export default function PublicReport() {
                         {eq.curso} {eq.paralelo}
                       </h3>
                       <p className="team-group">{eq.grupo}</p>
+                      <div className="team-details">
+                        <span className="team-genre">{eq.genero}</span>
+                        <span className="team-level">{eq.nivelEducacional}</span>
+                        <span className="team-category">{eq.categoria}</span>
+                      </div>
                     </div>
                     <div className="card-arrow">→</div>
                   </div>
@@ -574,7 +735,8 @@ export default function PublicReport() {
               ))}
           </div>
 
-          {equipos.filter((eq) =>
+          {filtroGenero && filtroNivelEducacional && filtroCategoria && 
+           equiposFiltrados.filter((eq) =>
             `${eq.curso} ${eq.paralelo}`
               .toLowerCase()
               .includes(busqueda.toLowerCase())

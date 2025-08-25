@@ -445,8 +445,13 @@ export default function PublicStandings() {
           <button 
             onClick={goToDisciplineSelector}
             className="nav-btn secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
           >
-            📋 Disciplinas
+            <span style={{ color: '#000' }}>←</span> 📋 Disciplinas
           </button>
           <button 
             onClick={goToLogin}
