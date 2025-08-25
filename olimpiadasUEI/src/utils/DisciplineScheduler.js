@@ -36,8 +36,8 @@ export const WORK_DAYS = [
   'viernes'
 ];
 
-// Horarios disponibles (intervalos de 45 minutos)
-export const AVAILABLE_TIMES = [
+// Horarios disponibles por defecto (modificables)
+export const DEFAULT_AVAILABLE_TIMES = [
   '08:00',
   '08:45',
   '09:30',
@@ -52,11 +52,40 @@ export const AVAILABLE_TIMES = [
   '16:15'
 ];
 
+// Backward compatibility export
+export const AVAILABLE_TIMES = DEFAULT_AVAILABLE_TIMES;
+
+// Configuración personalizable de horarios
+export const getAvailableTimes = () => {
+  const saved = localStorage.getItem('olimpiadas_custom_times');
+  return saved ? JSON.parse(saved) : DEFAULT_AVAILABLE_TIMES;
+};
+
+export const setAvailableTimes = (times) => {
+  localStorage.setItem('olimpiadas_custom_times', JSON.stringify(times));
+};
+
+// Configuración de semanas de olimpiadas
+export const getOlympicsWeeks = () => {
+  const saved = localStorage.getItem('olimpiadas_weeks_count');
+  return saved ? parseInt(saved) : 4; // Por defecto 4 semanas
+};
+
+export const setOlympicsWeeks = (weeks) => {
+  localStorage.setItem('olimpiadas_weeks_count', weeks.toString());
+};
+
 /**
  * Clase principal para gestión de cronogramas deportivos
  */
 export class DisciplineScheduler {
-  constructor() {
+  constructor(customConfig = {}) {
+    this.config = {
+      allowMultipleTeamMatches: true, // Permitir que un equipo juegue más de una vez por día
+      availableTimes: getAvailableTimes(),
+      olympicsWeeks: getOlympicsWeeks(),
+      ...customConfig
+    };
     this.schedule = this.initializeSchedule();
     this.assignedTeamsPerDay = {};
   }
@@ -82,8 +111,8 @@ export class DisciplineScheduler {
    */
   initializeTimeSlots() {
     const timeSlots = {};
-    
-    AVAILABLE_TIMES.forEach(time => {
+
+    this.config.availableTimes.forEach(time => {
       timeSlots[time] = {
         futbol: null,
         voley: null,
@@ -95,20 +124,50 @@ export class DisciplineScheduler {
   }
 
   /**
+   * Actualiza la configuración de horarios disponibles
+   * @param {Array} newTimes - Nuevos horarios disponibles
+   */
+  updateAvailableTimes(newTimes) {
+    this.config.availableTimes = newTimes;
+    setAvailableTimes(newTimes);
+    this.schedule = this.initializeSchedule(); // Reinicializar con nuevos horarios
+  }
+
+  /**
+   * Actualiza la configuración de semanas de olimpiadas
+   * @param {number} weeks - Número de semanas
+   */
+  updateOlympicsWeeks(weeks) {
+    this.config.olympicsWeeks = weeks;
+    setOlympicsWeeks(weeks);
+  }
+
+  /**
+   * Limpia el cronograma completo
+   */
+  clearSchedule() {
+    this.schedule = this.initializeSchedule();
+    this.assignedTeamsPerDay = {};
+  }
+
+  /**
    * Determina qué disciplinas se juegan en un día específico
+   * Nueva lógica: Fútbol todos los días, Vóley y Básquet día por medio alternando
    * @param {string} day - Día de la semana
    */
   getDisciplinesForDay(day) {
     const dayIndex = WORK_DAYS.indexOf(day);
-    const disciplines = ['futbol']; // Fútbol siempre se juega
-    
-    // Alternancia entre vóley y básquet
+    const disciplines = ['futbol']; // Fútbol todos los días
+
+    // Nueva lógica de alternancia: Vóley y Básquet día por medio
+    // Si es lunes (0) o miércoles (2) o viernes (4) -> Vóley
+    // Si es martes (1) o jueves (3) -> Básquet
     if (dayIndex % 2 === 0) {
       disciplines.push('voley');
     } else {
       disciplines.push('basquet');
     }
-    
+
     return disciplines;
   }
 
@@ -125,8 +184,12 @@ export class DisciplineScheduler {
     }
 
     this.schedule[day].timeSlots[time][discipline] = match;
-    this.trackTeamUsage(day, match);
-    
+
+    // Solo rastrear uso de equipos si la validación está habilitada
+    if (!this.config.allowMultipleTeamMatches) {
+      this.trackTeamUsage(day, match);
+    }
+
     return true;
   }
 
@@ -148,8 +211,13 @@ export class DisciplineScheduler {
       return false;
     }
 
-    // Verificar que los equipos no jueguen más de una vez por día
-    return !this.teamsAlreadyPlayingOnDay(day, match);
+    // ELIMINADA: Validación de equipos jugando más de una vez por día
+    // Ahora se permite que un equipo juegue múltiples partidos por día
+    if (!this.config.allowMultipleTeamMatches) {
+      return !this.teamsAlreadyPlayingOnDay(day, match);
+    }
+
+    return true;
   }
 
   /**
@@ -192,6 +260,84 @@ export class DisciplineScheduler {
    */
   getTeamIdentifier(team) {
     return `${team.curso}_${team.paralelo}`;
+  }
+
+  /**
+   * Obtiene los equipos que ya están jugando en un día específico
+   * @param {string} day - Día de la semana
+   */
+  getTeamsPlayingOnDay(day) {
+    return this.assignedTeamsPerDay[day] || new Set();
+  }
+
+  /**
+   * Cuenta cuántos partidos tiene un equipo en un día
+   * @param {string} day - Día de la semana
+   * @param {Object} team - Datos del equipo
+   */
+  getTeamMatchesOnDay(day, team) {
+    const teamId = this.getTeamIdentifier(team);
+    let count = 0;
+
+    this.config.availableTimes.forEach(time => {
+      Object.values(this.schedule[day].timeSlots[time]).forEach(match => {
+        if (match && (
+          this.getTeamIdentifier(match.equipoA) === teamId ||
+          this.getTeamIdentifier(match.equipoB) === teamId
+        )) {
+          count++;
+        }
+      });
+    });
+
+    return count;
+  }
+
+  /**
+   * Obtiene estadísticas del cronograma actual
+   */
+  getScheduleStats() {
+    const stats = {
+      totalSlots: 0,
+      usedSlots: 0,
+      byDiscipline: {},
+      byDay: {}
+    };
+
+    WORK_DAYS.forEach(day => {
+      stats.byDay[day] = { total: 0, used: 0 };
+
+      this.config.availableTimes.forEach(time => {
+        Object.keys(this.schedule[day].timeSlots[time]).forEach(discipline => {
+          stats.totalSlots++;
+          stats.byDay[day].total++;
+
+          if (!stats.byDiscipline[discipline]) {
+            stats.byDiscipline[discipline] = { total: 0, used: 0 };
+          }
+          stats.byDiscipline[discipline].total++;
+
+          if (this.schedule[day].timeSlots[time][discipline] !== null) {
+            stats.usedSlots++;
+            stats.byDay[day].used++;
+            stats.byDiscipline[discipline].used++;
+          }
+        });
+      });
+    });
+
+    return stats;
+  }
+
+  /**
+   * Exporta el cronograma actual
+   */
+  exportSchedule() {
+    return {
+      schedule: this.schedule,
+      config: this.config,
+      stats: this.getScheduleStats()
+    };
   }
 
   /**

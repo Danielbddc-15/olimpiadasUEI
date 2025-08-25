@@ -28,10 +28,16 @@ export default function ProfesorMatches() {
   const [equipos, setEquipos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   
-  // Estados para filtros
-  const [filtroGenero, setFiltroGenero] = useState("");
-  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
+  // Estados para filtros con persistencia
+  const [filtroGenero, setFiltroGenero] = useState(() => {
+    return localStorage.getItem(`olimpiadas_profesor_filtro_genero_${discipline}`) || "";
+  });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem(`olimpiadas_profesor_filtro_nivel_${discipline}`) || "";
+  });
+  const [filtroCategoria, setFiltroCategoria] = useState(() => {
+    return localStorage.getItem(`olimpiadas_profesor_filtro_categoria_${discipline}`) || "";
+  });
   
   // Estados para opciones de filtros (extraídos dinámicamente de los equipos)
   const [opcionesGenero, setOpcionesGenero] = useState([]);
@@ -192,22 +198,34 @@ export default function ProfesorMatches() {
 
   // ==================== FUNCIONES DE FILTROS ====================
   
+  // ==================== FUNCIONES DE FILTROS ====================
+  
+  // Guardar filtros en localStorage
+  const guardarFiltros = (genero, nivel, categoria) => {
+    localStorage.setItem(`olimpiadas_profesor_filtro_genero_${discipline}`, genero);
+    localStorage.setItem(`olimpiadas_profesor_filtro_nivel_${discipline}`, nivel);
+    localStorage.setItem(`olimpiadas_profesor_filtro_categoria_${discipline}`, categoria);
+  };
+
   // Manejar cambio de género
   const handleFiltroGeneroChange = (value) => {
     setFiltroGenero(value);
     setFiltroNivelEducacional("");
     setFiltroCategoria("");
+    guardarFiltros(value, "", "");
   };
 
   // Manejar cambio de nivel educacional
   const handleFiltroNivelEducacionalChange = (value) => {
     setFiltroNivelEducacional(value);
     setFiltroCategoria("");
+    guardarFiltros(filtroGenero, value, "");
   };
 
   // Manejar cambio de categoría
   const handleFiltroCategoriaChange = (value) => {
     setFiltroCategoria(value);
+    guardarFiltros(filtroGenero, filtroNivelEducacional, value);
   };
 
   // Obtener opciones de niveles educacionales disponibles según el género seleccionado
@@ -997,7 +1015,7 @@ export default function ProfesorMatches() {
             </label>
             <select
               value={filtroNivelEducacional}
-              onChange={(e) => setFiltroNivelEducacional(e.target.value)}
+              onChange={(e) => handleFiltroNivelEducacionalChange(e.target.value)}
               className="filter-select"
               disabled={!filtroGenero}
             >
@@ -1017,7 +1035,7 @@ export default function ProfesorMatches() {
             </label>
             <select
               value={filtroCategoria}
-              onChange={(e) => setFiltroCategoria(e.target.value)}
+              onChange={(e) => handleFiltroCategoriaChange(e.target.value)}
               className="filter-select"
               disabled={!filtroNivelEducacional}
             >
@@ -1036,6 +1054,7 @@ export default function ProfesorMatches() {
                 setFiltroGenero("");
                 setFiltroNivelEducacional("");
                 setFiltroCategoria("");
+                guardarFiltros("", "", "");
               }}
               className="filter-clear-btn"
               title="Limpiar filtros"

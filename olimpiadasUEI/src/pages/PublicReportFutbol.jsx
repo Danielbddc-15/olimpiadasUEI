@@ -271,7 +271,7 @@ export default function PublicReport() {
       }
 
       return (
-        <tr key={`${m.id}-${idx}`} style={{ borderBottom: "1px solid #e9ecef" }}>
+        <tr key={idx} style={{ borderBottom: "1px solid #e9ecef" }}>
           <td style={{ padding: "12px 8px", fontWeight: "500" }}>{rival}</td>
           <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>
             {marcador}

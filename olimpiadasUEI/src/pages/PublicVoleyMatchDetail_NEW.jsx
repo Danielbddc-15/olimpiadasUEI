@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
-import "../styles/AdminBasquetMatchDetail.css";
+import "../styles/ProfesorVoleyMatchDetail.css";
 
-export default function PublicBasquetMatchDetail() {
+export default function PublicVoleyMatchDetail() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
@@ -25,6 +25,44 @@ export default function PublicBasquetMatchDetail() {
     return () => unsubscribe();
   }, [matchId]);
 
+  // Función para determinar el ganador de un set
+  const ganadorSet = (setData, limitePuntos) => {
+    if (!setData) return null;
+    if (setData.A >= limitePuntos && setData.A - setData.B >= 2) return 'A';
+    if (setData.B >= limitePuntos && setData.B - setData.A >= 2) return 'B';
+    return null;
+  };
+
+  // Inicializar sets según las reglas del juego
+  const inicializarSets = () => {
+    const esFaseGrupos = match?.fase === 'grupos1' || match?.fase === 'grupos3' || !match?.fase;
+    const esSemifinal = match?.fase === "semifinales";
+    const esFinal = match?.fase === "finales";
+
+    const reglasJuego = esFaseGrupos
+      ? { sets: 1, puntosPorSet: 20, descripcion: "1 set de 20 puntos" }
+      : esSemifinal
+      ? { sets: 3, puntosPorSet: [20, 20, 15], descripcion: "Al mejor de 3 sets: 20-20-15" }
+      : esFinal
+      ? { sets: 3, puntosPorSet: [5, 5, 15], descripcion: "Al mejor de 3 sets: 5-5-15" }
+      : { sets: 3, puntosPorSet: [20, 20, 15], descripcion: "Al mejor de 3 sets: 20-20-15" };
+
+    const sets = [];
+    for (let i = 1; i <= reglasJuego.sets; i++) {
+      const setKey = `set${i}`;
+      sets.push(match?.[setKey] || { A: 0, B: 0 });
+    }
+    
+    return { sets, reglas: reglasJuego };
+  };
+
+  const fasesNombres = {
+    'grupos1': 'Fase de Grupos 1',
+    'grupos3': 'Fase de Grupos 3', 
+    'semifinales': 'Semifinales',
+    'finales': 'Final'
+  };
+
   if (loading) {
     return (
       <div className="profesor-match-detail-container">
@@ -43,6 +81,7 @@ export default function PublicBasquetMatchDetail() {
 
   const equipoA = `${match.equipoA?.curso} ${match.equipoA?.paralelo}`;
   const equipoB = `${match.equipoB?.curso} ${match.equipoB?.paralelo}`;
+  const { sets, reglas } = inicializarSets();
 
   return (
     <div className="profesor-match-detail-container">
@@ -51,10 +90,10 @@ export default function PublicBasquetMatchDetail() {
         <button onClick={() => navigate(-1)} className="profesor-back-button">
           ← Volver
         </button>
-        <h1 className="profesor-match-title">Detalle del Partido - Básquetbol</h1>
+        <h1 className="profesor-match-title">Detalle del Partido - Vóley</h1>
         <div className="profesor-match-info">
           <span className="profesor-match-group">{match.grupo}</span>
-          <span className="profesor-match-phase">{match.fase || "Grupos"}</span>
+          <span className="profesor-match-phase">{fasesNombres[match.fase] || "Fase de Grupos 1"}</span>
         </div>
       </div>
 
@@ -74,7 +113,7 @@ export default function PublicBasquetMatchDetail() {
         {/* Equipo A */}
         <div className="profesor-team-section">
           <div className="profesor-team-header">
-            <div className="profesor-team-icon">🏀</div>
+            <div className="profesor-team-icon">🏐</div>
             <h2 className="profesor-team-name">{equipoA}</h2>
           </div>
           <div className="profesor-score-display">
@@ -90,7 +129,7 @@ export default function PublicBasquetMatchDetail() {
         {/* Equipo B */}
         <div className="profesor-team-section">
           <div className="profesor-team-header">
-            <div className="profesor-team-icon">🏀</div>
+            <div className="profesor-team-icon">🏐</div>
             <h2 className="profesor-team-name">{equipoB}</h2>
           </div>
           <div className="profesor-score-display">
@@ -99,17 +138,65 @@ export default function PublicBasquetMatchDetail() {
         </div>
       </div>
 
+      {/* Información de reglas */}
+      <div className="profesor-game-rules">
+        <h3 className="profesor-section-title">📋 Reglas del Partido</h3>
+        <div className="profesor-rules-info">
+          <span className="profesor-rules-text">{reglas.descripcion}</span>
+        </div>
+      </div>
+
+      {/* Sets de vóley */}
+      <div className="profesor-sets-display">
+        <h3 className="profesor-section-title">🏐 Desarrollo por Sets</h3>
+        <div className="profesor-sets-grid">
+          {sets.map((setData, index) => {
+            const setNumber = index + 1;
+            const limitePuntos = Array.isArray(reglas.puntosPorSet) 
+              ? reglas.puntosPorSet[index] 
+              : reglas.puntosPorSet;
+            const ganador = ganadorSet(setData, limitePuntos);
+            
+            // Solo mostrar sets que tienen datos o son el próximo a jugar
+            if (!setData || (setData.A === 0 && setData.B === 0 && index > 0 && !ganadorSet(sets[index - 1], limitePuntos))) {
+              return null;
+            }
+            
+            return (
+              <div key={setNumber} className={`profesor-set-card ${ganador ? 'completed' : ''}`}>
+                <div className="profesor-set-header">
+                  <h4>Set {setNumber}</h4>
+                  <span className="profesor-set-limit">Hasta {limitePuntos} pts</span>
+                  {ganador && <span className="profesor-set-winner">✓</span>}
+                </div>
+                <div className="profesor-set-score">
+                  <div className={`profesor-team-score ${ganador === 'A' ? 'winner' : ''}`}>
+                    <span className="profesor-team-name-short">{equipoA}</span>
+                    <span className="profesor-score">{setData.A}</span>
+                  </div>
+                  <div className="profesor-score-separator">-</div>
+                  <div className={`profesor-team-score ${ganador === 'B' ? 'winner' : ''}`}>
+                    <span className="profesor-team-name-short">{equipoB}</span>
+                    <span className="profesor-score">{setData.B}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Anotadores */}
       {(match.anotadoresA?.length > 0 || match.anotadoresB?.length > 0) && (
         <div className="profesor-scorers">
-          <h3 className="profesor-section-title">🏀 Anotadores</h3>
+          <h3 className="profesor-section-title">📝 Anotadores</h3>
           <div className="profesor-scorers-grid">
             <div className="profesor-team-scorers">
               <h4 className="profesor-team-title">{equipoA}</h4>
               <div className="profesor-scorer-list">
                 {(match.anotadoresA || []).map((anotador, index) => (
                   <div key={index} className="profesor-scorer-item">
-                    🏀 {anotador}
+                    📝 {anotador}
                   </div>
                 ))}
                 {(!match.anotadoresA || match.anotadoresA.length === 0) && (
@@ -123,7 +210,7 @@ export default function PublicBasquetMatchDetail() {
               <div className="profesor-scorer-list">
                 {(match.anotadoresB || []).map((anotador, index) => (
                   <div key={index} className="profesor-scorer-item">
-                    🏀 {anotador}
+                    📝 {anotador}
                   </div>
                 ))}
                 {(!match.anotadoresB || match.anotadoresB.length === 0) && (
@@ -154,7 +241,7 @@ export default function PublicBasquetMatchDetail() {
           </div>
           <div className="profesor-info-item">
             <span className="profesor-info-label">🏆 Fase:</span>
-            <span className="profesor-info-value">{match.fase || "Fase de Grupos"}</span>
+            <span className="profesor-info-value">{fasesNombres[match.fase] || "Fase de Grupos 1"}</span>
           </div>
         </div>
       </div>

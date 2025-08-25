@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // Esto permite acceder desde otra IP
-    port: 5173, // o el puerto que uses
+    port: 5178, // o el puerto que uses
   },
 })

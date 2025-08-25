@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { verificarYGenerarFasesFinalesExterna } from "./AdminMatches";
 import "../styles/ProfesorMatchDetail.css";
 
 export default function ProfesorMatchDetail() {
@@ -256,6 +257,42 @@ export default function ProfesorMatchDetail() {
         "pendiente": "Partido pausado"
       };
       alert(mensajes[nuevoEstado] || "Estado actualizado");
+
+      // Si se finaliza un partido, ejecutar verificación automática de generación de finales
+      if (nuevoEstado === "finalizado") {
+        console.log(`🎯 PARTIDO FINALIZADO (PROFESOR) - Ejecutando verificación automática para partido ID: ${matchId}`);
+
+        // Ejecutar verificación automática después de un breve delay para asegurar que la BD esté actualizada
+        setTimeout(async () => {
+          try {
+            console.log(`🔄 Iniciando verificación automática de finales desde profesor...`);
+
+            // Obtener datos frescos de la base de datos
+            const matchesSnapshot = await getDocs(collection(db, "matches"));
+            const allMatches = matchesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Filtrar partidos de la misma disciplina, categoría y género que el partido actual
+            const matchesRelevantes = allMatches.filter(m =>
+              m.disciplina === match.disciplina &&
+              m.categoria === match.categoria &&
+              m.genero === match.genero &&
+              m.nivelEducacional === match.nivelEducacional
+            );
+
+            console.log(`📊 Partidos relevantes encontrados (profesor): ${matchesRelevantes.length}`);
+
+            // Usar la función de verificación externa desde AdminMatches
+            await verificarYGenerarFasesFinalesExterna(match, (mensaje, tipo) => {
+              console.log(`Toast (${tipo}): ${mensaje}`);
+              alert(mensaje);
+            });
+
+          } catch (error) {
+            console.error("Error en verificación automática (profesor):", error);
+            alert("❌ Error al verificar fases automáticas");
+          }
+        }, 2000);
+      }
     } catch (error) {
       console.error("Error al cambiar estado:", error);
       alert("Error al cambiar estado del partido");
@@ -322,18 +359,17 @@ export default function ProfesorMatchDetail() {
         <div className="profesor-status-actions">
           {(match.estado === "pendiente" || match.estado === "programado") && (
             <>
-              {equiposDefinidos() ? (
-                <button 
-                  onClick={() => cambiarEstado("en curso")}
-                  className="profesor-btn profesor-btn-start"
-                >
-                  ▶️ Iniciar Partido
-                </button>
-              ) : (
-                <div className="profesor-privilege-info">
-                  <span className="privilege-text">Este partido no se puede iniciar hasta que se conozcan los equipos participantes</span>
-                </div>
-              )}
+              <button 
+                onClick={() => cambiarEstado("en curso")}
+                className="profesor-btn profesor-btn-start"
+                title="Como profesor, puedes iniciar el partido en cualquier momento"
+              >
+                ▶️ Iniciar Partido
+              </button>
+              <div className="profesor-privilege-info">
+                <span className="privilege-icon">💡</span>
+                <span className="privilege-text">Como profesor, puedes iniciar partidos sin restricciones de horario</span>
+              </div>
             </>
           )}
           {match.estado === "en curso" && (

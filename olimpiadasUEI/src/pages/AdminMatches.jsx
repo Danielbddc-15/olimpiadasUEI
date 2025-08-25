@@ -518,7 +518,36 @@ export default function AdminMatches() {
 
   // ==================== GENERACIÓN AUTOMÁTICA DE FASES FINALES ====================
 
-  const generarFasesFinalesAutomaticas = async () => {
+  // Auto-generación de siguientes fases cuando se completa una fase (similar a ProfesorMatches)
+  useEffect(() => {
+    if (!matches.length || !filtroGenero || !filtroNivelEducacional || !filtroCategoria) return;
+
+    const verificarYGenerarAutomatico = async () => {
+      // Solo hacer auto-generación para básquet por ahora
+      if (discipline !== 'basquet') return;
+
+      const estado = analizarEstadoCategoria();
+      if (estado.tipo === "sin_filtros" || !estado.gruposCompletos) return;
+
+      // Verificar si ya existen semifinales/finales para evitar duplicados
+      const fasesFinalesExistentes = matches.filter(m =>
+        m.disciplina === discipline &&
+        m.genero === filtroGenero &&
+        m.nivelEducacional === filtroNivelEducacional &&
+        m.categoria === filtroCategoria &&
+        (m.fase === "semifinales" || m.fase === "final" || m.fase === "tercerPuesto")
+      );
+
+      if (fasesFinalesExistentes.length === 0) {
+        console.log(`🤖 Auto-generando fases finales para ${discipline} - ${filtroCategoria} ${filtroGenero}`);
+        await generarFasesFinalesAutomaticas(true); // true indica que es auto-generación
+      }
+    };
+
+    verificarYGenerarAutomatico();
+  }, [matches, filtroGenero, filtroNivelEducacional, filtroCategoria, discipline]);
+
+  const generarFasesFinalesAutomaticas = async (esAutoGeneracion = false) => {
     const estado = analizarEstadoCategoria();
     
     if (estado.tipo === "sin_filtros") {
@@ -532,7 +561,8 @@ export default function AdminMatches() {
     }
 
     try {
-      console.log(`🏆 Generando fases finales automáticas...`);
+      const tipoGeneracion = esAutoGeneracion ? 'automática' : 'manual';
+      console.log(`🏆 Generando fases finales ${tipoGeneracion}...`);
       console.log(`📊 Estado:`, estado);
 
       // CASO 1: Categoría con 2 grupos - Semifinales cruzadas
@@ -1194,7 +1224,7 @@ export default function AdminMatches() {
               className={`phase-tab grupos ${faseActiva === "grupos" ? "active" : ""}`}
               onClick={() => setFaseActiva("grupos")}
             >
-              🏃‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
+              ����‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
             </button>
           )}
           
@@ -2043,7 +2073,7 @@ const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToa
     console.log("🥉 Tercer puesto generado automáticamente");
 
     if (showToast && typeof showToast === 'function') {
-      showToast("🏆 Final y tercer puesto generados automáticamente tras completar semifinales", "success");
+      showToast("�� Final y tercer puesto generados automáticamente tras completar semifinales", "success");
     }
 
   } catch (error) {

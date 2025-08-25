@@ -1,0 +1,345 @@
+/* Olympics Configuration Modal Styles */
+.olympics-config-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+
+.olympics-config-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.olympics-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.olympics-config-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.olympics-config-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.olympics-config-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.olympics-config-content {
+  padding: 24px;
+}
+
+.config-section {
+  margin-bottom: 32px;
+}
+
+.config-section:last-child {
+  margin-bottom: 0;
+}
+
+.config-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Weeks Configuration */
+.weeks-config {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weeks-config label {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.weeks-input {
+  width: 100px;
+  padding: 8px 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.weeks-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.weeks-help {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Times Configuration */
+.times-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.time-input {
+  padding: 8px 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.add-time-btn,
+.reset-times-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-time-btn {
+  background: #10b981;
+  color: white;
+}
+
+.add-time-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.add-time-btn:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.reset-times-btn {
+  background: #f59e0b;
+  color: white;
+}
+
+.reset-times-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.times-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.time-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.time-item:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.time-value {
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  color: #374151;
+}
+
+.remove-time-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 2px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.remove-time-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  transform: scale(1.1);
+}
+
+.remove-time-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.times-summary {
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #1e40af;
+  text-align: center;
+}
+
+/* Discipline Logic */
+.discipline-logic {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discipline-rule,
+.flexibility-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.flexibility-note {
+  border-left-color: #10b981;
+  background: #ecfdf5;
+}
+
+.discipline-icon,
+.flexibility-icon {
+  font-size: 1.5rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+.olympics-config-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
+}
+
+.config-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-btn-cancel {
+  background: #6b7280;
+  color: white;
+}
+
+.config-btn-cancel:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+.config-btn-save {
+  background: #667eea;
+  color: white;
+}
+
+.config-btn-save:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .olympics-config-modal {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .olympics-config-header,
+  .olympics-config-content,
+  .olympics-config-footer {
+    padding: 16px;
+  }
+  
+  .times-add {
+    flex-direction: column;
+  }
+  
+  .times-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}

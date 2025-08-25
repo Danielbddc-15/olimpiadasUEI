@@ -199,22 +199,7 @@ export default function ProfesorHorarios() {
     // Verificar si ya hay un partido en esa hora
     const existingMatch = horariosPorDia[targetDia][targetHora];
     
-    // Verificar si alguno de los equipos ya juega ese día
-    const equipoA = `${draggedMatch.equipoA.curso} ${draggedMatch.equipoA.paralelo}`;
-    const equipoB = `${draggedMatch.equipoB.curso} ${draggedMatch.equipoB.paralelo}`;
-    
-    const equiposEnDia = Object.values(horariosPorDia[targetDia])
-      .filter(p => p && p.id !== draggedMatch.id)
-      .flatMap(p => [
-        `${p.equipoA.curso} ${p.equipoA.paralelo}`,
-        `${p.equipoB.curso} ${p.equipoB.paralelo}`
-      ]);
-
-    if (equiposEnDia.includes(equipoA) || equiposEnDia.includes(equipoB)) {
-      alert('Uno de los equipos ya tiene un partido programado ese día');
-      setDraggedMatch(null);
-      return;
-    }
+    // ELIMINADA: Validación de equipos por día - Ahora se permite múltiples partidos por equipo
 
     // Actualizar el horario
     const nuevosHorarios = { ...horariosPorDia };

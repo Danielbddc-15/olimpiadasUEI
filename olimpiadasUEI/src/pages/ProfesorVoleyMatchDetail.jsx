@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { verificarYGenerarFasesFinalesExterna } from "./AdminMatches";
+import { useToast } from "../components/Toast";
 import "../styles/ProfesorVoleyMatchDetail.css";
 
 export default function ProfesorVoleyMatchDetail() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const { showToast, ToastContainer } = useToast();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Estados para gestión de puntos
   const [mostrarInputPunto, setMostrarInputPunto] = useState(null);
   const [puntoInput, setPuntoInput] = useState("");
+
+  // Estados para jugadores
+  const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
+  const [jugadoresEquipoB, setJugadoresEquipoB] = useState([]);
 
   // Estados para edición de anotadores (solo nombres)
   const [editandoAnotadores, setEditandoAnotadores] = useState(false);
@@ -47,6 +54,55 @@ export default function ProfesorVoleyMatchDetail() {
     fetchMatch();
   }, [matchId, navigate]);
 
+  // Cargar jugadores de los equipos
+  useEffect(() => {
+    const fetchJugadores = async () => {
+      if (!match?.equipoA || !match?.equipoB) return;
+
+      try {
+        // Cargar jugadores del equipo A
+        const queryA = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoA.curso),
+          where("paralelo", "==", match.equipoA.paralelo),
+          where("categoria", "==", match.equipoA.categoria || match.categoria),
+          where("genero", "==", match.equipoA.genero || match.genero),
+          where("disciplina", "==", "voley")
+        );
+        const snapshotA = await getDocs(queryA);
+        const jugadoresA = snapshotA.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        // Cargar jugadores del equipo B
+        const queryB = query(
+          collection(db, "jugadores"),
+          where("curso", "==", match.equipoB.curso),
+          where("paralelo", "==", match.equipoB.paralelo),
+          where("categoria", "==", match.equipoB.categoria || match.categoria),
+          where("genero", "==", match.equipoB.genero || match.genero),
+          where("disciplina", "==", "voley")
+        );
+        const snapshotB = await getDocs(queryB);
+        const jugadoresB = snapshotB.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+        setJugadoresEquipoA(jugadoresA);
+        setJugadoresEquipoB(jugadoresB);
+        
+        console.log("Jugadores Equipo A (Voley):", jugadoresA);
+        console.log("Jugadores Equipo B (Voley):", jugadoresB);
+      } catch (error) {
+        console.error("Error al cargar jugadores:", error);
+      }
+    };
+
+    fetchJugadores();
+  }, [match]);
+
   // Mapeo de fases para mostrar nombres legibles
   const fasesNombres = {
     "grupos1": "Fase de Grupos 1",
@@ -56,7 +112,7 @@ export default function ProfesorVoleyMatchDetail() {
   };
 
   // Determinar reglas según fase
-  const esFaseGrupos = ["grupos1", "grupos3"].includes(match?.fase || "grupos1");
+  const esFaseGrupos = ["grupos", "grupos1", "grupos3"].includes(match?.fase || "grupos1");
   const esSemifinal = match?.fase === "semifinales";
   const esFinal = match?.fase === "finales";
 
@@ -83,9 +139,16 @@ export default function ProfesorVoleyMatchDetail() {
   const calcularSetsGanados = (sets) => {
     let setsA = 0, setsB = 0;
     
+    // Validar que sets existe y es un array
+    if (!sets || !Array.isArray(sets)) {
+      return { setsA, setsB };
+    }
+    
     sets.forEach((set, index) => {
-      if (set.A > 0 || set.B > 0) {
-        const puntosLimite = obtenerPuntosSet(index, sets);
+      if (set && (set.A > 0 || set.B > 0)) {
+        const puntosLimite = esFaseGrupos 
+          ? reglasJuego.puntosPorSet 
+          : reglasJuego.puntosPorSet[index] || (esFinal ? 5 : 20);
         
         if (set.A >= puntosLimite && set.A - set.B >= 2) {
           setsA++;
@@ -96,6 +159,25 @@ export default function ProfesorVoleyMatchDetail() {
     });
     
     return { setsA, setsB };
+  };
+
+  // Función para verificar si ambos equipos están definidos correctamente
+  const equiposDefinidos = () => {
+    if (!match) return false;
+    
+    const equipoAEsValido = match.equipoA && 
+      match.equipoA.curso && 
+      !match.equipoA.curso.includes("TBD") &&
+      match.equipoA.paralelo &&
+      !match.equipoA.paralelo.includes("TBD");
+      
+    const equipoBEsValido = match.equipoB && 
+      match.equipoB.curso && 
+      !match.equipoB.curso.includes("TBD") &&
+      match.equipoB.paralelo &&
+      !match.equipoB.paralelo.includes("TBD");
+      
+    return equipoAEsValido && equipoBEsValido;
   };
 
   // Función para agrupar anotadores por nombre y contar apariciones
@@ -117,12 +199,16 @@ export default function ProfesorVoleyMatchDetail() {
   const deberMostrarSet = (setIndex, sets) => {
     if (esFaseGrupos) return setIndex === 0; // Solo mostrar el primer set en fases de grupos
     
+    // Validar que sets existe
+    if (!sets) return setIndex <= 1;
+    
     // Para semifinales y finales (al mejor de 3 sets):
     if (setIndex <= 1) return true; // Siempre mostrar los primeros 2 sets
     
     // Para el set 3 (decisivo): solo mostrar si está empatado 1-1
     if (setIndex === 2) {
-      const { setsA, setsB } = calcularSetsGanados(sets.slice(0, 2));
+      const setsArray = Array.isArray(sets) ? sets : Object.values(sets);
+      const { setsA, setsB } = calcularSetsGanados(setsArray.slice(0, 2));
       return setsA === 1 && setsB === 1; // Set decisivo cuando está empatado 1-1
     }
     
@@ -133,8 +219,14 @@ export default function ProfesorVoleyMatchDetail() {
   const obtenerPuntosSet = (setIndex, sets) => {
     if (esFaseGrupos) return reglasJuego.puntosPorSet; // Siempre 20 en fases de grupos
     
+    // Validar que sets existe y es un array o objeto
+    if (!sets) return reglasJuego.puntosPorSet[setIndex] || (esFinal ? 5 : 20);
+    
+    // Si sets es un objeto, convertir a array
+    const setsArray = Array.isArray(sets) ? sets : Object.values(sets);
+    
     // Para semifinales y finales, verificar si algún equipo ya tiene 1 set ganado
-    const { setsA, setsB } = calcularSetsGanados(sets.slice(0, setIndex));
+    const { setsA, setsB } = calcularSetsGanados(setsArray.slice(0, setIndex));
     
     // Si algún equipo tiene 1 set ganado, el siguiente set es decisivo de 15 puntos
     if (setsA === 1 || setsB === 1) {
@@ -149,19 +241,12 @@ export default function ProfesorVoleyMatchDetail() {
   const puedeIniciarPartido = () => {
     const userRole = localStorage.getItem('userRole');
     
-    // Tanto admin como profesor pueden iniciar cualquier partido
+    // Los profesores y administradores tienen acceso total sin restricciones
     if (userRole === 'admin' || userRole === 'profesor') {
       return { puede: true, mensaje: '' };
     }
     
-    // Para otros roles (usuarios públicos, etc.), aplicar restricciones básicas
-    if (!match.fecha || !match.hora) {
-      return { 
-        puede: false, 
-        mensaje: 'Este partido no tiene fecha y hora programada.' 
-      };
-    }
-    
+    // Solo para otros roles aplicar validaciones mínimas
     return { puede: true, mensaje: '' };
   };
 
@@ -172,13 +257,13 @@ export default function ProfesorVoleyMatchDetail() {
       if (nuevoEstado === "en curso") {
         const validacion = puedeIniciarPartido();
         if (!validacion.puede) {
-          alert(validacion.mensaje);
+          showToast(validacion.mensaje, "warning");
           return;
         }
       }
-      
+
       const updateData = { estado: nuevoEstado };
-      
+
       if (nuevoEstado === "en curso") {
         // Inicializar sets al comenzar el partido
         const setsIniciales = inicializarSets();
@@ -187,23 +272,59 @@ export default function ProfesorVoleyMatchDetail() {
 
       await updateDoc(doc(db, "matches", matchId), updateData);
       setMatch(prev => ({ ...prev, ...updateData }));
-      
+
       const mensajes = {
         "en curso": "Partido iniciado",
         "finalizado": "Partido finalizado",
         "pendiente": "Partido pausado"
       };
-      alert(mensajes[nuevoEstado] || "Estado actualizado");
+      showToast(mensajes[nuevoEstado] || "Estado actualizado", "success");
+
+      // Si se finaliza un partido, ejecutar verificación automática de generación de finales
+      if (nuevoEstado === "finalizado") {
+        console.log(`🎯 PARTIDO VÓLEY FINALIZADO (PROFESOR) - Ejecutando verificación automática para partido ID: ${matchId}`);
+
+        // Ejecutar verificación automática después de un breve delay para asegurar que la BD esté actualizada
+        setTimeout(async () => {
+          try {
+            console.log(`🔄 Iniciando verificación automática de finales desde profesor vóley...`);
+
+            // Obtener datos frescos de la base de datos
+            const matchesSnapshot = await getDocs(collection(db, "matches"));
+            const allMatches = matchesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Filtrar partidos de la misma disciplina, categoría y género que el partido actual
+            const matchesRelevantes = allMatches.filter(m =>
+              m.disciplina === match.disciplina &&
+              m.categoria === match.categoria &&
+              m.genero === match.genero &&
+              m.nivelEducacional === match.nivelEducacional
+            );
+
+            console.log(`📊 Partidos relevantes encontrados (profesor vóley): ${matchesRelevantes.length}`);
+
+            // Usar la función de verificación externa desde AdminMatches
+            await verificarYGenerarFasesFinalesExterna(match, (mensaje, tipo) => {
+              console.log(`Toast (${tipo}): ${mensaje}`);
+              // Eliminado alert redundante - verificación automática en background
+            });
+
+          } catch (error) {
+            console.error("Error en verificación automática (profesor vóley):", error);
+            // Solo mostrar error si es crítico
+          }
+        }, 2000);
+      }
     } catch (error) {
       console.error("Error al cambiar estado:", error);
-      alert("Error al cambiar estado del partido");
+      showToast("Error al cambiar estado del partido", "error");
     }
   };
 
   // Marcar punto
   const marcarPunto = async (equipo, setActual) => {
     if (!puntoInput.trim()) {
-      alert("Por favor, ingresa el nombre del anotador");
+      showToast("Por favor, ingresa el nombre del anotador", "warning");
       return;
     }
 
@@ -217,7 +338,7 @@ export default function ProfesorVoleyMatchDetail() {
       // Verificar si el set ya está completo
       const setCompleto = ganadorSet(sets[setActual], limitePuntos) !== null;
       if (setCompleto) {
-        alert("Este set ya está completo");
+        showToast("Este set ya está completo", "warning");
         return;
       }
 
@@ -255,7 +376,7 @@ export default function ProfesorVoleyMatchDetail() {
 
     } catch (error) {
       console.error("Error al marcar punto:", error);
-      alert("Error al marcar punto");
+      showToast("Error al marcar punto", "error");
     }
   };
 
@@ -299,10 +420,10 @@ export default function ProfesorVoleyMatchDetail() {
       }));
 
       setEditandoAnotadores(false);
-      alert("Nombres de anotadores actualizados correctamente");
+      showToast("Nombres de anotadores actualizados correctamente", "success");
     } catch (error) {
       console.error("Error al actualizar anotadores:", error);
-      alert("Error al actualizar nombres de anotadores");
+      showToast("Error al actualizar nombres de anotadores", "error");
     }
   };
 
@@ -378,28 +499,25 @@ export default function ProfesorVoleyMatchDetail() {
       <div className="admin-voley-status">
         <div className="admin-status-info">
           <span className={`admin-status-badge ${match.estado?.replace(' ', '-')}`}>
-            {match.estado === "pendiente" && "⏳ Pendiente"}
+            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
             {match.estado === "en curso" && "🟢 En Curso"}
             {match.estado === "finalizado" && "✅ Finalizado"}
           </span>
         </div>
         <div className="admin-status-actions">
-          {match.estado === "pendiente" && (
+          {(match.estado === "pendiente" || match.estado === "programado") && (
             <>
               <button
                 onClick={() => cambiarEstadoPartido("en curso")}
-                className={`admin-btn admin-btn-start ${!puedeIniciarPartido().puede ? 'disabled' : ''}`}
-                disabled={!puedeIniciarPartido().puede}
-                title={!puedeIniciarPartido().puede ? puedeIniciarPartido().mensaje : 'Iniciar partido'}
+                className="admin-btn admin-btn-start"
+                title="Como profesor, puedes iniciar el partido en cualquier momento"
               >
                 🚀 Iniciar Partido
               </button>
-              {!puedeIniciarPartido().puede && (
-                <div className="admin-restriction-info">
-                  <span className="restriction-icon">⏰</span>
-                  <span className="restriction-text">{puedeIniciarPartido().mensaje}</span>
-                </div>
-              )}
+              <div className="admin-privilege-info">
+                <span className="privilege-icon">💡</span>
+                <span className="privilege-text">Como profesor, puedes iniciar partidos sin restricciones de horario</span>
+              </div>
             </>
           )}
           {match.estado === "en curso" && (
@@ -418,7 +536,15 @@ export default function ProfesorVoleyMatchDetail() {
               </button>
             </>
           )}
-          {/* Profesor NO puede reanudar partidos finalizados - solo admin */}
+          {/* Los profesores pueden reanudar partidos finalizados */}
+          {match.estado === "finalizado" && (
+            <button
+              onClick={() => cambiarEstadoPartido("en curso")}
+              className="admin-btn admin-btn-resume"
+            >
+              ⏯️ Reanudar Partido
+            </button>
+          )}
         </div>
       </div>
 
@@ -534,23 +660,93 @@ export default function ProfesorVoleyMatchDetail() {
             <h3>Agregar Punto</h3>
             <p>Equipo: {mostrarInputPunto.equipo === 'A' ? equipoA : equipoB}</p>
             <p>Set: {mostrarInputPunto.set + 1}</p>
-            <input
-              type="text"
-              value={puntoInput}
-              onChange={(e) => setPuntoInput(e.target.value)}
-              placeholder="Nombre del anotador"
-              className="admin-punto-input"
-              autoFocus
-            />
+            
+            {/* Selector de jugadores */}
+            <div className="admin-player-selector" style={{ marginBottom: '15px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '14px', color: '#333' }}>Seleccionar Jugador:</h4>
+              <div className="admin-players-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', 
+                gap: '8px', 
+                maxHeight: '200px', 
+                overflowY: 'auto',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                backgroundColor: '#f9f9f9'
+              }}>
+                {(mostrarInputPunto.equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB).length > 0 ? (
+                  (mostrarInputPunto.equipo === 'A' ? jugadoresEquipoA : jugadoresEquipoB).map((jugador) => (
+                    <button
+                      key={jugador.id}
+                      onClick={() => setPuntoInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
+                      className={`admin-player-selector-btn ${
+                        puntoInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
+                      }`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '8px',
+                        border: puntoInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? '2px solid #4CAF50' : '1px solid #ccc',
+                        borderRadius: '6px',
+                        backgroundColor: puntoInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? '#e8f5e8' : 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <span className="player-number-btn" style={{ 
+                        fontWeight: 'bold', 
+                        color: '#2196F3',
+                        marginBottom: '2px'
+                      }}>#{jugador.numero || '?'}</span>
+                      <span className="player-name-btn" style={{ 
+                        fontSize: '11px',
+                        textAlign: 'center',
+                        lineHeight: '1.2'
+                      }}>{jugador.nombre}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="no-players-available" style={{
+                    gridColumn: '1 / -1',
+                    textAlign: 'center',
+                    padding: '20px',
+                    color: '#666'
+                  }}>
+                    <span className="no-players-icon">⚠️</span>
+                    <span>No hay jugadores registrados para este equipo</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Input manual como alternativa */}
+            <div className="admin-manual-input" style={{ marginBottom: '15px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '14px', color: '#333' }}>O escribir manualmente:</h4>
+              <input
+                type="text"
+                value={puntoInput}
+                onChange={(e) => setPuntoInput(e.target.value)}
+                placeholder="Nombre del anotador"
+                className="admin-punto-input"
+              />
+            </div>
+
             <div className="admin-modal-actions">
               <button
                 onClick={() => marcarPunto(mostrarInputPunto.equipo, mostrarInputPunto.set)}
                 className="admin-btn admin-btn-confirm"
+                disabled={!puntoInput.trim()}
               >
                 ✅ Confirmar
               </button>
               <button
-                onClick={() => setMostrarInputPunto(null)}
+                onClick={() => {
+                  setMostrarInputPunto(null);
+                  setPuntoInput("");
+                }}
                 className="admin-btn admin-btn-cancel"
               >
                 ❌ Cancelar
@@ -565,36 +761,29 @@ export default function ProfesorVoleyMatchDetail() {
         <div className="admin-scorers-header">
           <h3 className="admin-section-title">🏐 Anotadores del Partido</h3>
           <div className="admin-scorer-controls">
-            {/* Profesor NO puede editar anotadores una vez finalizado el partido */}
-            {!partidoFinalizado && (
-              editandoAnotadores ? (
-                <div className="admin-edit-actions">
-                  <button
-                    onClick={guardarAnotadores}
-                    className="admin-btn admin-btn-save"
-                  >
-                    💾 Guardar Cambios
-                  </button>
-                  <button
-                    onClick={cancelarEdicionAnotadores}
-                    className="admin-btn admin-btn-cancel"
-                  >
-                    ❌ Cancelar
-                  </button>
-                </div>
-              ) : (
+            {/* Los profesores pueden editar anotadores en cualquier momento */}
+            {editandoAnotadores ? (
+              <div className="admin-edit-actions">
                 <button
-                  onClick={() => setEditandoAnotadores(true)}
-                  className="admin-btn admin-btn-edit"
+                  onClick={guardarAnotadores}
+                  className="admin-btn admin-btn-save"
                 >
-                  ✏️ Editar Anotadores
+                  💾 Guardar Cambios
                 </button>
-              )
-            )}
-            {partidoFinalizado && (
-              <span className="admin-readonly-notice">
-                🔒 Partido finalizado - Solo lectura
-              </span>
+                <button
+                  onClick={cancelarEdicionAnotadores}
+                  className="admin-btn admin-btn-cancel"
+                >
+                  ❌ Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditandoAnotadores(true)}
+                className="admin-btn admin-btn-edit"
+              >
+                ✏️ Editar Anotadores
+              </button>
             )}
           </div>
         </div>
@@ -604,7 +793,7 @@ export default function ProfesorVoleyMatchDetail() {
           <div className="admin-team-scorers">
             <h4 className="admin-team-subtitle">{equipoA}</h4>
             <div className="admin-scorers-list">
-              {editandoAnotadores && !partidoFinalizado ? (
+              {editandoAnotadores ? (
                 <>
                   {anotadoresTemporal.A.map((nombre, index) => (
                     <div key={index} className="admin-scorer-edit-item">
@@ -658,7 +847,7 @@ export default function ProfesorVoleyMatchDetail() {
           <div className="admin-team-scorers">
             <h4 className="admin-team-subtitle">{equipoB}</h4>
             <div className="admin-scorers-list">
-              {editandoAnotadores && !partidoFinalizado ? (
+              {editandoAnotadores ? (
                 <>
                   {anotadoresTemporal.B.map((nombre, index) => (
                     <div key={index} className="admin-scorer-edit-item">
@@ -731,6 +920,7 @@ export default function ProfesorVoleyMatchDetail() {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }

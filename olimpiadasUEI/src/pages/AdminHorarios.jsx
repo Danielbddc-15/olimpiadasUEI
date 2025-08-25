@@ -11,6 +11,7 @@ import {
 import { db } from "../firebase/config";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/AdminHorarios.css";
+import OlympicsConfig from "../components/OlympicsConfig";
 
 export default function AdminHorarios() {
   const { discipline } = useParams();
@@ -25,7 +26,10 @@ export default function AdminHorarios() {
 
   // Estados para navegación por semanas
   const [currentWeek, setCurrentWeek] = useState(1);
-  const [totalWeeks, setTotalWeeks] = useState(1);
+  const [totalWeeks, setTotalWeeks] = useState(() => {
+    const saved = localStorage.getItem('olimpiadas_weeks_count');
+    return saved ? parseInt(saved) : 4;
+  });
   const [weeklySchedules, setWeeklySchedules] = useState({});
 
   // Estados para configuración de cronograma
@@ -40,6 +44,35 @@ export default function AdminHorarios() {
       basquet: 'martes' // día específico para básquet
     };
   });
+
+  // Estados para configuración personalizada
+  const [olympicsWeeks, setOlympicsWeeks] = useState(() => {
+    const saved = localStorage.getItem('olimpiadas_weeks_count');
+    return saved ? parseInt(saved) : 4;
+  });
+  const [customTimes, setCustomTimes] = useState(() => {
+    const saved = localStorage.getItem('olimpiadas_custom_times');
+    return saved ? JSON.parse(saved) : [
+      '08:00', '08:45', '09:30', '10:15', '11:00', '11:45',
+      '12:30', '13:15', '14:00', '14:45', '15:30', '16:15'
+    ];
+  });
+  const [showConfigModal, setShowConfigModal] = useState(false);
+
+  // Configuración de disciplinas actualizada para nueva lógica
+  const getDisciplinesForDay = (dayName) => {
+    const dayIndex = diasLaborables.indexOf(dayName);
+    const disciplines = ['futbol']; // Fútbol todos los días
+
+    // Nueva lógica: Vóley días impares (0,2,4), Básquet días pares (1,3)
+    if (dayIndex % 2 === 0) {
+      disciplines.push('voley');
+    } else {
+      disciplines.push('basquet');
+    }
+
+    return disciplines;
+  };
 
   // Estados de filtros
   const [filtroGenero, setFiltroGenero] = useState(() => {
@@ -76,6 +109,11 @@ export default function AdminHorarios() {
     navigate('/admin');
   };
 
+  // Sincronizar totalWeeks con olympicsWeeks al inicio
+  useEffect(() => {
+    setTotalWeeks(olympicsWeeks);
+  }, [olympicsWeeks]);
+
   // Días laborables de la semana
   const diasLaborables = [
     'lunes',
@@ -87,28 +125,66 @@ export default function AdminHorarios() {
 
   // Funciones para navegación de semanas
   const calculateTotalWeeks = (matches) => {
-    if (matches.length === 0) return 1;
+    // Usar la configuración de semanas de olimpiadas
+    return olympicsWeeks;
+  };
 
-    // Calcular partidos únicos (sin considerar los ya programados)
-    const partidosPendientes = matches.filter(m => !m.fecha || !m.hora);
-    const partidosProgramados = matches.filter(m => m.fecha && m.hora);
+  // Funciones de configuración
+  const updateOlympicsWeeks = (weeks) => {
+    setOlympicsWeeks(weeks);
+    localStorage.setItem('olimpiadas_weeks_count', weeks.toString());
+    setTotalWeeks(weeks);
+  };
 
-    // Capacidad por semana: 5 días × horarios × equipos únicos por día
-    const slotsPerWeek = diasLaborables.length * horariosDisponibles.length;
-    const equiposUnicos = new Set();
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setFiltroGenero("");
+    setFiltroNivelEducacional("");
+    setFiltroCategoria("");
+    setFaseActiva("todas");
 
-    matches.forEach(match => {
-      const equipoA = `${match.equipoA.curso}_${match.equipoA.paralelo}`;
-      const equipoB = `${match.equipoB.curso}_${match.equipoB.paralelo}`;
-      equiposUnicos.add(equipoA);
-      equiposUnicos.add(equipoB);
-    });
+    // Limpiar localStorage
+    localStorage.removeItem(`olimpiadas_horarios_filtro_genero_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_filtro_nivel_educacional_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_filtro_categoria_${discipline}`);
+    localStorage.removeItem(`olimpiadas_horarios_fase_activa_${discipline}`);
+  };
 
-    // Estimar partidos por semana considerando la restricción de un equipo por día
-    const maxPartidosPorSemana = Math.min(slotsPerWeek, Math.floor(equiposUnicos.size / 2) * diasLaborables.length);
-    const weeksNeeded = Math.ceil(matches.length / maxPartidosPorSemana);
+  const updateCustomTimes = (times) => {
+    setCustomTimes(times);
+    localStorage.setItem('olimpiadas_custom_times', JSON.stringify(times));
+  };
 
-    return Math.max(1, weeksNeeded);
+  const addCustomTime = (time) => {
+    if (time && !customTimes.includes(time)) {
+      const newTimes = [...customTimes, time].sort();
+      updateCustomTimes(newTimes);
+    }
+  };
+
+  const removeCustomTime = (time) => {
+    const newTimes = customTimes.filter(t => t !== time);
+    if (newTimes.length > 0) {
+      updateCustomTimes(newTimes);
+    }
+  };
+
+  const resetToDefaultTimes = () => {
+    const defaultTimes = [
+      '08:00', '08:45', '09:30', '10:15', '11:00', '11:45',
+      '12:30', '13:15', '14:00', '14:45', '15:30', '16:15'
+    ];
+    updateCustomTimes(defaultTimes);
+  };
+
+  // Función para abrir configuración
+  const openConfigModal = () => {
+    setShowConfigModal(true);
+  };
+
+  // Función para cerrar configuración
+  const closeConfigModal = () => {
+    setShowConfigModal(false);
   };
 
   const goToWeek = (weekNumber) => {
@@ -358,21 +434,8 @@ export default function AdminHorarios() {
     return teams;
   };
 
-  // Horarios disponibles (intervalos de 45 minutos)
-  const horariosDisponibles = [
-    '08:00',
-    '08:45',
-    '09:30',
-    '10:15',
-    '11:00',
-    '11:45',
-    '12:30',
-    '13:15',
-    '14:00',
-    '14:45',
-    '15:30',
-    '16:15'
-  ];
+  // Horarios disponibles (ahora configurables)
+  const horariosDisponibles = customTimes;
 
   // Cargar equipos para filtros
   useEffect(() => {
@@ -613,19 +676,6 @@ export default function AdminHorarios() {
     }
   }, [currentWeek, weeklySchedules]);
 
-  // Funciones de filtros
-  const limpiarFiltros = () => {
-    setFiltroGenero("");
-    setFiltroNivelEducacional("");
-    setFiltroCategoria("");
-    setFaseActiva("todas");
-
-    localStorage.removeItem(`olimpiadas_horarios_filtro_genero_${discipline}`);
-    localStorage.removeItem(`olimpiadas_horarios_filtro_nivel_educacional_${discipline}`);
-    localStorage.removeItem(`olimpiadas_horarios_filtro_categoria_${discipline}`);
-    localStorage.removeItem(`olimpiadas_horarios_fase_activa_${discipline}`);
-  };
-
   // Guardar filtros en localStorage
   useEffect(() => {
     if (filtroGenero) {
@@ -697,7 +747,7 @@ export default function AdminHorarios() {
     
     if (!draggedMatch) return;
 
-    // Validar que la disciplina puede jugar en este día
+    // Validar que la disciplina puede jugar en este d��a
     const disciplineValidation = validateDisciplineAssignment(draggedMatch, targetDia);
     if (!disciplineValidation.valid) {
       alert(disciplineValidation.message);
@@ -708,24 +758,7 @@ export default function AdminHorarios() {
     // Verificar si ya hay un partido en ese horario
     const partidoEnTarget = horariosPorDia[targetDia]?.[targetHora];
 
-    // Verificar restricción: un equipo por día
-    const equiposEnDia = Object.values(horariosPorDia[targetDia] || {})
-      .filter(p => p && p.id !== draggedMatch.id)
-      .map(p => [`${p.equipoA.curso} ${p.equipoA.paralelo}`, `${p.equipoB.curso} ${p.equipoB.paralelo}`])
-      .flat();
-
-    const equiposDraggedMatch = [
-      `${draggedMatch.equipoA.curso} ${draggedMatch.equipoA.paralelo}`,
-      `${draggedMatch.equipoB.curso} ${draggedMatch.equipoB.paralelo}`
-    ];
-
-    const conflicto = equiposDraggedMatch.some(equipo => equiposEnDia.includes(equipo));
-
-    if (conflicto && !partidoEnTarget) {
-      alert('Uno de los equipos ya tiene un partido programado ese día');
-      setDraggedMatch(null);
-      return;
-    }
+    // ELIMINADA: Restricción de un equipo por día - Ahora se permite múltiples partidos por equipo por día
 
     try {
       // Si hay un partido en el slot target, intercambiar posiciones
@@ -779,25 +812,10 @@ export default function AdminHorarios() {
       return;
     }
 
-    // Verificar conflictos
+    // Verificar si hay partido en ese horario
     const partidoEnTarget = horariosPorDia[dia]?.[hora];
 
-    const equiposEnDia = Object.values(horariosPorDia[dia] || {})
-      .filter(p => p && p.id !== selectedMatch.id)
-      .map(p => [`${p.equipoA.curso} ${p.equipoA.paralelo}`, `${p.equipoB.curso} ${p.equipoB.paralelo}`])
-      .flat();
-
-    const equiposSelectedMatch = [
-      `${selectedMatch.equipoA.curso} ${selectedMatch.equipoA.paralelo}`,
-      `${selectedMatch.equipoB.curso} ${selectedMatch.equipoB.paralelo}`
-    ];
-
-    const conflicto = equiposSelectedMatch.some(equipo => equiposEnDia.includes(equipo));
-
-    if (conflicto && !partidoEnTarget) {
-      alert('Uno de los equipos ya tiene un partido programado ese día');
-      return;
-    }
+    // ELIMINADA: Validación de conflictos de equipos - Ahora se permite múltiples partidos por equipo por día
 
     try {
       if (partidoEnTarget) {
@@ -1022,6 +1040,14 @@ export default function AdminHorarios() {
             title="Limpiar todos los filtros"
           >
             🗑️ Limpiar
+          </button>
+
+          <button
+            onClick={openConfigModal}
+            className="config-olympics-btn"
+            title="Configurar Olimpiadas"
+          >
+            ⚙️ Configurar Olimpiadas
           </button>
         </div>
       </div>
@@ -1463,6 +1489,16 @@ export default function AdminHorarios() {
           </div>
         </div>
       )}
+
+      {/* Componente de Configuración de Olimpiadas */}
+      <OlympicsConfig
+        isOpen={showConfigModal}
+        onClose={closeConfigModal}
+        olympicsWeeks={olympicsWeeks}
+        customTimes={customTimes}
+        onUpdateWeeks={updateOlympicsWeeks}
+        onUpdateTimes={updateCustomTimes}
+      />
     </div>
   );
 }

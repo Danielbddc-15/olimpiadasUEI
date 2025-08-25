@@ -51,14 +51,25 @@ function App() {
         {/* Detalle público de partido - FÚTBOL */}
         <Route path="/public/partido/:matchId" element={<PublicMatchDetail />} />
         
-        {/* Nuevas rutas públicas con patrón discipline/match */}
+        {/* Rutas específicas por disciplina */}
+        <Route path="/public/voley/match/:matchId" element={<PublicVoleyMatchDetail />} />
+        <Route path="/public/basquet/match/:matchId" element={<PublicBasquetMatchDetail />} />
+        <Route path="/public/futbol/match/:matchId" element={<PublicMatchDetail />} />
+        
+        {/* Rutas cortas sin /public */}
+        <Route path="/voley/match/:matchId" element={<PublicVoleyMatchDetail />} />
+        <Route path="/basquet/match/:matchId" element={<PublicBasquetMatchDetail />} />
+        <Route path="/futbol/match/:matchId" element={<PublicMatchDetail />} />
+        
+        {/* Ruta genérica (fallback) */}
         <Route path="/public/:discipline/match/:matchId" element={<PublicMatchDetail />} />
         
-        {/* Detalle público de partido - VÓLEY */}
+        {/* Detalle público de partido - VÓLEY (rutas legacy) */}
         <Route path="/public-voley-match-detail/:matchId" element={<PublicVoleyMatchDetail />} />
         
         {/* Detalle público de partido - BÁSQUET */}
         <Route path="/public-basquet-match-detail/:matchId" element={<PublicBasquetMatchDetail />} />
+        <Route path="/basquet/match/:matchId" element={<PublicBasquetMatchDetail />} />
 
         {/* RUTAS ADMIN */}
         <Route

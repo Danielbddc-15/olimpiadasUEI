@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useToast } from "../components/Toast";
 import "../styles/AdminBasquetMatchDetail.css";
 
 export default function AdminBasquetMatchDetail() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const { showToast, ToastContainer } = useToast();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [jugadoresEquipoA, setJugadoresEquipoA] = useState([]);
@@ -141,7 +143,7 @@ export default function AdminBasquetMatchDetail() {
   // Función para asignar punto por número de jugador
   const asignarPuntoPorNumero = () => {
     if (!numeroJugadorBusqueda.trim()) {
-      alert("Por favor ingresa un número de jugador");
+      showToast("Por favor ingresa un número de jugador", "warning");
       return;
     }
 
@@ -150,16 +152,16 @@ export default function AdminBasquetMatchDetail() {
     if (jugadorEncontrado) {
       setJugadorInput(`#${jugadorEncontrado.numero} ${jugadorEncontrado.nombre}`);
       setNumeroJugadorBusqueda("");
-      alert(`Jugador encontrado: ${jugadorEncontrado.nombre}`);
+      // Eliminado alert redundante - el usuario ve que se seleccionó el jugador
     } else {
-      alert(`No se encontró jugador con número ${numeroJugadorBusqueda}`);
+      showToast(`No se encontró jugador con número ${numeroJugadorBusqueda}`, "warning");
     }
   };
 
   // Función para anotar puntos
   const anotarPuntos = async (equipo) => {
     if (!jugadorInput.trim()) {
-      alert("Por favor, ingresa el nombre del jugador");
+      showToast("Por favor, ingresa el nombre del jugador", "warning");
       return;
     }
 
@@ -213,7 +215,7 @@ export default function AdminBasquetMatchDetail() {
 
     } catch (error) {
       console.error("Error al anotar puntos:", error);
-      alert("Error al anotar puntos");
+      showToast("Error al anotar puntos", "error");
     }
   };
 
@@ -283,10 +285,10 @@ export default function AdminBasquetMatchDetail() {
       }));
 
       setEditandoAnotadores(false);
-      alert("Anotaciones actualizadas correctamente");
+      showToast("Anotaciones actualizadas correctamente", "success");
     } catch (error) {
       console.error("Error al actualizar anotaciones:", error);
-      alert("Error al actualizar anotaciones");
+      showToast("Error al actualizar anotaciones", "error");
     }
   };
 
@@ -320,10 +322,10 @@ export default function AdminBasquetMatchDetail() {
 
         setPartidoIniciado(true);
         console.log("🏀 Partido iniciado correctamente");
-        alert("Partido iniciado correctamente");
+        showToast("Partido iniciado correctamente", "success");
       } catch (error) {
         console.error("Error al iniciar partido:", error);
-        alert("Error al iniciar partido");
+        showToast("Error al iniciar partido", "error");
       }
     }
   };
@@ -344,10 +346,10 @@ export default function AdminBasquetMatchDetail() {
         }));
 
         setPartidoFinalizado(true);
-        alert("Partido finalizado correctamente");
+        showToast("Partido finalizado correctamente", "success");
       } catch (error) {
         console.error("Error al finalizar partido:", error);
-        alert("Error al finalizar partido");
+        showToast("Error al finalizar partido", "error");
       }
     }
   };
@@ -970,6 +972,7 @@ export default function AdminBasquetMatchDetail() {
           </button>
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }

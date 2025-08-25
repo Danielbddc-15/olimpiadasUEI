@@ -20,7 +20,10 @@ export default function PublicHorarios() {
   
   // Estados para navegación por semanas
   const [currentWeek, setCurrentWeek] = useState(1);
-  const [totalWeeks, setTotalWeeks] = useState(4);
+  const [totalWeeks, setTotalWeeks] = useState(() => {
+    const saved = localStorage.getItem('olimpiadas_weeks_count');
+    return saved ? parseInt(saved) : 4;
+  });
   const [weeklySchedule, setWeeklySchedule] = useState({});
 
   // Estados para configuración de cronograma (desde AdminHorarios)
@@ -62,21 +65,29 @@ export default function PublicHorarios() {
     navigate('/');
   };
 
-  // Horarios disponibles (intervalos de 45 minutos)
-  const horariosDisponibles = [
-    '08:00',
-    '08:45',
-    '09:30',
-    '10:15',
-    '11:00',
-    '11:45',
-    '12:30',
-    '13:15',
-    '14:00',
-    '14:45',
-    '15:30',
-    '16:15'
-  ];
+  // Horarios disponibles (ahora configurables)
+  const horariosDisponibles = (() => {
+    const saved = localStorage.getItem('olimpiadas_custom_times');
+    return saved ? JSON.parse(saved) : [
+      '08:00', '08:45', '09:30', '10:15', '11:00', '11:45',
+      '12:30', '13:15', '14:00', '14:45', '15:30', '16:15'
+    ];
+  })();
+
+  // Nueva lógica de disciplinas: Fútbol todos los días, Vóley/Básquet alternando
+  const getDisciplinesForDay = (dayName) => {
+    const dayIndex = diasLaborables.indexOf(dayName);
+    const disciplines = ['futbol']; // Fútbol todos los días
+
+    // Nueva lógica: Vóley días impares (0,2,4), Básquet días pares (1,3)
+    if (dayIndex % 2 === 0) {
+      disciplines.push('voley');
+    } else {
+      disciplines.push('basquet');
+    }
+
+    return disciplines;
+  };
 
   // Obtener partidos en tiempo real - primero cargar todas las disciplinas
   useEffect(() => {

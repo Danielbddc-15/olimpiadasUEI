@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useToast } from "../components/Toast";
 import "../styles/AdminVoleyMatchDetail.css";
 
 export default function AdminVoleyMatchDetail() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const { showToast, ToastContainer } = useToast();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -131,7 +133,7 @@ export default function AdminVoleyMatchDetail() {
   };
 
   // Determinar reglas según fase
-  const esFaseGrupos = ["grupos1", "grupos3"].includes(match?.fase || "grupos1");
+  const esFaseGrupos = ["grupos", "grupos1", "grupos3"].includes(match?.fase || "grupos1");
   const esSemifinal = match?.fase === "semifinales";
   const esFinal = match?.fase === "finales";
 
@@ -225,10 +227,10 @@ export default function AdminVoleyMatchDetail() {
         "pendiente": "Partido pausado"
       };
       console.log("🔧 Estado cambiado exitosamente a:", nuevoEstado);
-      alert(mensajes[nuevoEstado] || "Estado actualizado");
+      showToast(mensajes[nuevoEstado] || "Estado actualizado", "success");
     } catch (error) {
       console.error("Error al cambiar estado:", error);
-      alert("Error al cambiar estado del partido");
+      showToast("Error al cambiar estado del partido", "error");
     }
   };
 
@@ -242,7 +244,7 @@ export default function AdminVoleyMatchDetail() {
   // Función para asignar punto por número de jugador
   const asignarPuntoPorNumero = () => {
     if (!numeroJugadorBusqueda.trim()) {
-      alert("Por favor ingresa un número de jugador");
+      showToast("Por favor ingresa un número de jugador", "warning");
       return;
     }
 
@@ -251,16 +253,16 @@ export default function AdminVoleyMatchDetail() {
     if (jugadorEncontrado) {
       setPuntoInput(`#${jugadorEncontrado.numero} ${jugadorEncontrado.nombre}`);
       setNumeroJugadorBusqueda("");
-      alert(`Jugador encontrado: ${jugadorEncontrado.nombre}`);
+      // Eliminado alert redundante - el usuario ve que se seleccionó el jugador
     } else {
-      alert(`No se encontró jugador con número ${numeroJugadorBusqueda}`);
+      showToast(`No se encontró jugador con número ${numeroJugadorBusqueda}`, "warning");
     }
   };
 
   // Marcar punto
   const marcarPunto = async (equipo, setActual) => {
     if (!puntoInput.trim()) {
-      alert("Por favor, ingresa el nombre del anotador");
+      showToast("Por favor, ingresa el nombre del anotador", "warning");
       return;
     }
 
@@ -276,7 +278,7 @@ export default function AdminVoleyMatchDetail() {
       // Verificar si el set ya está completo
       const setCompleto = ganadorSet(sets[setActual], limitePuntos) !== null;
       if (setCompleto) {
-        alert("Este set ya está completo");
+        showToast("Este set ya está completo", "warning");
         return;
       }
 
@@ -315,7 +317,7 @@ export default function AdminVoleyMatchDetail() {
 
     } catch (error) {
       console.error("Error al marcar punto:", error);
-      alert("Error al marcar punto");
+      showToast("Error al marcar punto", "error");
     }
   };
 
@@ -353,10 +355,10 @@ export default function AdminVoleyMatchDetail() {
       await updateDoc(doc(db, "matches", matchId), updateData);
       setMatch(prev => ({ ...prev, ...updateData }));
       setEditandoAnotadores(false);
-      alert("Anotadores actualizados correctamente");
+      showToast("Anotadores actualizados correctamente", "success");
     } catch (error) {
       console.error("Error al actualizar anotadores:", error);
-      alert("Error al actualizar anotadores");
+      showToast("Error al actualizar anotadores", "error");
     }
   };
 
@@ -865,6 +867,7 @@ export default function AdminVoleyMatchDetail() {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }
