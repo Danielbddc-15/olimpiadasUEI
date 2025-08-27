@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import PublicHome from "./pages/PublicHome";
 import PublicMatchDetail from "./pages/PublicMatchDetail";
+import PublicFutbolMatchDetail from "./pages/PublicFutbolMatchDetail";
 import PublicVoleyMatchDetail from "./pages/PublicVoleyMatchDetail";
 import PublicBasquetMatchDetail from "./pages/PublicBasquetMatchDetail";
 import PrivateRoute from "./routes/PrivateRoute";
@@ -52,7 +53,9 @@ function App() {
         <Route path="/public/partido/:matchId" element={<PublicMatchDetail />} />
         
         {/* Nuevas rutas públicas con patrón discipline/match */}
-        <Route path="/public/:discipline/match/:matchId" element={<PublicMatchDetail />} />
+        <Route path="/public/futbol/match/:matchId" element={<PublicFutbolMatchDetail />} />
+        <Route path="/public/voley/match/:matchId" element={<PublicMatchDetail />} />
+        <Route path="/public/basquet/match/:matchId" element={<PublicMatchDetail />} />
         
         {/* Detalle público de partido - VÓLEY */}
         <Route path="/public-voley-match-detail/:matchId" element={<PublicVoleyMatchDetail />} />

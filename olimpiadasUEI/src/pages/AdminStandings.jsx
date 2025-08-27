@@ -174,18 +174,11 @@ export default function AdminStandings() {
     console.log("Todos los equipos:", equipos);
     console.log("Todos los partidos:", matches);
 
-    // ✅ NO MOSTRAR NADA SI NO ESTÁN TODOS LOS FILTROS SELECCIONADOS
-    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
-      console.log("Filtros incompletos - no mostrar tabla");
-      setStandingsPorGrupo({});
-      return;
-    }
-
-    // Aplicar filtros de género, nivel educacional y categoría
+    // ✅ Aplicar filtros de manera independiente - si no hay filtros, mostrar todo
     const equiposFiltrados = equipos.filter(equipo => {
-      const pasaGenero = equipo.genero === filtroGenero;
-      const pasaNivel = equipo.nivelEducacional === filtroNivelEducacional;
-      const pasaCategoria = equipo.categoria === filtroCategoria;
+      const pasaGenero = !filtroGenero || equipo.genero === filtroGenero;
+      const pasaNivel = !filtroNivelEducacional || equipo.nivelEducacional === filtroNivelEducacional;
+      const pasaCategoria = !filtroCategoria || equipo.categoria === filtroCategoria;
       return pasaGenero && pasaNivel && pasaCategoria;
     });
 
@@ -238,11 +231,11 @@ export default function AdminStandings() {
       const partidosDelGrupo = matches.filter((match) => {
         // Verificar que el partido esté finalizado
         if (match.estado !== "finalizado") return false;
-        
-        // Verificar filtros básicos
-        if (match.genero !== filtroGenero) return false;
-        if (match.nivelEducacional !== filtroNivelEducacional) return false;
-        if (match.categoria !== filtroCategoria) return false;
+
+        // Verificar filtros básicos - aplicar solo los filtros seleccionados
+        if (filtroGenero && match.genero !== filtroGenero) return false;
+        if (filtroNivelEducacional && match.nivelEducacional !== filtroNivelEducacional) return false;
+        if (filtroCategoria && match.categoria !== filtroCategoria) return false;
         
         // Verificar que ambos equipos pertenezcan a este grupo
         const equipoAPertenece = equiposGrupo.some(
@@ -398,11 +391,9 @@ export default function AdminStandings() {
               equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
             });
         } else {
-          // En grupos1, inicial o sin fase específica, todos los equipos que han jugado están activos
+          // En grupos1, inicial o sin fase específica, todos los equipos están activos inicialmente
           result.forEach(team => {
-            if (team.pj > 0) {
-              equiposActivos.add(team.nombre);
-            }
+            equiposActivos.add(team.nombre);
           });
         }
         
@@ -430,14 +421,7 @@ export default function AdminStandings() {
         });
         
         // Mostrar todos los equipos del grupo, incluso si no han jugado
-        // Solo filtrar equipos con partidos si TODOS los equipos han jugado al menos 1 partido
-        const equiposConPartidos = result.filter(team => team.pj > 0);
-        const todosHanJugado = result.every(team => team.pj > 0);
-        
-        if (todosHanJugado && equiposConPartidos.length > 0) {
-          result = equiposConPartidos;
-        }
-        // Si no todos han jugado, mostrar todos los equipos para mantener la integridad del grupo
+        // No filtrar por partidos jugados para mostrar la tabla completa
       }
 
       standingsPorGrupoTemp[grupo] = result;
@@ -662,7 +646,7 @@ export default function AdminStandings() {
           )}
         </div>
 
-        {(filtroGenero && filtroNivelEducacional && filtroCategoria) && (
+        {(filtroGenero || filtroNivelEducacional || filtroCategoria) && (
           <div style={{
             marginTop: '1rem',
             padding: '0.75rem',
@@ -671,7 +655,11 @@ export default function AdminStandings() {
             fontSize: '0.9rem',
             color: '#1565c0'
           }}>
-            📊 Mostrando posiciones para: {filtroGenero} - {filtroNivelEducacional} - {filtroCategoria}
+            📊 Filtros aplicados: {[
+              filtroGenero && `Género: ${filtroGenero}`,
+              filtroNivelEducacional && `Nivel: ${filtroNivelEducacional}`,
+              filtroCategoria && `Categoría: ${filtroCategoria}`
+            ].filter(Boolean).join(' | ')}
           </div>
         )}
       </div>
@@ -686,8 +674,10 @@ export default function AdminStandings() {
           <div className="empty-icon">📊</div>
           <h3>No hay datos disponibles</h3>
           <p>
-            Los partidos deben estar finalizados para generar la tabla de
-            posiciones
+            {(filtroGenero || filtroNivelEducacional || filtroCategoria)
+              ? "No hay equipos o partidos que coincidan con los filtros seleccionados"
+              : "Los partidos deben estar finalizados para generar la tabla de posiciones"
+            }
           </p>
         </div>
       ) : (
@@ -755,9 +745,9 @@ export default function AdminStandings() {
                         </th>
                       )}
                       <th>
-                        <div className="th-content" title={discipline === "voley" ? "Puntos en Contra" : "Goles en Contra"}>
+                        <div className="th-content" title={discipline === "voley" || discipline === "basquet" ? "Puntos en Contra" : "Goles en Contra"}>
                           <span className="th-icon">🚫</span>
-                          {discipline === "voley" ? "PC" : "GC"}
+                          {discipline === "voley" || discipline === "basquet" ? "PC" : "GC"}
                         </div>
                       </th>
                       {discipline === "futbol" && (

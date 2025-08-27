@@ -9,14 +9,12 @@ export default function PublicHorarios() {
   const navigate = useNavigate();
   
   const [matches, setMatches] = useState([]);
-  const [allMatches, setAllMatches] = useState([]);
   const [horariosPorDia, setHorariosPorDia] = useState({});
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [totalWeeks, setTotalWeeks] = useState(1);
   
   // Filtros públicos
-  const [viewMode, setViewMode] = useState(discipline || 'todas');
   const [selectedPhase, setSelectedPhase] = useState("todas");
   const [filtroGenero, setFiltroGenero] = useState("");
   const [filtroNivelEducacional, setFiltroNivelEducacional] = useState("");
@@ -135,23 +133,15 @@ export default function PublicHorarios() {
     ];
   };
 
-  // Cargar partidos según disciplina o todas
+  // Cargar partidos según disciplina
   useEffect(() => {
     setLoading(true);
     
-    let matchesQuery;
-    if (viewMode === 'todas') {
-      matchesQuery = query(
-        collection(db, "matches"),
-        where("estado", "==", "programado")
-      );
-    } else {
-      matchesQuery = query(
-        collection(db, "matches"),
-        where("disciplina", "==", viewMode),
-        where("estado", "==", "programado")
-      );
-    }
+    const matchesQuery = query(
+      collection(db, "matches"),
+      where("disciplina", "==", discipline),
+      where("estado", "==", "programado")
+    );
 
     const unsubscribe = onSnapshot(matchesQuery, (snapshot) => {
       try {
@@ -168,12 +158,7 @@ export default function PublicHorarios() {
           }, {})
         );
 
-        if (viewMode === 'todas') {
-          setAllMatches(uniqueById);
-          setMatches(uniqueById);
-        } else {
-          setMatches(uniqueById);
-        }
+        setMatches(uniqueById);
         
         // Calcular semanas automáticamente basándose en fechas reales
         const partidosConFecha = uniqueById.filter(m => m.fecha && m.estado === "programado");
@@ -212,7 +197,7 @@ export default function PublicHorarios() {
     });
 
     return () => unsubscribe();
-  }, [viewMode]);
+  }, [discipline]);
 
   // Organizar partidos por horarios para la semana actual con filtros
   useEffect(() => {
@@ -310,12 +295,15 @@ export default function PublicHorarios() {
   };
 
   const verDetallesPartido = (partido) => {
-    const detailPages = {
-      'futbol': `/public/match/${partido.id}`,
-      'voley': `/public/voley-match/${partido.id}`,
-      'basquet': `/public/basquet-match/${partido.id}`
+    // Use specific routes for each discipline
+    const detailRoutes = {
+      'futbol': `/public/${partido.disciplina}/match/${partido.id}`,
+      'voley': `/public-voley-match-detail/${partido.id}`,
+      'basquet': `/public-basquet-match-detail/${partido.id}`
     };
-    navigate(detailPages[partido.disciplina] || `/public/match/${partido.id}`);
+    
+    const route = detailRoutes[partido.disciplina] || `/public/${partido.disciplina}/match/${partido.id}`;
+    navigate(route);
   };
 
   // Limpiar filtros
@@ -348,51 +336,14 @@ export default function PublicHorarios() {
               Horarios de las Olimpiadas UEI
             </h1>
             <p className="public-subtitle">
-              {viewMode === 'todas' 
-                ? 'Todas las disciplinas' 
-                : `${disciplinasConfig[viewMode]?.nombre || viewMode}`}
+              {`${disciplinasConfig[discipline]?.nombre || discipline}`}
             </p>
-          </div>
-          <div className="public-nav-buttons">
-            <button className="public-nav-btn" onClick={goToPublicHome}>
-              🏠 Inicio
-            </button>
           </div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="public-filters">
-        <div className="filter-section">
-          <h3>Ver disciplina:</h3>
-          <div className="discipline-buttons">
-            <button 
-              className={`discipline-btn ${viewMode === 'todas' ? 'active' : ''}`}
-              onClick={() => setViewMode('todas')}
-            >
-              📋 Todas
-            </button>
-            <button 
-              className={`discipline-btn ${viewMode === 'futbol' ? 'active' : ''}`}
-              onClick={() => setViewMode('futbol')}
-            >
-              ⚽ Fútbol
-            </button>
-            <button 
-              className={`discipline-btn ${viewMode === 'voley' ? 'active' : ''}`}
-              onClick={() => setViewMode('voley')}
-            >
-              🏐 Vóley
-            </button>
-            <button 
-              className={`discipline-btn ${viewMode === 'basquet' ? 'active' : ''}`}
-              onClick={() => setViewMode('basquet')}
-            >
-              🏀 Básquet
-            </button>
-          </div>
-        </div>
-
         <div className="filters-row">
           <div className="filter-group">
             <label>Fase:</label>

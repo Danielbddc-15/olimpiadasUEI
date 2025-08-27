@@ -111,6 +111,27 @@ export default function ProfesorBasquetMatchDetail() {
     fetchJugadores();
   }, [match]);
 
+  // Función para agrupar anotadores por nombre y sumar puntos
+  const agruparAnotadores = (anotadores) => {
+    if (!anotadores || anotadores.length === 0) return [];
+    
+    const agrupados = {};
+    anotadores.forEach(anotador => {
+      // Extraer el nombre del anotador (quitar puntos si los hay al final)
+      const nombreLimpio = anotador.replace(/\s*\(\d+\s*pts?\)\s*$/i, '').replace(/\s*\d+\s*pts?\s*$/i, '').trim();
+      
+      if (agrupados[nombreLimpio]) {
+        agrupados[nombreLimpio]++;
+      } else {
+        agrupados[nombreLimpio] = 1;
+      }
+    });
+    
+    return Object.entries(agrupados)
+      .map(([nombre, puntos]) => ({ nombre, puntos }))
+      .sort((a, b) => b.puntos - a.puntos); // Ordenar por puntos descendente
+  };
+
   // Función para anotar puntos
   const anotarPuntos = async (equipo) => {
     if (!partidoIniciado) {
@@ -743,30 +764,23 @@ export default function ProfesorBasquetMatchDetail() {
             <h4>{match.equipoA.curso} {match.equipoA.paralelo}</h4>
             
             <div className="anotaciones-display">
-              {(match.anotadoresA || []).map((anotacion, index) => (
-                <div key={index} className="anotacion-item">
-                  <span className="jugador-nombre">{anotacion.jugador}</span>
-                  <span className={`puntos-badge puntos-${anotacion.puntos}`}>
-                    {anotacion.puntos} pt{anotacion.puntos > 1 ? 's' : ''}
-                  </span>
-                </div>
-              ))}
-              
-              {/* Estadísticas del equipo */}
+              {/* Solo mostrar estadísticas agrupadas */}
               {match.anotadoresA && match.anotadoresA.length > 0 && (
                 <div className="estadisticas-equipo">
                   <h5>📊 Estadísticas:</h5>
                   {Object.entries(getEstadisticasJugador(match.anotadoresA)).map(([jugador, stats]) => (
                     <div key={jugador} className="jugador-stats">
                       <span className="stats-jugador">{jugador}:</span>
-                      <span className="stats-detalle">
-                        {stats.total} pts ({stats.puntos1 > 0 && `${stats.puntos1}×1pt `}
-                        {stats.puntos2 > 0 && `${stats.puntos2}×2pts `}
-                        {stats.puntos3 > 0 && `${stats.puntos3}×3pts`})
+                      <span className="stats-total">
+                        {stats.total} pts
                       </span>
                     </div>
                   ))}
                 </div>
+              )}
+              
+              {(!match.anotadoresA || match.anotadoresA.length === 0) && (
+                <div className="no-anotaciones">Sin anotaciones registradas</div>
               )}
             </div>
           </div>
@@ -776,30 +790,23 @@ export default function ProfesorBasquetMatchDetail() {
             <h4>{match.equipoB.curso} {match.equipoB.paralelo}</h4>
             
             <div className="anotaciones-display">
-              {(match.anotadoresB || []).map((anotacion, index) => (
-                <div key={index} className="anotacion-item">
-                  <span className="jugador-nombre">{anotacion.jugador}</span>
-                  <span className={`puntos-badge puntos-${anotacion.puntos}`}>
-                    {anotacion.puntos} pt{anotacion.puntos > 1 ? 's' : ''}
-                  </span>
-                </div>
-              ))}
-              
-              {/* Estadísticas del equipo */}
+              {/* Solo mostrar estadísticas agrupadas */}
               {match.anotadoresB && match.anotadoresB.length > 0 && (
                 <div className="estadisticas-equipo">
                   <h5>📊 Estadísticas:</h5>
                   {Object.entries(getEstadisticasJugador(match.anotadoresB)).map(([jugador, stats]) => (
                     <div key={jugador} className="jugador-stats">
                       <span className="stats-jugador">{jugador}:</span>
-                      <span className="stats-detalle">
-                        {stats.total} pts ({stats.puntos1 > 0 && `${stats.puntos1}×1pt `}
-                        {stats.puntos2 > 0 && `${stats.puntos2}×2pts `}
-                        {stats.puntos3 > 0 && `${stats.puntos3}×3pts`})
+                      <span className="stats-total">
+                        {stats.total} pts
                       </span>
                     </div>
                   ))}
                 </div>
+              )}
+              
+              {(!match.anotadoresB || match.anotadoresB.length === 0) && (
+                <div className="no-anotaciones">Sin anotaciones registradas</div>
               )}
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
-import "../styles/AdminVoleyMatchDetail.css";
+import "../styles/PublicVoleyMatchDetail.css";
 
 export default function PublicVoleyMatchDetail() {
   const { matchId } = useParams();
@@ -204,24 +204,24 @@ export default function PublicVoleyMatchDetail() {
   const equipoB = match.equipoB ? `${match.equipoB.curso} ${match.equipoB.paralelo}` : "Equipo B";
 
   return (
-    <div className="admin-voley-detail-container">
+    <div className="public-voley-detail-container">
       {/* Header */}
-      <div className="admin-voley-header">
-        <button onClick={() => navigate(-1)} className="admin-back-button">
+      <div className="public-voley-header">
+        <button onClick={() => navigate(-1)} className="public-back-button">
           ← Volver
         </button>
-        <h1 className="admin-voley-title">🏐 Detalle del Partido - Vóley</h1>
-        <div className="admin-voley-info">
-          <span className="admin-voley-group">{match.grupo}</span>
-          <span className="admin-voley-phase">{fasesNombres[match.fase] || "Fase de Grupos"}</span>
-          <span className="admin-voley-rules">{reglasJuego.descripcion}</span>
+        <h1 className="public-voley-title">🏐 Detalle del Partido - Vóley</h1>
+        <div className="public-voley-info">
+          <span className="public-voley-group">{match.grupo}</span>
+          <span className="public-voley-phase">{fasesNombres[match.fase] || "Fase de Grupos"}</span>
+          <span className="public-voley-rules">{reglasJuego.descripcion}</span>
         </div>
       </div>
 
       {/* Estado del partido */}
-      <div className="admin-voley-status">
-        <div className="admin-status-info">
-          <span className={`admin-status-badge ${match.estado?.replace(' ', '-')}`}>
+      <div className="public-voley-status">
+        <div className="public-status-info">
+          <span className={`public-status-badge ${match.estado?.replace(' ', '-')}`}>
             {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
             {match.estado === "en curso" && "🟢 En Curso"}
             {match.estado === "finalizado" && "✅ Finalizado"}
@@ -230,168 +230,174 @@ export default function PublicVoleyMatchDetail() {
       </div>
 
       {/* Marcador principal */}
-      <div className="admin-voley-scoreboard">
-        <div className="admin-team-section">
-          <div className="admin-team-header">
-            <div className="admin-team-icon">�</div>
-            <h2 className="admin-team-name">{equipoA}</h2>
+      <div className="public-voley-scoreboard">
+        <div className="public-team-section">
+          <div className="public-team-header">
+            <div className="public-team-icon">🏆</div>
+            <h2 className="public-team-name">{equipoA}</h2>
           </div>
-          <div className="admin-team-score">{match.marcadorA ?? 0}</div>
+          <div className="public-team-score">{match.marcadorA ?? 0}</div>
         </div>
 
-        <div className="admin-vs-divider">
-          <span className="admin-vs-text">VS</span>
+        <div className="public-vs-divider">
+          <span className="public-vs-text">VS</span>
         </div>
 
-        <div className="admin-team-section">
-          <div className="admin-team-header">
-            <div className="admin-team-icon">🏆</div>
-            <h2 className="admin-team-name">{equipoB}</h2>
+        <div className="public-team-section">
+          <div className="public-team-header">
+            <div className="public-team-icon">🏆</div>
+            <h2 className="public-team-name">{equipoB}</h2>
           </div>
-          <div className="admin-team-score">{match.marcadorB ?? 0}</div>
+          <div className="public-team-score">{match.marcadorB ?? 0}</div>
         </div>
       </div>
 
       {/* Información adicional */}
-      <div className="admin-match-info">
-        <div className="admin-info-grid">
-          <div className="admin-info-card">
-            <div className="admin-info-icon">📅</div>
-            <div className="admin-info-content">
-              <span className="admin-info-label">Fecha</span>
-              <span className="admin-info-value">{match.fecha || "Por definir"}</span>
+      <div className="public-match-info">
+        <div className="public-info-grid">
+          <div className="public-info-card">
+            <div className="public-info-icon">📅</div>
+            <div className="public-info-content">
+              <span className="public-info-label">Fecha</span>
+              <span className="public-info-value">{match.fecha || "Por definir"}</span>
             </div>
           </div>
-          <div className="admin-info-card">
-            <div className="admin-info-icon">🕐</div>
-            <div className="admin-info-content">
-              <span className="admin-info-label">Hora</span>
-              <span className="admin-info-value">{match.hora || "Por definir"}</span>
+          <div className="public-info-card">
+            <div className="public-info-icon">🕐</div>
+            <div className="public-info-content">
+              <span className="public-info-label">Hora</span>
+              <span className="public-info-value">{match.hora || "Por definir"}</span>
             </div>
           </div>
-          <div className="admin-info-card">
-            <div className="admin-info-icon">🏐</div>
-            <div className="admin-info-content">
-              <span className="admin-info-label">Disciplina</span>
-              <span className="admin-info-value">Vóley</span>
+          <div className="public-info-card">
+            <div className="public-info-icon">🏐</div>
+            <div className="public-info-content">
+              <span className="public-info-label">Disciplina</span>
+              <span className="public-info-value">Vóley</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabla de Sets */}
-      {match.sets && Object.keys(match.sets).length > 0 && (
-        <div className="admin-sets-section">
-          <h3 className="admin-section-title">
-            <span className="admin-section-icon">🏐</span>
-            Marcador por Sets
-          </h3>
-          <div className="admin-sets-table-container">
-            <table className="admin-sets-table">
-              <thead>
-                <tr>
-                  <th className="admin-team-header-cell">Equipo</th>
-                  {Object.entries(match.sets)
-                    .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
-                    .map(([setKey, setData], index) => {
-                      const setNumber = parseInt(setKey.replace('set', ''));
-                      if (!deberMostrarSet(setNumber - 1, Object.values(match.sets))) return null;
-                      
-                      return (
-                        <th key={setKey} className="admin-set-header">
-                          Set {setNumber}
-                          {!esFaseGrupos && setNumber >= 3 && " (Decisivo)"}
-                        </th>
-                      );
-                    })}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="admin-team-name-cell">{equipoA}</td>
-                  {Object.entries(match.sets)
-                    .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
-                    .map(([setKey, setData], index) => {
-                      const setNumber = parseInt(setKey.replace('set', ''));
-                      if (!deberMostrarSet(setNumber - 1, Object.values(match.sets))) return null;
-                      
-                      const limitePuntos = obtenerPuntosSet(setNumber - 1, Object.values(match.sets));
-                      const ganador = ganadorSet(setData, limitePuntos);
-                      
-                      return (
-                        <td key={setKey} className={`admin-set-score ${ganador === 'A' ? 'admin-winner' : ''}`}>
-                          <div className="admin-score-display">
-                            <span className="admin-score-value">{setData?.A || 0}</span>
-                            <span className="admin-score-limit">/{limitePuntos}</span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                </tr>
-                <tr>
-                  <td className="admin-team-name-cell">{equipoB}</td>
-                  {Object.entries(match.sets)
-                    .sort(([a], [b]) => parseInt(a.replace('set', '')) - parseInt(b.replace('set', '')))
-                    .map(([setKey, setData], index) => {
-                      const setNumber = parseInt(setKey.replace('set', ''));
-                      if (!deberMostrarSet(setNumber - 1, Object.values(match.sets))) return null;
-                      
-                      const limitePuntos = obtenerPuntosSet(setNumber - 1, Object.values(match.sets));
-                      const ganador = ganadorSet(setData, limitePuntos);
-                      
-                      return (
-                        <td key={setKey} className={`admin-set-score ${ganador === 'B' ? 'admin-winner' : ''}`}>
-                          <div className="admin-score-display">
-                            <span className="admin-score-value">{setData?.B || 0}</span>
-                            <span className="admin-score-limit">/{limitePuntos}</span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div className="public-sets-section">
+        <h3 className="public-section-title">
+          <span className="public-section-icon">📊</span>
+          Marcador por Sets
+        </h3>
+        <div className="public-sets-table-container">
+          <table className="public-sets-table">
+            <thead>
+              <tr>
+                <th className="public-team-header-cell">Equipo</th>
+                {/* Mostrar sets según las reglas del juego */}
+                {Array.from({ length: reglasJuego.sets }, (_, index) => {
+                  const setNumber = index + 1;
+                  const showSet = esFaseGrupos ? setNumber === 1 : setNumber <= 3;
+                  
+                  if (!showSet) return null;
+                  
+                  return (
+                    <th key={`set${setNumber}`} className="public-set-header">
+                      Set {setNumber}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="public-team-name-cell">{equipoA}</td>
+                {Array.from({ length: reglasJuego.sets }, (_, index) => {
+                  const setNumber = index + 1;
+                  const showSet = esFaseGrupos ? setNumber === 1 : setNumber <= 3;
+                  
+                  if (!showSet) return null;
+                  
+                  const setKey = `set${setNumber}`;
+                  const setData = match.sets?.[setKey];
+                  const limitePuntos = esFaseGrupos 
+                    ? reglasJuego.puntosPorSet 
+                    : reglasJuego.puntosPorSet[index] || 20;
+                  const ganador = setData ? ganadorSet(setData, limitePuntos) : null;
+                  
+                  return (
+                    <td key={setKey} className={`public-set-score ${ganador === 'A' ? 'public-winner' : ''}`}>
+                      <div className="public-score-display">
+                        <span className="public-score-value">{setData?.A || 0}</span>
+                        <div className="public-score-limit">/{limitePuntos}</div>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <td className="public-team-name-cell">{equipoB}</td>
+                {Array.from({ length: reglasJuego.sets }, (_, index) => {
+                  const setNumber = index + 1;
+                  const showSet = esFaseGrupos ? setNumber === 1 : setNumber <= 3;
+                  
+                  if (!showSet) return null;
+                  
+                  const setKey = `set${setNumber}`;
+                  const setData = match.sets?.[setKey];
+                  const limitePuntos = esFaseGrupos 
+                    ? reglasJuego.puntosPorSet 
+                    : reglasJuego.puntosPorSet[index] || 20;
+                  const ganador = setData ? ganadorSet(setData, limitePuntos) : null;
+                  
+                  return (
+                    <td key={setKey} className={`public-set-score ${ganador === 'B' ? 'public-winner' : ''}`}>
+                      <div className="public-score-display">
+                        <span className="public-score-value">{setData?.B || 0}</span>
+                        <div className="public-score-limit">/{limitePuntos}</div>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Anotadores */}
-      <div className="admin-scorers-section">
-        <h3 className="admin-section-title">
-          <span className="admin-section-icon">�‍♂️</span>
+      <div className="public-scorers-section">
+        <h3 className="public-section-title">
+          <span className="public-section-icon">👤</span>
           Anotadores del Partido
         </h3>
-        <div className="admin-scorers-grid">
+        <div className="public-scorers-grid">
           {/* Anotadores Equipo A */}
-          <div className="admin-team-scorers">
-            <h4 className="admin-team-subtitle">{equipoA}</h4>
-            <div className="admin-scorers-list">
+          <div className="public-team-scorers">
+            <h4 className="public-team-subtitle">{equipoA}</h4>
+            <div className="public-scorers-list">
               {anotadoresAAgrupados.length > 0 ? (
                 anotadoresAAgrupados.map((anotador, index) => (
-                  <div key={index} className="admin-scorer-item">
-                    <span className="admin-player-name">{anotador.nombre}</span>
-                    <span className="admin-point-count">{anotador.cantidad} pts</span>
+                  <div key={index} className="public-scorer-item">
+                    <span className="public-player-name">{anotador.nombre}</span>
+                    <span className="public-point-count">{anotador.cantidad} pts</span>
                   </div>
                 ))
               ) : (
-                <p className="admin-no-points">Sin puntos aún</p>
+                <p className="public-no-points">Sin puntos aún</p>
               )}
             </div>
           </div>
 
           {/* Anotadores Equipo B */}
-          <div className="admin-team-scorers">
-            <h4 className="admin-team-subtitle">{equipoB}</h4>
-            <div className="admin-scorers-list">
+          <div className="public-team-scorers">
+            <h4 className="public-team-subtitle">{equipoB}</h4>
+            <div className="public-scorers-list">
               {anotadoresBAgrupados.length > 0 ? (
                 anotadoresBAgrupados.map((anotador, index) => (
-                  <div key={index} className="admin-scorer-item">
-                    <span className="admin-player-name">{anotador.nombre}</span>
-                    <span className="admin-point-count">{anotador.cantidad} pts</span>
+                  <div key={index} className="public-scorer-item">
+                    <span className="public-player-name">{anotador.nombre}</span>
+                    <span className="public-point-count">{anotador.cantidad} pts</span>
                   </div>
                 ))
               ) : (
-                <p className="admin-no-points">Sin puntos aún</p>
+                <p className="public-no-points">Sin puntos aún</p>
               )}
             </div>
           </div>

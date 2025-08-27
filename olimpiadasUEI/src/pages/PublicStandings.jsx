@@ -68,18 +68,11 @@ export default function PublicStandings() {
   useEffect(() => {
     if (equipos.length === 0) return;
 
-    // ✅ NO MOSTRAR NADA SI NO ESTÁN TODOS LOS FILTROS SELECCIONADOS
-    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
-      console.log("Filtros incompletos - no mostrar tabla");
-      setStandingsPorGrupo({});
-      return;
-    }
-
-    // Aplicar filtros de género, nivel educacional y categoría
+    // ✅ Aplicar filtros de manera independiente - si no hay filtros, mostrar todo
     const equiposFiltrados = equipos.filter(equipo => {
-      const pasaGenero = equipo.genero === filtroGenero;
-      const pasaNivel = equipo.nivelEducacional === filtroNivelEducacional;
-      const pasaCategoria = equipo.categoria === filtroCategoria;
+      const pasaGenero = !filtroGenero || equipo.genero === filtroGenero;
+      const pasaNivel = !filtroNivelEducacional || equipo.nivelEducacional === filtroNivelEducacional;
+      const pasaCategoria = !filtroCategoria || equipo.categoria === filtroCategoria;
       return pasaGenero && pasaNivel && pasaCategoria;
     });
 
@@ -120,11 +113,11 @@ export default function PublicStandings() {
       const partidosDelGrupo = matches.filter((match) => {
         // Verificar que el partido esté finalizado
         if (match.estado !== "finalizado") return false;
-        
-        // Verificar filtros básicos
-        if (match.genero !== filtroGenero) return false;
-        if (match.nivelEducacional !== filtroNivelEducacional) return false;
-        if (match.categoria !== filtroCategoria) return false;
+
+        // Verificar filtros básicos - aplicar solo los filtros seleccionados
+        if (filtroGenero && match.genero !== filtroGenero) return false;
+        if (filtroNivelEducacional && match.nivelEducacional !== filtroNivelEducacional) return false;
+        if (filtroCategoria && match.categoria !== filtroCategoria) return false;
         
         // Verificar que ambos equipos pertenezcan a este grupo
         const equipoAPertenece = equiposGrupo.some(
@@ -251,11 +244,8 @@ export default function PublicStandings() {
           return 0;
         });
         
-        // Filtrar equipos con 0 partidos jugados solo si hay equipos activos
-        const equiposConPartidos = result.filter(team => team.pj > 0);
-        if (equiposConPartidos.length > 0) {
-          result = equiposConPartidos;
-        }
+        // Mostrar todos los equipos del grupo, incluso si no han jugado
+        // No filtrar por partidos jugados para mostrar la tabla completa
       }
 
       standingsPorGrupoTemp[grupo] = result;
@@ -463,7 +453,7 @@ export default function PublicStandings() {
       </div>
 
       <div className="standings-container">
-        {!filtroGenero || !filtroNivelEducacional || !filtroCategoria ? (
+        {Object.keys(standingsPorGrupo).length === 0 && (filtroGenero || filtroNivelEducacional || filtroCategoria) ? (
           <div className="filter-requirement-message" style={{
             textAlign: 'center',
             padding: '40px 20px',
@@ -473,16 +463,20 @@ export default function PublicStandings() {
             margin: '20px 0'
           }}>
             <h3 style={{ color: '#6c757d', marginBottom: '10px' }}>
-              📋 Selecciona todos los filtros para ver las posiciones
+              📋 No hay datos con los filtros aplicados
             </h3>
             <p style={{ color: '#6c757d', margin: 0 }}>
-              Debes seleccionar género, nivel educacional y categoría para mostrar la tabla de posiciones
+              No se encontraron equipos o partidos que coincidan con los filtros: {[
+                filtroGenero && `Género: ${filtroGenero}`,
+                filtroNivelEducacional && `Nivel: ${filtroNivelEducacional}`,
+                filtroCategoria && `Categoría: ${filtroCategoria}`
+              ].filter(Boolean).join(', ')}
             </p>
           </div>
         ) : Object.keys(standingsPorGrupo).length === 0 ? (
           <div className="no-data">
             <div className="no-data-icon">📊</div>
-            <p>No hay datos de posiciones disponibles para este grupo</p>
+            <p>No hay datos de posiciones disponibles{grupoActual ? ` para ${grupoActual}` : ''}</p>
           </div>
         ) : (
         <div className="modern-table-wrapper">
@@ -536,9 +530,9 @@ export default function PublicStandings() {
                   </th>
                 )}
                 <th>
-                  <span className="th-content" title={discipline === "voley" ? "Puntos en Contra" : "Goles en Contra"}>
+                  <span className="th-content" title={discipline === "voley" || discipline === "basquet" ? "Puntos en Contra" : "Goles en Contra"}>
                     <span className="th-icon">🚫</span>
-                    {discipline === "voley" ? "PC" : "GC"}
+                    {discipline === "voley" || discipline === "basquet" ? "PC" : "GC"}
                   </span>
                 </th>
                 {discipline === "futbol" && (

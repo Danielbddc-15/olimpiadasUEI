@@ -25,6 +25,33 @@ export default function PublicBasquetMatchDetail() {
     return () => unsubscribe();
   }, [matchId]);
 
+  // Función para agrupar anotadores por nombre y sumar puntos
+  const agruparAnotadores = (anotadores) => {
+    if (!anotadores || anotadores.length === 0) return [];
+    
+    const agrupados = {};
+    anotadores.forEach(anotacion => {
+      // En básquet, cada anotación es un objeto con 'jugador' y 'puntos'
+      const nombreJugador = typeof anotacion === 'string' 
+        ? anotacion.replace(/\s*\(\d+\s*pts?\)\s*$/i, '').replace(/\s*\d+\s*pts?\s*$/i, '').trim()
+        : anotacion.jugador || anotacion.nombre || 'Jugador desconocido';
+      
+      const puntosAnotacion = typeof anotacion === 'string' 
+        ? 1 
+        : anotacion.puntos || 1;
+      
+      if (agrupados[nombreJugador]) {
+        agrupados[nombreJugador] += puntosAnotacion;
+      } else {
+        agrupados[nombreJugador] = puntosAnotacion;
+      }
+    });
+    
+    return Object.entries(agrupados)
+      .map(([nombre, puntos]) => ({ nombre, puntos }))
+      .sort((a, b) => b.puntos - a.puntos); // Ordenar por puntos descendente
+  };
+
   if (loading) {
     return (
       <div className="profesor-match-detail-container">
@@ -43,6 +70,10 @@ export default function PublicBasquetMatchDetail() {
 
   const equipoA = `${match.equipoA?.curso} ${match.equipoA?.paralelo}`;
   const equipoB = `${match.equipoB?.curso} ${match.equipoB?.paralelo}`;
+
+  // Agrupar anotadores por jugador
+  const anotadoresAAgrupados = agruparAnotadores(match.anotadoresA);
+  const anotadoresBAgrupados = agruparAnotadores(match.anotadoresB);
 
   return (
     <div className="profesor-match-detail-container">
@@ -100,19 +131,21 @@ export default function PublicBasquetMatchDetail() {
       </div>
 
       {/* Anotadores */}
-      {(match.anotadoresA?.length > 0 || match.anotadoresB?.length > 0) && (
+      {(anotadoresAAgrupados.length > 0 || anotadoresBAgrupados.length > 0) && (
         <div className="profesor-scorers">
           <h3 className="profesor-section-title">🏀 Anotadores</h3>
           <div className="profesor-scorers-grid">
             <div className="profesor-team-scorers">
               <h4 className="profesor-team-title">{equipoA}</h4>
               <div className="profesor-scorer-list">
-                {(match.anotadoresA || []).map((anotador, index) => (
-                  <div key={index} className="profesor-scorer-item">
-                    🏀 {anotador}
-                  </div>
-                ))}
-                {(!match.anotadoresA || match.anotadoresA.length === 0) && (
+                {anotadoresAAgrupados.length > 0 ? (
+                  anotadoresAAgrupados.map((anotador, index) => (
+                    <div key={index} className="profesor-scorer-item">
+                      <span className="scorer-name">🏀 {anotador.nombre}</span>
+                      <span className="scorer-points">{anotador.puntos} pts</span>
+                    </div>
+                  ))
+                ) : (
                   <div className="profesor-no-scorers">Sin anotadores registrados</div>
                 )}
               </div>
@@ -121,12 +154,14 @@ export default function PublicBasquetMatchDetail() {
             <div className="profesor-team-scorers">
               <h4 className="profesor-team-title">{equipoB}</h4>
               <div className="profesor-scorer-list">
-                {(match.anotadoresB || []).map((anotador, index) => (
-                  <div key={index} className="profesor-scorer-item">
-                    🏀 {anotador}
-                  </div>
-                ))}
-                {(!match.anotadoresB || match.anotadoresB.length === 0) && (
+                {anotadoresBAgrupados.length > 0 ? (
+                  anotadoresBAgrupados.map((anotador, index) => (
+                    <div key={index} className="profesor-scorer-item">
+                      <span className="scorer-name">🏀 {anotador.nombre}</span>
+                      <span className="scorer-points">{anotador.puntos} pts</span>
+                    </div>
+                  ))
+                ) : (
                   <div className="profesor-no-scorers">Sin anotadores registrados</div>
                 )}
               </div>

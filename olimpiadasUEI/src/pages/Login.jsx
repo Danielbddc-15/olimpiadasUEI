@@ -218,6 +218,13 @@ function Login() {
           </form>
         </div>
       )}
+      
+      {/* Copyright Footer */}
+      <footer className="copyright-footer">
+        <p className="copyright-text">
+          © 2025 Elaborado por el <strong>Comité de Padres de Familia</strong> en colaboración con <strong>FACCI ULEAM</strong>
+        </p>
+      </footer>
     </div>
   );
 }

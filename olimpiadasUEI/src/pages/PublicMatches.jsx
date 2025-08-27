@@ -365,7 +365,15 @@ export default function PublicMatches() {
 
   // Función para ir al detalle del partido (solo visualización)
   const irADetallePartido = (partidoId) => {
-    navigate(`/public/${discipline}/match/${partidoId}`);
+    // Use specific routes for each discipline
+    const detailRoutes = {
+      'futbol': `/public/${discipline}/match/${partidoId}`,
+      'voley': `/public-voley-match-detail/${partidoId}`,
+      'basquet': `/public-basquet-match-detail/${partidoId}`
+    };
+    
+    const route = detailRoutes[discipline] || `/public/${discipline}/match/${partidoId}`;
+    navigate(route);
   };
 
   // Función para formatear fecha y hora
@@ -411,7 +419,15 @@ export default function PublicMatches() {
 
   // Función para manejar clic en partido (navegar al detalle)
   const handleMatchClick = (partido) => {
-    navigate(`/public/${discipline}/match/${partido.id}`);
+    // Use specific routes for each discipline
+    const detailRoutes = {
+      'futbol': `/public/${discipline}/match/${partido.id}`,
+      'voley': `/public-voley-match-detail/${partido.id}`,
+      'basquet': `/public-basquet-match-detail/${partido.id}`
+    };
+    
+    const route = detailRoutes[discipline] || `/public/${discipline}/match/${partido.id}`;
+    navigate(route);
   };
 
   // Limpiar todos los filtros

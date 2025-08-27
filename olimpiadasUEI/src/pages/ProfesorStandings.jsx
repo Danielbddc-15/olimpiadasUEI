@@ -131,35 +131,13 @@ export default function ProfesorStandings() {
     console.log("Todos los equipos:", equipos);
     console.log("Todos los partidos:", matches);
 
-    // ✅ NO MOSTRAR NADA SI NO ESTÁN TODOS LOS FILTROS SELECCIONADOS
-    if (!filtroGenero || !filtroNivel || !filtroCategoria) {
-      console.log("Filtros incompletos - no mostrar tabla");
-      setStandingsPorGrupo({});
-      return;
-    }
-
-    // Aplicar filtros (ahora todos son requeridos)
-    const partidosFiltrados = matches.filter(partido => {
-      const pasaGenero = partido.genero === filtroGenero;
-      const pasaNivel = partido.nivelEducacional === filtroNivel;
-      const pasaCategoria = partido.categoria === filtroCategoria;
+    // ✅ Aplicar filtros de manera independiente - si no hay filtros, mostrar todo
+    const equiposFiltrados = equipos.filter(equipo => {
+      const pasaGenero = !filtroGenero || equipo.genero === filtroGenero;
+      const pasaNivel = !filtroNivel || equipo.nivelEducacional === filtroNivel;
+      const pasaCategoria = !filtroCategoria || equipo.categoria === filtroCategoria;
       return pasaGenero && pasaNivel && pasaCategoria;
     });
-
-    // Obtener equipos únicos de los partidos filtrados
-    const equiposEnPartidos = new Set();
-    partidosFiltrados.forEach(partido => {
-      equiposEnPartidos.add(`${partido.equipoA.curso}_${partido.equipoA.paralelo}`);
-      equiposEnPartidos.add(`${partido.equipoB.curso}_${partido.equipoB.paralelo}`);
-    });
-
-    // Filtrar equipos que aparecen en los partidos filtrados y que coinciden con los filtros
-    const equiposFiltrados = equipos.filter(equipo => 
-      equiposEnPartidos.has(`${equipo.curso}_${equipo.paralelo}`) &&
-      equipo.genero === filtroGenero &&
-      equipo.nivelEducacional === filtroNivel &&
-      equipo.categoria === filtroCategoria
-    );
 
     console.log("Equipos filtrados:", equiposFiltrados);
 
@@ -210,11 +188,11 @@ export default function ProfesorStandings() {
       const partidosDelGrupo = matches.filter((match) => {
         // Verificar que el partido esté finalizado
         if (match.estado !== "finalizado") return false;
-        
-        // Verificar filtros básicos
-        if (match.genero !== filtroGenero) return false;
-        if (match.nivelEducacional !== filtroNivel) return false;
-        if (match.categoria !== filtroCategoria) return false;
+
+        // Verificar filtros básicos - aplicar solo los filtros seleccionados
+        if (filtroGenero && match.genero !== filtroGenero) return false;
+        if (filtroNivel && match.nivelEducacional !== filtroNivel) return false;
+        if (filtroCategoria && match.categoria !== filtroCategoria) return false;
         
         // Verificar que ambos equipos pertenezcan a este grupo
         const equipoAPertenece = equiposGrupo.some(
@@ -361,11 +339,9 @@ export default function ProfesorStandings() {
               equiposActivos.add(`${match.equipoB.curso} ${match.equipoB.paralelo}`);
             });
         } else {
-          // En grupos1 o sin fase específica, todos los equipos que han jugado están activos
+          // En grupos1 o sin fase específica, todos los equipos están activos inicialmente
           result.forEach(team => {
-            if (team.pj > 0) {
-              equiposActivos.add(team.nombre);
-            }
+            equiposActivos.add(team.nombre);
           });
         }
         
@@ -392,11 +368,8 @@ export default function ProfesorStandings() {
           return 0;
         });
         
-        // Siempre mostrar todos los equipos que han jugado
-        const equiposConPartidos = result.filter(team => team.pj > 0);
-        if (equiposConPartidos.length > 0) {
-          result = equiposConPartidos;
-        }
+        // Mostrar todos los equipos del grupo, incluso si no han jugado
+        // No filtrar por partidos jugados para mostrar la tabla completa
       }
 
       standingsPorGrupoTemp[grupo] = result;
@@ -721,17 +694,17 @@ export default function ProfesorStandings() {
           <div className="loading-spinner"></div>
           <p className="loading-text">Cargando estadísticas...</p>
         </div>
-      ) : !filtroGenero || !filtroNivel || !filtroCategoria ? (
+      ) : Object.keys(standingsPorGrupo).length === 0 && (filtroGenero || filtroNivel || filtroCategoria) ? (
         <div className="empty-state">
           <div className="empty-icon">🔍</div>
-          <h3>Selecciona todos los filtros</h3>
+          <h3>No hay datos con los filtros aplicados</h3>
           <p>
-            Para ver la tabla de posiciones, debes seleccionar:
+            No se encontraron equipos o partidos que coincidan con los filtros seleccionados:
           </p>
           <ul style={{textAlign: 'left', marginTop: '1rem'}}>
-            <li>✅ <strong>Género:</strong> {filtroGenero || '❌ Sin seleccionar'}</li>
-            <li>✅ <strong>Nivel Educacional:</strong> {filtroNivel || '❌ Sin seleccionar'}</li>
-            <li>✅ <strong>Categoría:</strong> {filtroCategoria || '❌ Sin seleccionar'}</li>
+            {filtroGenero && <li>✅ <strong>Género:</strong> {filtroGenero}</li>}
+            {filtroNivel && <li>✅ <strong>Nivel Educacional:</strong> {filtroNivel}</li>}
+            {filtroCategoria && <li>✅ <strong>Categoría:</strong> {filtroCategoria}</li>}
           </ul>
         </div>
       ) : Object.keys(standingsPorGrupo).length === 0 ? (
@@ -816,9 +789,9 @@ export default function ProfesorStandings() {
                         </>
                       )}
                       <th>
-                        <div className="th-content" title={discipline === "voley" ? "Puntos en Contra" : "Goles en Contra"}>
+                        <div className="th-content" title={discipline === "voley" || discipline === "basquet" ? "Puntos en Contra" : "Goles en Contra"}>
                           <span className="th-icon">🚫</span>
-                          {discipline === "voley" ? "PC" : "GC"}
+                          {discipline === "voley" || discipline === "basquet" ? "PC" : "GC"}
                         </div>
                       </th>
                       {discipline === "futbol" && (

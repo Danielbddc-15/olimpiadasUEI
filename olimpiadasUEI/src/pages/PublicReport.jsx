@@ -566,7 +566,7 @@ export default function PublicReport() {
             className="back-button"
           >
             <span className="back-icon">←</span>
-            <span>Volver a la lista</span>
+            <span>Atrás</span>
           </button>
           <ReporteEquipo equipo={equipoSeleccionado} />
         </>

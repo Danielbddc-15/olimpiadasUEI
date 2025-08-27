@@ -806,3 +806,434 @@
   font-weight: 500;
   line-height: 1.4;
 }
+
+/* Estilos públicos específicos */
+
+/* Container principal */
+.public-voley-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  position: relative;
+}
+
+.public-voley-detail-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(29, 78, 216, 0.3) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Header público */
+.public-voley-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(29, 78, 216, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.public-back-button {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+}
+
+.public-back-button:hover {
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+}
+
+.public-voley-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+/* Tabla de Sets Pública */
+.public-sets-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.public-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.public-section-icon {
+  font-size: 1.5rem;
+}
+
+.public-sets-table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.public-sets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.public-sets-table th,
+.public-sets-table td {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.public-sets-table th {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.public-team-header-cell {
+  background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
+  color: white;
+  font-weight: 700;
+  min-width: 150px;
+}
+
+.public-set-header {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: white;
+  min-width: 120px;
+}
+
+.public-team-name-cell {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #1e40af;
+  text-align: left;
+  padding-left: 1.5rem;
+}
+
+.public-set-score {
+  background: white;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.public-set-score:hover {
+  background: #f1f5f9;
+}
+
+.public-set-score.public-winner {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #166534;
+  border: 2px solid #22c55e;
+}
+
+.public-score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.public-score-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.public-winner .public-score-value {
+  color: #166534;
+}
+
+.public-score-limit {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.public-winner .public-score-limit {
+  color: #16a34a;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .public-sets-table {
+    font-size: 0.9rem;
+  }
+  
+  .public-sets-table th,
+  .public-sets-table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .public-score-value {
+    font-size: 1.3rem;
+  }
+}
+
+/* Estilos adicionales para información y marcador */
+.public-voley-info {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.public-voley-group,
+.public-voley-phase,
+.public-voley-rules {
+  background: rgba(59, 130, 246, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.public-voley-status {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.public-status-badge {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.public-status-badge.programado {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.public-status-badge.en-curso {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.public-status-badge.finalizado {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.public-voley-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.public-team-section {
+  text-align: center;
+  flex: 1;
+}
+
+.public-team-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.public-team-icon {
+  font-size: 1.5rem;
+}
+
+.public-team-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0;
+}
+
+.public-team-score {
+  font-size: 4rem;
+  font-weight: 900;
+  color: #1e40af;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.public-vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.public-vs-text {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.public-match-info {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.public-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.public-info-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.public-info-icon {
+  font-size: 1.5rem;
+  color: #3b82f6;
+}
+
+.public-info-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.public-info-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.public-info-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+/* Estilos para anotadores */
+.public-scorers-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.public-scorers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.public-team-scorers {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.public-team-subtitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.public-scorers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.public-scorer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.public-player-name {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.public-point-count {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.public-no-points {
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+  padding: 2rem;
+}
