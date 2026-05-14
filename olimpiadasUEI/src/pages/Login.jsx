@@ -1,65 +1,28 @@
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { auth, db } from "../firebase/config";
-import { doc, getDoc } from "firebase/firestore";
 import { useState, useEffect } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { useAuth } from "../context/AuthContext";
 import "../styles/login.css";
 import logo from "../Logo/logo192.png";
 
 function Login() {
   const navigate = useNavigate();
+  const { login, user, loading } = useAuth();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [animationPhase, setAnimationPhase] = useState("sponsor"); // "sponsor", "transition", "login"
-  const [user, loading] = useAuthState(auth);
-
-  // Configurar persistencia de autenticación al cargar el componente
-  useEffect(() => {
-    const configurePersistence = async () => {
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-        console.log("Persistencia de autenticación configurada");
-      } catch (error) {
-        console.error("Error configurando persistencia:", error);
-      }
-    };
-    configurePersistence();
-  }, []);
 
   // Verificar si ya hay un usuario autenticado y redirigir
   useEffect(() => {
-    const checkUserAndRedirect = async () => {
-      if (user && !loading) {
-        try {
-          // Obtener el rol desde Firestore
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const role = docSnap.data().role;
-            
-            // Redirigir según el rol
-            if (role === "admin") {
-              navigate(`/admin`);
-            } else if (role === "profesor") {
-              navigate(`/profesor`);
-            } else {
-              navigate("/selector");
-            }
-          } else {
-            // Si no hay documento, tratar como invitado
-            navigate("/selector");
-          }
-        } catch (error) {
-          console.error("Error verificando usuario:", error);
-        }
+    if (!loading && user) {
+      if (user.role === "ADMIN") {
+        navigate(`/admin`);
+      } else if (user.role === "PROFESOR") {
+        navigate(`/profesor`);
+      } else {
+        navigate("/selector");
       }
-    };
-
-    if (!loading) {
-      checkUserAndRedirect();
     }
   }, [user, loading, navigate]);
 
@@ -81,47 +44,25 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
-      const loggedUser = userCredential.user;
-
-      // Obtener el rol desde Firestore
-      const docRef = doc(db, "users", loggedUser.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const role = docSnap.data().role;
-
-        // Guardar información de sesión en localStorage
-        localStorage.setItem('userRole', role);
-        localStorage.setItem('userEmail', loggedUser.email);
-        localStorage.setItem('sessionTimestamp', Date.now().toString());
-
-        // Redirigir según el rol
-        if (role === "admin") {
-          navigate(`/admin`);
-        } else if (role === "profesor") {
-          navigate(`/profesor`);
-        }
+      const loggedUser = await login(email, password);
+      
+      // Redirigir según el rol
+      if (loggedUser.role === "ADMIN") {
+        navigate(`/admin`);
+      } else if (loggedUser.role === "PROFESOR") {
+        navigate(`/profesor`);
       } else {
-        // Si no hay documento, tratar como invitado
-        localStorage.setItem('userRole', 'guest');
         navigate("/selector");
       }
     } catch (error) {
       console.error("Error de login:", error);
-      alert("Credenciales incorrectas");
+      const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+      alert(`Error al iniciar sesión: ${errorMsg}`);
     }
   };
 
   const handleGuestAccess = () => {
-    // Limpiar cualquier sesión previa
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('sessionTimestamp');
+    localStorage.setItem('userRole', 'guest');
     navigate("/selector");
   };
 
@@ -129,7 +70,6 @@ function Login() {
     setShowPassword(!showPassword);
   };
 
-  // Mostrar loading mientras verifica autenticación
   if (loading) {
     return (
       <div className="login-bg">

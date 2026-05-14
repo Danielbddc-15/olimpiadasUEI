@@ -5,7 +5,7 @@ import {
   query,
   where,
   or,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 
 export const generarPartidosFutbol = async () => {

@@ -1,11 +1,39 @@
 /* Modern Tournament View Styles */
 
-/* Main tournament container */
+/* Modern tournament container */
 .tournament-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
   overflow-x: hidden;
+}
+
+/* Estilos generales para barras de scroll en tablas */
+.modern-table-wrapper {
+  /* Scroll personalizado para todas las resoluciones */
+  scrollbar-width: thin;
+  scrollbar-color: #667eea #f1f1f1;
+}
+
+.modern-table-wrapper::-webkit-scrollbar {
+  height: 10px;
+  background-color: #f1f1f1;
+  border-radius: 12px;
+}
+
+.modern-table-wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  border: 2px solid #f1f1f1;
+}
+
+.modern-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.modern-table-wrapper::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+  border-radius: 12px;
 }
 
 .tournament-container::before {
@@ -1361,12 +1389,38 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     margin: 0 -1rem;
-    padding: 0 1rem;
+    padding: 0 1rem 1rem 1rem; /* Padding inferior para la barra de scroll */
+    /* Forzar visualización de la barra de scroll */
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+  }
+
+  /* Estilos para barra de scroll en WebKit (Chrome, Safari, Edge) */
+  .modern-table-wrapper::-webkit-scrollbar {
+    height: 8px;
+    background-color: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    border: 1px solid #f1f1f1;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+    border-radius: 10px;
   }
 
   .standings-table {
     min-width: 600px; /* Ancho mínimo para mantener legibilidad */
     font-size: 0.85rem;
+    width: 100%; /* Asegurar que ocupe todo el ancho disponible */
   }
 
   .table-cell,
@@ -1441,6 +1495,23 @@
 
 /* Móviles pequeños */
 @media (max-width: 480px) {
+  .modern-table-wrapper {
+    /* Mantener estilos de scroll también en móviles pequeños */
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar {
+    height: 6px;
+    background-color: #f1f1f1;
+    border-radius: 8px;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+  }
+
   .standings-table {
     min-width: 500px;
     font-size: 0.8rem;
@@ -1502,6 +1573,23 @@
 
 /* Móviles muy pequeños */
 @media (max-width: 360px) {
+  .modern-table-wrapper {
+    /* Scroll más compacto para pantallas muy pequeñas */
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar {
+    height: 5px;
+    background-color: #f1f1f1;
+    border-radius: 6px;
+  }
+
+  .modern-table-wrapper::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+  }
+
   /* Tabla en modo ultra-compacto */
   .standings-table {
     min-width: 450px;

@@ -5,7 +5,7 @@ import {
   query,
   where,
   getDocs,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/PublicMatches.css";

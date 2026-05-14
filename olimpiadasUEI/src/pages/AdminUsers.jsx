@@ -7,8 +7,8 @@ import {
   deleteDoc,
   doc,
   setDoc,
-} from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+} from "../api/firestoreCompat";
+// auth import removed
 import { db, auth } from "../firebase/config";
 import { useNavigate } from "react-router-dom";
 import "../styles/AdminUsers.css";
@@ -57,41 +57,21 @@ export default function AdminUsers() {
     }
 
     try {
-      // 1. Crear usuario en Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        nuevoUsuario.email, 
-        nuevoUsuario.password
-      );
-      
-      const uid = userCredential.user.uid;
-
-      // 2. Crear documento en Firestore usando el UID como ID del documento
-      await setDoc(doc(db, "users", uid), {
+      // Crear documento en la API (esto manejará la creación del usuario y password)
+      await addDoc(collection(db, "users"), {
         nombre: nuevoUsuario.nombre,
         email: nuevoUsuario.email,
+        password: nuevoUsuario.password,
         role: nuevoUsuario.role,
         fechaCreacion: new Date().toISOString()
-        // No guardamos la contraseña en Firestore por seguridad
       });
       
       setNuevoUsuario({ nombre: "", email: "", password: "", role: "profesor" });
       obtenerUsuarios();
-      alert("Usuario creado exitosamente en Authentication y Firestore");
+      alert("Usuario creado exitosamente");
     } catch (error) {
       console.error("Error al crear usuario:", error);
-      
-      // Manejar errores específicos de Firebase Auth
-      let errorMessage = "Error al crear usuario";
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "Este email ya está registrado en Authentication";
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = "La contraseña debe tener al menos 6 caracteres";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "El formato del email no es válido";
-      }
-      
-      alert(errorMessage);
+      alert("Error al crear usuario: " + (error.response?.data?.error || error.message));
     }
   };
 
@@ -449,7 +429,7 @@ export default function AdminUsers() {
                       <td className="table-cell">
                         {usuarioEditando === usuario.id ? (
                           <select
-                            value={datosEdicion.role}
+                            value={datosEdicion.role?.toLowerCase()}
                             onChange={(e) =>
                               setDatosEdicion({ ...datosEdicion, role: e.target.value })
                             }
@@ -459,8 +439,8 @@ export default function AdminUsers() {
                             <option value="admin">Administrador</option>
                           </select>
                         ) : (
-                          <span className={`role-badge ${usuario.role}`}>
-                            {usuario.role === "admin" ? "🔑 Administrador" : "👨‍🏫 Profesor"}
+                          <span className={`role-badge ${usuario.role?.toLowerCase()}`}>
+                            {usuario.role?.toLowerCase() === "admin" ? "🔑 Administrador" : "👨‍🏫 Profesor"}
                           </span>
                         )}
                       </td>

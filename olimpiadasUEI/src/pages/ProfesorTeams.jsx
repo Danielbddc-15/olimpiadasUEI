@@ -7,11 +7,11 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db, auth } from "../firebase/config";
-import { signInWithEmailAndPassword } from "firebase/auth";
+// auth import removed
 import { useParams, useNavigate } from "react-router-dom";
-import { query, where } from "firebase/firestore";
+import { query, where } from "../api/firestoreCompat";
 import * as XLSX from "xlsx";
 import { useNotification } from "../context/NotificationContext";
 import "../styles/ProfesorTeams.css";

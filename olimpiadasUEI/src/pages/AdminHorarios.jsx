@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import "../styles/AdminHorarios.css";
 
@@ -290,29 +290,45 @@ export default function AdminHorarios() {
     <div className="admin-horarios-container">
       {/* Header */}
       <div className="admin-header">
-        <div className="admin-header-content">
-          <div className="admin-title-section">
-            <h1 className="admin-title">
-              <span className="admin-icon">{disciplinasConfig[discipline]?.icon || '🏅'}</span>
-              Horarios de {disciplinasConfig[discipline]?.nombre || discipline}
-            </h1>
-            <p className="admin-subtitle">Vista de horarios programados</p>
+        <div className="header-icon">📅</div>
+        <h1 className="admin-title">Horarios de {disciplinasConfig[discipline]?.nombre || discipline}</h1>
+        <p className="admin-subtitle">Vista de horarios programados</p>
+      </div>
+
+      {/* Navegación rápida */}
+      <div className="quick-navigation">
+        <button onClick={goToDisciplineSelector} className="nav-card panel-card">
+          <div className="nav-card-icon">🏠</div>
+          <div className="nav-card-content">
+            <h3>Volver al Panel</h3>
+            <p>Ir al panel principal</p>
           </div>
-          <div className="admin-nav-buttons">
-            <button className="admin-nav-btn" onClick={goToDisciplineSelector}>
-              🏠 Inicio
-            </button>
-            <button className="admin-nav-btn" onClick={goToMatches}>
-              📋 Partidos
-            </button>
-            <button className="admin-nav-btn" onClick={goToTeams}>
-              👥 Equipos
-            </button>
-            <button className="admin-nav-btn" onClick={goToStandings}>
-              🏆 Posiciones
-            </button>
+          <div className="nav-card-arrow">→</div>
+        </button>
+        <button onClick={goToTeams} className="nav-card teams-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">👥</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Equipos</h3>
+            <p>Gestionar equipos</p>
           </div>
-        </div>
+          <div className="nav-card-arrow">→</div>
+        </button>
+        <button onClick={goToMatches} className="nav-card matches-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">⚽</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Partidos</h3>
+            <p>Gestionar encuentros</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
+        </button>
+        <button onClick={goToStandings} className="nav-card standings-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">🏆</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Posiciones</h3>
+            <p>Ver clasificación</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
+        </button>
       </div>
 
       {/* Controles de semana */}

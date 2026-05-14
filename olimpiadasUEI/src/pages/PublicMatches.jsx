@@ -6,7 +6,7 @@ import {
   query,
   where,
   onSnapshot
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/AdminMatches.css";
 

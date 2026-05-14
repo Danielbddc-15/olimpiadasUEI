@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import "../styles/AdminBasquetMatchDetail.css";
 

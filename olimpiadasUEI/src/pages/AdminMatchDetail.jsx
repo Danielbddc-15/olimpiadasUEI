@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useToast } from "../components/Toast";
 import { verificarYGenerarFasesFinalesExterna } from "./AdminMatches";

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { collection, getDocs, onSnapshot, query } from "firebase/firestore";
+import { useEffect, useState, useRef } from "react";
+import { collection, getDocs, onSnapshot, query } from "../api/firestoreCompat";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../firebase/config";
 import "../styles/PublicTournament.css";
@@ -12,6 +12,7 @@ export default function PublicStandings() {
   const [grupoActual, setGrupoActual] = useState("");
   const { discipline } = useParams();
   const navigate = useNavigate();
+  const tableWrapperRef = useRef(null);
 
   // Funciones de navegación
   const goToDisciplineSelector = () => {
@@ -21,6 +22,61 @@ export default function PublicStandings() {
   const goToLogin = () => {
     navigate('/');
   };
+
+  // Función para detectar si la tabla necesita scroll horizontal
+  const checkTableScrollable = () => {
+    if (tableWrapperRef.current) {
+      const { scrollWidth, clientWidth } = tableWrapperRef.current;
+      const needsScroll = scrollWidth > clientWidth + 5; // Margen de 5px para evitar falsos positivos
+      
+      console.log('Scroll check:', { scrollWidth, clientWidth, needsScroll });
+      
+      if (needsScroll) {
+        tableWrapperRef.current.setAttribute('scrollable', 'true');
+        // Forzar el overflow para asegurar que sea visible
+        tableWrapperRef.current.style.overflowX = 'auto';
+      } else {
+        tableWrapperRef.current.removeAttribute('scrollable');
+        tableWrapperRef.current.style.overflowX = 'hidden';
+      }
+    }
+  };
+
+  // Detectar scroll cuando cambia el contenido o tamaño de ventana
+  useEffect(() => {
+    const handleResize = () => {
+      checkTableScrollable();
+    };
+    
+    // Verificar inmediatamente
+    checkTableScrollable();
+    
+    // Verificar después de un delay para asegurar que el DOM se haya actualizado
+    const timer = setTimeout(() => {
+      checkTableScrollable();
+    }, 200);
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
+  }, [standingsPorGrupo, grupoActual]);
+
+  // Detectar scroll después de que se renderice la tabla
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkTableScrollable();
+      
+      // Forzar scroll en móviles si la pantalla es pequeña
+      if (window.innerWidth <= 768 && tableWrapperRef.current) {
+        tableWrapperRef.current.style.overflowX = 'auto';
+        tableWrapperRef.current.setAttribute('scrollable', 'true');
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [standingsPorGrupo]);
 
   // Estados de filtros avanzados
   const [filtroGenero, setFiltroGenero] = useState(() => {
@@ -479,7 +535,7 @@ export default function PublicStandings() {
             <p>No hay datos de posiciones disponibles{grupoActual ? ` para ${grupoActual}` : ''}</p>
           </div>
         ) : (
-        <div className="modern-table-wrapper">
+        <div className="modern-table-wrapper" ref={tableWrapperRef}>
           <table className="modern-table standings-table">
             <thead>
               <tr>

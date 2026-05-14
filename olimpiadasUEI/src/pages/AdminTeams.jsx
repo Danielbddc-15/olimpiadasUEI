@@ -7,12 +7,13 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db, auth } from "../firebase/config";
-import { signInWithEmailAndPassword } from "firebase/auth";
+// auth import removed
 import { useParams, useNavigate } from "react-router-dom";
-import { query, where } from "firebase/firestore";
+import { query, where } from "../api/firestoreCompat";
 import * as XLSX from "xlsx";
+import api from "../api/axios";
 import "../styles/AdminTeams.css";
 
 export default function AdminTeams() {
@@ -210,37 +211,22 @@ export default function AdminTeams() {
             return;
           }
 
-          // Intentar autenticar con Firebase
+          // Intentar autenticar con nuestra API
           try {
-            await signInWithEmailAndPassword(auth, userEmail, password);
+            await api.post('/auth/login', { email: userEmail, password });
             mostrarModalAlerta("✅ Autenticado", "Contraseña verificada correctamente.", "success");
             resolve(true);
           } catch (authError) {
             console.error("Error de autenticación:", authError);
             
             let mensajeError = "❌ Contraseña incorrecta.";
-            
-            switch (authError.code) {
-              case 'auth/wrong-password':
-                mensajeError = "Contraseña incorrecta. Verifica e intenta nuevamente.";
-                break;
-              case 'auth/too-many-requests':
-                mensajeError = "Demasiados intentos fallidos. Espera unos minutos e intenta nuevamente.";
-                break;
-              case 'auth/user-not-found':
-                mensajeError = "Usuario no encontrado. Contacta al administrador del sistema.";
-                break;
-              case 'auth/invalid-email':
-                mensajeError = "Email inválido. Contacta al administrador del sistema.";
-                break;
-              default:
-                mensajeError = `Error de autenticación: ${authError.message}`;
+            if (authError.response && authError.response.data && authError.response.data.message) {
+              mensajeError = authError.response.data.message;
             }
             
             mostrarModalAlerta("❌ Error de Autenticación", mensajeError, "error");
             resolve(false);
           }
-          
         } catch (error) {
           console.error("Error en validación de contraseña:", error);
           mostrarModalAlerta("❌ Error", "Error interno. Contacta al administrador del sistema.", "error");
@@ -1326,8 +1312,7 @@ export default function AdminTeams() {
     try {
       const ref = doc(db, "jugadores", jugadorId);
       await updateDoc(ref, {
-        ...datos,
-        fechaActualizacion: new Date().toISOString()
+        ...datos
       });
       
       obtenerJugadores();
@@ -1953,12 +1938,14 @@ export default function AdminTeams() {
                 <option value="">
                   {!nuevoEquipo.genero ? "Primero selecciona un género" : "Selecciona un nivel educacional"}
                 </option>
-                {nuevoEquipo.genero && (
-                  <>
-                    <option value="Escuela">Escuela</option>
-                    <option value="Colegio">Colegio</option>
-                  </>
-                )}
+                {nuevoEquipo.genero && nivelesEducacionales
+                  .filter((nivel, index, array) => 
+                    array.findIndex(n => n.nombre === nivel.nombre) === index
+                  )
+                  .map(nivel => (
+                    <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                  ))
+                }
               </select>
             </div>
 
@@ -1977,16 +1964,10 @@ export default function AdminTeams() {
                     grupo: "" // Limpiar grupo al cambiar categoría
                   });
                 }}
-                disabled={!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional}
-                style={{
-                  backgroundColor: (!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional) ? '#f5f5f5' : '',
-                  color: (!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional) ? '#999' : '',
-                  cursor: (!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional) ? 'not-allowed' : 'pointer'
-                }}
               >
                 <option value="">
                   {!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional 
-                    ? "Primero selecciona género y nivel educacional" 
+                    ? "Primero selecciona género y nivel" 
                     : "Selecciona una categoría"}
                 </option>
                 {categorias
@@ -1998,11 +1979,6 @@ export default function AdminTeams() {
                     <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
                   ))}
               </select>
-              {(!nuevoEquipo.genero || !nuevoEquipo.nivelEducacional) && (
-                <small style={{color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block'}}>
-                  Primero selecciona género y nivel educacional
-                </small>
-              )}
             </div>
             
             <div className="input-group">
@@ -2012,24 +1988,13 @@ export default function AdminTeams() {
               </label>
               <input
                 type="text"
-                placeholder="Ej: 1ro BGU"
+                placeholder={!nuevoEquipo.genero ? "Primero selecciona un género" : "Ej: 1ro BGU"}
                 value={nuevoEquipo.curso}
                 onChange={(e) =>
                   setNuevoEquipo({ ...nuevoEquipo, curso: e.target.value })
                 }
                 className="modern-input"
-                disabled={!nuevoEquipo.genero}
-                style={{
-                  backgroundColor: !nuevoEquipo.genero ? '#f5f5f5' : '',
-                  color: !nuevoEquipo.genero ? '#999' : '',
-                  cursor: !nuevoEquipo.genero ? 'not-allowed' : 'text'
-                }}
               />
-              {!nuevoEquipo.genero && (
-                <small style={{color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block'}}>
-                  Primero selecciona un género
-                </small>
-              )}
             </div>
 
             <div className="input-group">
@@ -2039,24 +2004,13 @@ export default function AdminTeams() {
               </label>
               <input
                 type="text"
-                placeholder="Ej: A, B, C"
+                placeholder={!nuevoEquipo.genero ? "Primero selecciona un género" : "Ej: A, B, C"}
                 value={nuevoEquipo.paralelo}
                 onChange={(e) =>
                   setNuevoEquipo({ ...nuevoEquipo, paralelo: e.target.value })
                 }
                 className="modern-input"
-                disabled={!nuevoEquipo.genero}
-                style={{
-                  backgroundColor: !nuevoEquipo.genero ? '#f5f5f5' : '',
-                  color: !nuevoEquipo.genero ? '#999' : '',
-                  cursor: !nuevoEquipo.genero ? 'not-allowed' : 'text'
-                }}
               />
-              {!nuevoEquipo.genero && (
-                <small style={{color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block'}}>
-                  Primero selecciona un género
-                </small>
-              )}
             </div>
 
             <div className="input-group">
@@ -2068,18 +2022,16 @@ export default function AdminTeams() {
                 <input
                   list="grupos-list"
                   type="text"
-                  placeholder="Selecciona o crea grupo"
+                  placeholder={
+                    (!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero)
+                      ? "Primero selecciona categoría"
+                      : "Selecciona o crea grupo"
+                  }
                   value={nuevoEquipo.grupo || ""}
                   onChange={(e) =>
                     setNuevoEquipo({ ...nuevoEquipo, grupo: e.target.value })
                   }
                   className="modern-input"
-                  disabled={!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero}
-                  style={{
-                    backgroundColor: (!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero) ? '#f5f5f5' : '',
-                    color: (!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero) ? '#999' : '',
-                    cursor: (!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero) ? 'not-allowed' : 'text'
-                  }}
                 />
                 <datalist id="grupos-list">
                   {grupos
@@ -2111,11 +2063,6 @@ export default function AdminTeams() {
                   </button>
                 )}
               </div>
-              {(!nuevoEquipo.categoria || !nuevoEquipo.nivelEducacional || !nuevoEquipo.genero) && (
-                <small style={{color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block'}}>
-                  Primero selecciona género, nivel educacional y categoría
-                </small>
-              )}
             </div>
 
             <button 
@@ -3116,55 +3063,26 @@ export default function AdminTeams() {
                             )}
                           </td>
                           <td style={{padding:'0.75rem', borderBottom:'1px solid #dee2e6'}}>
-                            {jugadorEditando === jugador.id ? (
-                              <div style={{display:'flex', gap:'0.5rem', alignItems:'center'}}>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="9999"
-                                  value={numeroAsignar}
-                                  onChange={(e) => setNumeroAsignar(e.target.value)}
-                                  placeholder="Núm."
-                                  style={{
-                                    width:'60px',
-                                    padding:'0.25rem',
-                                    border:'1px solid #ced4da',
-                                    borderRadius:'4px'
-                                  }}
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() => asignarNumero(jugador.id, numeroAsignar)}
-                                  style={{
-                                    background:'#28a745',
-                                    color:'white',
-                                    border:'none',
-                                    borderRadius:'4px',
-                                    padding:'0.25rem 0.5rem',
-                                    fontSize:'0.8rem',
-                                    cursor:'pointer'
-                                  }}
-                                >
-                                  ✓
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setJugadorEditando(null);
-                                    setNumeroAsignar("");
-                                  }}
-                                  style={{
-                                    background:'#dc3545',
-                                    color:'white',
-                                    border:'none',
-                                    borderRadius:'4px',
-                                    padding:'0.25rem 0.5rem',
-                                    fontSize:'0.8rem',
-                                    cursor:'pointer'
-                                  }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
+                            {jugadorAEditar === jugador.id ? (
+                              <input
+                                type="number"
+                                min="1"
+                                max="9999"
+                                value={jugador.numero || ""}
+                                onChange={(e) => {
+                                  const updatedJugadores = jugadores.map(j => 
+                                    j.id === jugador.id ? {...j, numero: e.target.value ? parseInt(e.target.value) : null} : j
+                                  );
+                                  setJugadores(updatedJugadores);
+                                }}
+                                placeholder="Núm."
+                                className="modern-input"
+                                style={{
+                                  margin:0,
+                                  width:'70px',
+                                  textAlign: 'center'
+                                }}
+                              />
                             ) : (
                               <span style={{
                                 display:'inline-block',
@@ -3188,7 +3106,8 @@ export default function AdminTeams() {
                                   onClick={() => actualizarJugador(jugador.id, {
                                     nombre: jugador.nombre,
                                     curso: jugador.curso,
-                                    paralelo: jugador.paralelo
+                                    paralelo: jugador.paralelo,
+                                    numero: jugador.numero
                                   })}
                                   style={{
                                     background:'#28a745',
@@ -3225,26 +3144,6 @@ export default function AdminTeams() {
                             ) : (
                               // Botones de acción normal
                               <div style={{display:'flex', gap:'0.5rem'}}>
-                                {jugadorEditando === jugador.id ? null : (
-                                  <button
-                                    onClick={() => {
-                                      setJugadorEditando(jugador.id);
-                                      setNumeroAsignar(jugador.numero || "");
-                                    }}
-                                    style={{
-                                      background:'#007bff',
-                                      color:'white',
-                                      border:'none',
-                                      borderRadius:'4px',
-                                      padding:'0.25rem 0.75rem',
-                                      fontSize:'0.8rem',
-                                      cursor:'pointer'
-                                    }}
-                                    title="Asignar/Cambiar número"
-                                  >
-                                    {jugador.numero ? '✏️ Núm.' : '📝 Núm.'}
-                                  </button>
-                                )}
                                 <button
                                   onClick={() => setJugadorAEditar(jugador.id)}
                                   style={{

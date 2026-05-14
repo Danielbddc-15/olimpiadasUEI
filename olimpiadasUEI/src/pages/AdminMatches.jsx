@@ -10,7 +10,7 @@ import {
   onSnapshot,
   updateDoc,
   deleteDoc
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { useParams } from "react-router-dom";
 import "../styles/AdminMatches.css";
 import { useNavigate } from "react-router-dom";
@@ -518,36 +518,7 @@ export default function AdminMatches() {
 
   // ==================== GENERACIÓN AUTOMÁTICA DE FASES FINALES ====================
 
-  // Auto-generación de siguientes fases cuando se completa una fase (similar a ProfesorMatches)
-  useEffect(() => {
-    if (!matches.length || !filtroGenero || !filtroNivelEducacional || !filtroCategoria) return;
-
-    const verificarYGenerarAutomatico = async () => {
-      // Solo hacer auto-generación para básquet por ahora
-      if (discipline !== 'basquet') return;
-
-      const estado = analizarEstadoCategoria();
-      if (estado.tipo === "sin_filtros" || !estado.gruposCompletos) return;
-
-      // Verificar si ya existen semifinales/finales para evitar duplicados
-      const fasesFinalesExistentes = matches.filter(m =>
-        m.disciplina === discipline &&
-        m.genero === filtroGenero &&
-        m.nivelEducacional === filtroNivelEducacional &&
-        m.categoria === filtroCategoria &&
-        (m.fase === "semifinales" || m.fase === "final" || m.fase === "tercerPuesto")
-      );
-
-      if (fasesFinalesExistentes.length === 0) {
-        console.log(`🤖 Auto-generando fases finales para ${discipline} - ${filtroCategoria} ${filtroGenero}`);
-        await generarFasesFinalesAutomaticas(true); // true indica que es auto-generación
-      }
-    };
-
-    verificarYGenerarAutomatico();
-  }, [matches, filtroGenero, filtroNivelEducacional, filtroCategoria, discipline]);
-
-  const generarFasesFinalesAutomaticas = async (esAutoGeneracion = false) => {
+  const generarFasesFinalesAutomaticas = async () => {
     const estado = analizarEstadoCategoria();
     
     if (estado.tipo === "sin_filtros") {
@@ -561,8 +532,7 @@ export default function AdminMatches() {
     }
 
     try {
-      const tipoGeneracion = esAutoGeneracion ? 'automática' : 'manual';
-      console.log(`🏆 Generando fases finales ${tipoGeneracion}...`);
+      console.log(`🏆 Generando fases finales automáticas...`);
       console.log(`📊 Estado:`, estado);
 
       // CASO 1: Categoría con 2 grupos - Semifinales cruzadas
@@ -1078,40 +1048,47 @@ export default function AdminMatches() {
   const estado = analizarEstadoCategoria();
 
   return (
-    <div className="admin-matches">
-      <h1>Gestión de Partidos - {discipline.charAt(0).toUpperCase() + discipline.slice(1)}</h1>
+    <div className="admin-matches admin-teams-container">
+      {/* Header */}
+      <div className="admin-header">
+        <div className="header-icon">⚽</div>
+        <h1 className="admin-title">Gestión de Partidos - {discipline.charAt(0).toUpperCase() + discipline.slice(1)}</h1>
+        <p className="admin-subtitle">Administra los encuentros</p>
+      </div>
       
-      {/* Navegación con botones de colores */}
-      <div className="nav-buttons">
-        <button 
-          className="nav-button volver"
-          onClick={() => navigate(`/admin`)}
-        >
-          ← Volver al Panel
+      {/* Navegación rápida */}
+      <div className="quick-navigation">
+        <button onClick={() => navigate('/admin')} className="nav-card panel-card">
+          <div className="nav-card-icon">🏠</div>
+          <div className="nav-card-content">
+            <h3>Volver al Panel</h3>
+            <p>Ir al panel principal</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
         </button>
-        <button
-          className="nav-button equipos"
-          onClick={() => navigate(`/admin/${discipline}/equipos`)}
-        >
-          📋 Equipos
+        <button onClick={() => navigate(`/admin/${discipline}/equipos`)} className="nav-card teams-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">👥</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Equipos</h3>
+            <p>Gestionar equipos</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
         </button>
-        <button
-          className="nav-button partidos"
-          onClick={() => navigate(`/admin/${discipline}/partidos`)}
-        >
-          ⚽ Partidos
+        <button onClick={() => navigate(`/admin/${discipline}/tabla`)} className="nav-card standings-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">🏆</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Posiciones</h3>
+            <p>Ver clasificación</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
         </button>
-        <button
-          className="nav-button posiciones"
-          onClick={() => navigate(`/admin/${discipline}/tabla`)}
-        >
-          🏆 Posiciones
-        </button>
-        <button
-          className="nav-button horarios"
-          onClick={() => navigate(`/admin/${discipline}/horarios`)}
-        >
-          📅 Horarios
+        <button onClick={() => navigate(`/admin/${discipline}/horarios`)} className="nav-card schedule-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
+          <div className="nav-card-icon">📅</div>
+          <div className="nav-card-content">
+            <h3 style={{color: '#2d3748'}}>Horarios</h3>
+            <p>Organizar encuentros</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
         </button>
       </div>
       
@@ -1224,7 +1201,7 @@ export default function AdminMatches() {
               className={`phase-tab grupos ${faseActiva === "grupos" ? "active" : ""}`}
               onClick={() => setFaseActiva("grupos")}
             >
-              ����‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
+              🏃‍♂️ Fase de Grupos ({contarPartidosPorFase("grupos")})
             </button>
           )}
           
@@ -1507,7 +1484,7 @@ const verificarYGenerarDesempate = async (partidoFinalizado, showToast) => {
     console.log(`🔍 Verificando desempate para partido de ${partidoFinalizado.fase}`);
 
     // Obtener todos los partidos de la misma categoría
-    const { getDocs, query, collection, where } = await import("firebase/firestore");
+    const { getDocs, query, collection, where } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
     const q = query(
@@ -1600,7 +1577,7 @@ const calcularResultadoAgregado = (partidoIda, partidoVuelta) => {
 // Función para generar partido de desempate
 const generarPartidoDesempate = async (partidoIda, partidoVuelta) => {
   try {
-    const { addDoc, collection } = await import("firebase/firestore");
+    const { addDoc, collection } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
     // Usar los equipos del partido de ida en su orden original
@@ -1654,7 +1631,7 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
     console.log(`✅ Campos validados - Disciplina: ${partidoFinalizado.disciplina}, G��nero: ${partidoFinalizado.genero}, Nivel: ${partidoFinalizado.nivelEducacional}, Categoría: ${partidoFinalizado.categoria}`);
 
     // Obtener todos los partidos de la misma categoría
-    const { getDocs, query, collection, where } = await import("firebase/firestore");
+    const { getDocs, query, collection, where } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
     const q = query(
@@ -1821,7 +1798,7 @@ const calcularClasificacionGrupo = (partidos, equipos) => {
 // Función para generar semifinales cruzadas entre múltiples grupos
 const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partidoBase, showToast) => {
   try {
-    const { addDoc, collection } = await import("firebase/firestore");
+    const { addDoc, collection } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
     const grupos = Object.keys(equiposPorGrupo);
@@ -1960,7 +1937,7 @@ const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToa
     }
 
     // Obtener todas las semifinales de la misma categoría
-    const { getDocs, query, collection, where, addDoc } = await import("firebase/firestore");
+    const { getDocs, query, collection, where, addDoc } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
     const qSemifinales = query(
@@ -2073,7 +2050,7 @@ const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToa
     console.log("🥉 Tercer puesto generado automáticamente");
 
     if (showToast && typeof showToast === 'function') {
-      showToast("�� Final y tercer puesto generados automáticamente tras completar semifinales", "success");
+      showToast("🏆 Final y tercer puesto generados automáticamente tras completar semifinales", "success");
     }
 
   } catch (error) {

@@ -7,7 +7,7 @@ import {
   deleteDoc,
   doc,
   updateDoc,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import EquipoForm from "../components/EquipoForm";
 import "../styles/equipos.css";

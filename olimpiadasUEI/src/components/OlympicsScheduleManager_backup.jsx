@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from "../api/firestoreCompat";
 import { db } from '../firebase/config';
 import '../styles/OlympicsScheduleManager.css';
 

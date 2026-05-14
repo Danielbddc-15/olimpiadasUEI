@@ -9,10 +9,11 @@ import {
   where,
   onSnapshot,
   addDoc,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { Link, useLocation } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { verificarYGenerarFasesFinalesExterna } from './AdminMatches';
 import "../styles/ProfesorMatches.css";
 
 export default function ProfesorMatches() {
@@ -28,10 +29,16 @@ export default function ProfesorMatches() {
   const [equipos, setEquipos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   
-  // Estados para filtros
-  const [filtroGenero, setFiltroGenero] = useState("");
-  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
+  // Estados para filtros (ahora persistentes)
+  const [filtroGenero, setFiltroGenero] = useState(() => {
+    return localStorage.getItem('profesor_matches_filtro_genero') || "";
+  });
+  const [filtroNivelEducacional, setFiltroNivelEducacional] = useState(() => {
+    return localStorage.getItem('profesor_matches_filtro_nivel_educacional') || "";
+  });
+  const [filtroCategoria, setFiltroCategoria] = useState(() => {
+    return localStorage.getItem('profesor_matches_filtro_categoria') || "";
+  });
   
   // Estados para opciones de filtros (extraídos dinámicamente de los equipos)
   const [opcionesGenero, setOpcionesGenero] = useState([]);
@@ -192,22 +199,42 @@ export default function ProfesorMatches() {
 
   // ==================== FUNCIONES DE FILTROS ====================
   
-  // Manejar cambio de género
+  // Manejar cambio de género (con persistencia)
   const handleFiltroGeneroChange = (value) => {
     setFiltroGenero(value);
+    if (value) {
+      localStorage.setItem('profesor_matches_filtro_genero', value);
+    } else {
+      localStorage.removeItem('profesor_matches_filtro_genero');
+    }
+    // Reset dependent filters
     setFiltroNivelEducacional("");
     setFiltroCategoria("");
+    localStorage.removeItem('profesor_matches_filtro_nivel_educacional');
+    localStorage.removeItem('profesor_matches_filtro_categoria');
   };
 
-  // Manejar cambio de nivel educacional
+  // Manejar cambio de nivel educacional (con persistencia)
   const handleFiltroNivelEducacionalChange = (value) => {
     setFiltroNivelEducacional(value);
+    if (value) {
+      localStorage.setItem('profesor_matches_filtro_nivel_educacional', value);
+    } else {
+      localStorage.removeItem('profesor_matches_filtro_nivel_educacional');
+    }
+    // Reset dependent filters
     setFiltroCategoria("");
+    localStorage.removeItem('profesor_matches_filtro_categoria');
   };
 
-  // Manejar cambio de categoría
+  // Manejar cambio de categoría (con persistencia)
   const handleFiltroCategoriaChange = (value) => {
     setFiltroCategoria(value);
+    if (value) {
+      localStorage.setItem('profesor_matches_filtro_categoria', value);
+    } else {
+      localStorage.removeItem('profesor_matches_filtro_categoria');
+    }
   };
 
   // Obtener opciones de niveles educacionales disponibles según el género seleccionado
@@ -231,6 +258,131 @@ export default function ProfesorMatches() {
       .map(categoria => categoria.nombre)
       .filter(Boolean)
     )];
+  };
+
+  // ==================== FUNCIONES PARA GENERACIÓN DE SEMIFINALES ====================
+
+  // Función para mostrar notificaciones simples
+  const showToast = (mensaje, tipo = 'success') => {
+    alert(mensaje); // Por simplicidad, usando alert. Se puede mejorar con una librería de toast
+  };
+
+  // Función para analizar estado de una categoría
+  const analizarEstadoCategoria = async (categoria, genero, nivelEducacional, disciplina) => {
+    try {
+      const partidosSnapshot = await getDocs(collection(db, 'matches'));
+      const equiposSnapshot = await getDocs(collection(db, 'equipos'));
+      
+      const partidos = partidosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      const equipos = equiposSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Filtrar partidos de la categoría específica
+      const partidosCategoria = partidos.filter(partido => 
+        partido.categoria === categoria && 
+        partido.genero === genero && 
+        partido.nivelEducacional === nivelEducacional &&
+        partido.disciplina === disciplina
+      );
+      
+      const partidosGrupos = partidosCategoria.filter(p => p.fase === 'grupos');
+      const partidosSemifinales = partidosCategoria.filter(p => p.fase === 'semifinal');
+      
+      const todosGruposFinalizados = partidosGrupos.length > 0 && 
+        partidosGrupos.every(partido => partido.estado === 'finalizado');
+      
+      const equiposCategoria = equipos.filter(equipo => 
+        equipo.categoria === categoria && 
+        equipo.genero === genero && 
+        equipo.nivelEducacional === nivelEducacional &&
+        equipo.disciplina === disciplina
+      );
+      
+      return {
+        partidosGrupos,
+        partidosSemifinales,
+        todosGruposFinalizados,
+        equiposCategoria,
+        totalEquipos: equiposCategoria.length
+      };
+    } catch (error) {
+      console.error('Error al analizar estado de categoría:', error);
+      return null;
+    }
+  };
+
+  // Función para generar fases finales automáticas (manual)
+  const generarFasesFinalesAutomaticas = async () => {
+    if (!filtroGenero || !filtroNivelEducacional || !filtroCategoria) {
+      showToast('Selecciona género, nivel y categoría para generar las fases finales');
+      return;
+    }
+
+    try {
+      showToast('Analizando categoría y generando fases finales...');
+      
+      const estadoCategoria = await analizarEstadoCategoria(
+        filtroCategoria, 
+        filtroGenero, 
+        filtroNivelEducacional, 
+        discipline
+      );
+
+      if (!estadoCategoria) {
+        showToast('Error al analizar el estado de la categoría');
+        return;
+      }
+
+      const { 
+        partidosGrupos, 
+        partidosSemifinales, 
+        todosGruposFinalizados, 
+        equiposCategoria, 
+        totalEquipos 
+      } = estadoCategoria;
+
+      // Verificaciones
+      if (partidosSemifinales.length > 0) {
+        showToast('Las semifinales ya han sido generadas para esta categoría');
+        return;
+      }
+
+      if (!todosGruposFinalizados) {
+        const partidosPendientes = partidosGrupos.filter(p => p.estado !== 'finalizado').length;
+        showToast(`Aún hay ${partidosPendientes} partidos de grupos sin finalizar`);
+        return;
+      }
+
+      if (totalEquipos < 4) {
+        showToast('Se necesitan al menos 4 equipos para generar semifinales');
+        return;
+      }
+
+      // Crear objeto partidoFinalizado simulado con los datos necesarios
+      const partidoFinalizado = {
+        disciplina: discipline,
+        categoria: filtroCategoria,
+        genero: filtroGenero,
+        nivelEducacional: filtroNivelEducacional,
+        fase: "grupos",
+        estado: "finalizado"
+      };
+
+      // Usar la función de AdminMatches para generar
+      await verificarYGenerarFasesFinalesExterna(partidoFinalizado, showToast);
+
+      showToast('¡Fases finales generadas exitosamente!');
+
+    } catch (error) {
+      console.error('Error al generar fases finales:', error);
+      showToast('Error al generar las fases finales');
+    }
   };
 
   // Modal para goleador

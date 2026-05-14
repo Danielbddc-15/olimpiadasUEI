@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+import { useEffect, useState, useRef } from "react";
+import { collection, getDocs, onSnapshot, query, where } from "../api/firestoreCompat";
 import { useParams } from "react-router-dom";
 import { db } from "../firebase/config";
 import "../styles/PublicTournament.css";
@@ -18,6 +18,45 @@ export default function PublicReport() {
   const [filtroCategoria, setFiltroCategoria] = useState("");
   
   const { discipline } = useParams();
+  const tableWrapperRef1 = useRef(null);
+  const tableWrapperRef2 = useRef(null);
+
+  // Función para detectar si las tablas necesitan scroll horizontal
+  const checkTableScrollable = () => {
+    [tableWrapperRef1, tableWrapperRef2].forEach(ref => {
+      if (ref.current) {
+        const { scrollWidth, clientWidth } = ref.current;
+        const needsScroll = scrollWidth > clientWidth;
+        
+        if (needsScroll) {
+          ref.current.setAttribute('scrollable', 'true');
+        } else {
+          ref.current.removeAttribute('scrollable');
+        }
+      }
+    });
+  };
+
+  // Detectar scroll cuando cambia el contenido o tamaño de ventana
+  useEffect(() => {
+    checkTableScrollable();
+    
+    const handleResize = () => {
+      checkTableScrollable();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [equipoSeleccionado]);
+
+  // Detectar scroll después de que se rendericen las tablas
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkTableScrollable();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [equipoSeleccionado]);
 
   // Cargar equipos en tiempo real
   useEffect(() => {
@@ -251,6 +290,7 @@ export default function PublicReport() {
 
       let resultadoColor = "#6c757d";
       let resultadoText = "";
+      let resultadoClass = "";
 
       if (m.estado === "finalizado") {
         const marcadorPropio = esA ? m.marcadorA : m.marcadorB;
@@ -259,48 +299,48 @@ export default function PublicReport() {
         if (marcadorPropio > marcadorRival) {
           resultadoColor = "#28a745";
           resultadoText = "Victoria";
+          resultadoClass = "wins";
         } else if (marcadorPropio < marcadorRival) {
           resultadoColor = "#dc3545";
           resultadoText = "Derrota";
+          resultadoClass = "losses";
         } else {
           resultadoColor = "#ffc107";
           resultadoText = "Empate";
+          resultadoClass = "draws";
         }
       }
 
       return (
-        <tr key={idx} style={{ borderBottom: "1px solid #e9ecef" }}>
-          <td style={{ padding: "12px 8px", fontWeight: "500" }}>{rival}</td>
-          <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>
+        <tr key={idx} className="table-row">
+          <td className="table-cell team-cell">
+            <div className="team-info">
+              <span className="team-icon">🏫</span>
+              <span className="team-name">{rival}</span>
+            </div>
+          </td>
+          <td className="table-cell goals-for">
             {marcador}
           </td>
-          <td style={{ padding: "12px 8px", textAlign: "center" }}>
+          <td className={`table-cell ${resultadoClass}`}>
             {m.estado === "finalizado" ? (
-              <span
-                style={{
-                  color: resultadoColor,
-                  fontWeight: "bold",
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  backgroundColor: `${resultadoColor}20`,
-                }}
-              >
+              <span className="points-badge" style={{ backgroundColor: resultadoColor }}>
                 {resultadoText}
               </span>
             ) : m.estado === "en curso" ? (
-              <span style={{ color: "#2563eb", fontWeight: "bold", padding: "4px 8px", borderRadius: "4px", backgroundColor: "#2563eb20" }}>
+              <span className="points-badge" style={{ backgroundColor: "#2563eb" }}>
                 En curso
               </span>
             ) : (
-              <span style={{ color: "#f39c12", fontWeight: "bold", padding: "4px 8px", borderRadius: "4px", backgroundColor: "#f39c1220" }}>
+              <span className="points-badge" style={{ backgroundColor: "#f39c12" }}>
                 Pendiente
               </span>
             )}
           </td>
-          <td style={{ padding: "12px 8px", textAlign: "center", textTransform: "capitalize" }}>
+          <td className="table-cell">
             {m.fase || "grupos"}
           </td>
-          <td style={{ padding: "12px 8px", textAlign: "center", color: "#6c757d" }}>
+          <td className="table-cell">
             {m.fecha || "Por definir"}
           </td>
         </tr>
@@ -443,24 +483,39 @@ export default function PublicReport() {
                 {partidosJugados.length}
               </span>
             </h3>
-            <div style={{ background: "#fff", borderRadius: "8px", overflow: "hidden", border: "1px solid #e9ecef", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="modern-table-wrapper" ref={tableWrapperRef1}>
+              <table className="modern-table standings-table">
                 <thead>
-                  <tr style={{ background: "#f8f9fa" }}>
-                    <th style={{ padding: "16px 8px", textAlign: "left", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Rival
+                  <tr>
+                    <th>
+                      <span className="th-content" title="Equipo rival">
+                        <span className="th-icon">👥</span>
+                        Rival
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Marcador
+                    <th>
+                      <span className="th-content" title="Marcador del partido">
+                        <span className="th-icon">🏐</span>
+                        Marcador
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Resultado
+                    <th>
+                      <span className="th-content" title="Resultado del partido">
+                        <span className="th-icon">🏆</span>
+                        Resultado
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Fase
+                    <th>
+                      <span className="th-content" title="Fase del torneo">
+                        <span className="th-icon">🏁</span>
+                        Fase
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Fecha
+                    <th>
+                      <span className="th-content" title="Fecha del partido">
+                        <span className="th-icon">📅</span>
+                        Fecha
+                      </span>
                     </th>
                   </tr>
                 </thead>
@@ -481,24 +536,39 @@ export default function PublicReport() {
                 {partidosPendientes.length}
               </span>
             </h3>
-            <div style={{ background: "#fff", borderRadius: "8px", overflow: "hidden", border: "1px solid #e9ecef", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="modern-table-wrapper" ref={tableWrapperRef2}>
+              <table className="modern-table standings-table">
                 <thead>
-                  <tr style={{ background: "#f8f9fa" }}>
-                    <th style={{ padding: "16px 8px", textAlign: "left", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Rival
+                  <tr>
+                    <th>
+                      <span className="th-content" title="Equipo rival">
+                        <span className="th-icon">👥</span>
+                        Rival
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Marcador
+                    <th>
+                      <span className="th-content" title="Marcador del partido">
+                        <span className="th-icon">🏐</span>
+                        Marcador
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Estado
+                    <th>
+                      <span className="th-content" title="Estado del partido">
+                        <span className="th-icon">⏳</span>
+                        Estado
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Fase
+                    <th>
+                      <span className="th-content" title="Fase del torneo">
+                        <span className="th-icon">🏁</span>
+                        Fase
+                      </span>
                     </th>
-                    <th style={{ padding: "16px 8px", textAlign: "center", fontWeight: "600", color: "#495057", borderBottom: "2px solid #e9ecef" }}>
-                      Fecha
+                    <th>
+                      <span className="th-content" title="Fecha del partido">
+                        <span className="th-icon">📅</span>
+                        Fecha
+                      </span>
                     </th>
                   </tr>
                 </thead>
