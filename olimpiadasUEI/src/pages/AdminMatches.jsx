@@ -275,20 +275,8 @@ export default function AdminMatches() {
 
     // Partido de ida
     await addDoc(collection(db, "matches"), {
-      equipoA: {
-        curso: equipoA.curso,
-        paralelo: equipoA.paralelo,
-        genero: filtroGenero,
-        categoria: filtroCategoria,
-        nivelEducacional: filtroNivelEducacional
-      },
-      equipoB: {
-        curso: equipoB.curso,
-        paralelo: equipoB.paralelo,
-        genero: filtroGenero,
-        categoria: filtroCategoria,
-        nivelEducacional: filtroNivelEducacional
-      },
+      equipoA: equipoA,
+      equipoB: equipoB,
       grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
       fase: "ida",
       estado: "programado",
@@ -308,20 +296,8 @@ export default function AdminMatches() {
 
     // Partido de vuelta (equipos intercambiados)
     await addDoc(collection(db, "matches"), {
-      equipoA: {
-        curso: equipoB.curso,
-        paralelo: equipoB.paralelo,
-        genero: filtroGenero,
-        categoria: filtroCategoria,
-        nivelEducacional: filtroNivelEducacional
-      },
-      equipoB: {
-        curso: equipoA.curso,
-        paralelo: equipoA.paralelo,
-        genero: filtroGenero,
-        categoria: filtroCategoria,
-        nivelEducacional: filtroNivelEducacional
-      },
+      equipoA: equipoB,
+      equipoB: equipoA,
       grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
       fase: "vuelta",
       estado: "programado",
@@ -352,20 +328,8 @@ export default function AdminMatches() {
         const equipoB = equipos[j];
 
         await addDoc(collection(db, "matches"), {
-          equipoA: {
-            curso: equipoA.curso,
-            paralelo: equipoA.paralelo,
-            genero: filtroGenero,
-            categoria: filtroCategoria,
-            nivelEducacional: filtroNivelEducacional
-          },
-          equipoB: {
-            curso: equipoB.curso,
-            paralelo: equipoB.paralelo,
-            genero: filtroGenero,
-            categoria: filtroCategoria,
-            nivelEducacional: filtroNivelEducacional
-          },
+          equipoA: equipoA,
+          equipoB: equipoB,
           grupo: nombreGrupo === "Grupo Único" ? `${filtroCategoria} - ${filtroGenero}` : nombreGrupo,
           fase: "grupos",
           estado: "programado",
@@ -593,8 +557,8 @@ export default function AdminMatches() {
 
     // Crear semifinales cruzadas
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: primero1.curso, paralelo: primero1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: segundo2.curso, paralelo: segundo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: primero1,
+      equipoB: segundo2,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -611,8 +575,8 @@ export default function AdminMatches() {
     });
 
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: primero2.curso, paralelo: primero2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: segundo1.curso, paralelo: segundo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: primero2,
+      equipoB: segundo1,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -662,8 +626,8 @@ export default function AdminMatches() {
 
     // Final: 1° vs 2°
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: primero.curso, paralelo: primero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: segundo.curso, paralelo: segundo.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: primero,
+      equipoB: segundo,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -681,8 +645,8 @@ export default function AdminMatches() {
 
     // Tercer puesto: 3° vs 4°
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: tercero.curso, paralelo: tercero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: cuarto.curso, paralelo: cuarto.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: tercero,
+      equipoB: cuarto,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -730,8 +694,8 @@ export default function AdminMatches() {
 
     // Solo final: 1° vs 2°
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: primero.curso, paralelo: primero.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: segundo.curso, paralelo: segundo.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: primero,
+      equipoB: segundo,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -779,8 +743,8 @@ export default function AdminMatches() {
 
     // Partido de ida
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: equipo1.curso, paralelo: equipo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: equipo2.curso, paralelo: equipo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: equipo1,
+      equipoB: equipo2,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -798,8 +762,8 @@ export default function AdminMatches() {
 
     // Partido de vuelta
     await addDoc(collection(db, "matches"), {
-      equipoA: { curso: equipo2.curso, paralelo: equipo2.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
-      equipoB: { curso: equipo1.curso, paralelo: equipo1.paralelo, genero: filtroGenero, categoria: filtroCategoria, nivelEducacional: filtroNivelEducacional },
+      equipoA: equipo2,
+      equipoB: equipo1,
       disciplina: discipline,
       categoria: filtroCategoria,
       genero: filtroGenero,
@@ -1306,72 +1270,90 @@ export default function AdminMatches() {
               });
 
               return Object.entries(partidosPorGrupo).map(([nombreGrupo, partidos]) => (
-                <div key={nombreGrupo} className="partidos-grupo">
-                  <h3 className="grupo-titulo">
-                    {nombreGrupo} ({partidos.length} {partidos.length === 1 ? 'partido' : 'partidos'})
+                <div key={nombreGrupo} className="grupo-container">
+                  <h3 className="grupo-title">
+                    {nombreGrupo} <span>({partidos.length} {partidos.length === 1 ? 'partido' : 'partidos'})</span>
                   </h3>
-                  <div className="partidos-grid">
+                  <div className="partidos-list">
                     {partidos.map(match => (
-                      <div key={match.id} className="partido-card">
-                        <div className="partido-header">
-                          <span className={`partido-fase ${match.fase?.toUpperCase() || 'GRUPOS'}`}>
-                            {match.fase === "ida" ? "IDA" :
-                             match.fase === "vuelta" ? "VUELTA" :
-                             match.fase === "desempate" ? "DESEMPATE" :
-                             match.fase === "semifinal" || match.fase === "semifinales" ? "SEMIFINAL" :
-                             match.fase === "final" || match.fase === "finales" ? "FINAL" :
-                             (match.fase === "tercer_puesto" || match.fase === "tercerPuesto") ? "3ER PUESTO" :
-                             match.fase === "grupos3" ? "FASE DE GRUPOS" :
-                             match.fase === "grupos2" ? "FASE DE GRUPOS" :
-                             "FASE DE GRUPOS"}
-                          </span>
-                          <span className={`partido-estado ${match.estado?.toUpperCase() || 'PROGRAMADO'}`}>
-                            {match.estado || 'PROGRAMADO'}
-                          </span>
-                        </div>
+                      <div key={match.id} className="partido-row">
                         
-                        <div className="partido-equipos">
-                          <div className="equipo">
-                            <div className="equipo-nombre">{match.equipoA?.curso} {match.equipoA?.paralelo}</div>
-                            <div className="equipo-score">{match.marcadorA || 0}</div>
+                        {/* Columna Izquierda: Información de tiempo y estado */}
+                        <div className="match-info-col">
+                          <div className="match-time-badge">
+                            {match.fecha ? (
+                              <>
+                                <span>📅 {match.fecha}</span>
+                                {match.hora && <span>🕒 {match.hora}</span>}
+                              </>
+                            ) : (
+                              <span className="no-time">🕒 Pendiente</span>
+                            )}
                           </div>
-                          <div className="vs">VS</div>
-                          <div className="equipo">
-                            <div className="equipo-nombre">{match.equipoB?.curso} {match.equipoB?.paralelo}</div>
-                            <div className="equipo-score">{match.marcadorB || 0}</div>
+                          <div className="match-status-badge">
+                            <span className={`status-dot ${match.estado === 'en curso' ? 'live' : ''}`}></span>
+                            <span className="status-text">{match.estado?.toUpperCase() || 'PROGRAMADO'}</span>
                           </div>
                         </div>
-                        
-                        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
-                          {match.fecha} {match.hora}
+
+                        {/* Columna Central: Equipos y Marcador */}
+                        <div className="match-teams-col">
+                          {/* Equipo Local */}
+                          <div className="team-item local">
+                            <span className="team-name">
+                              {match.equipoA ? `${match.equipoA.curso} ${match.equipoA.paralelo}` : 'Por definir'}
+                            </span>
+                            <div className="team-avatar-mini">
+                              {match.equipoA?.curso?.charAt(0) || 'A'}
+                            </div>
+                          </div>
+
+                          {/* Marcador */}
+                          <div className="match-score-center">
+                            <div className="score-box">
+                              <span className="score-num">{match.marcadorA ?? 0}</span>
+                              <span className="score-divider">-</span>
+                              <span className="score-num">{match.marcadorB ?? 0}</span>
+                            </div>
+                            <span className="phase-mini">
+                               {match.fase === "ida" ? "IDA" :
+                                match.fase === "vuelta" ? "VUELTA" :
+                                match.fase === "desempate" ? "DESEMPATE" :
+                                match.fase === "semifinal" || match.fase === "semifinales" ? "SEMIFINAL" :
+                                match.fase === "final" || match.fase === "finales" ? "FINAL" :
+                                "GRUPOS"}
+                            </span>
+                          </div>
+
+                          {/* Equipo Visitante */}
+                          <div className="team-item visitor">
+                            <div className="team-avatar-mini visitor">
+                              {match.equipoB?.curso?.charAt(0) || 'B'}
+                            </div>
+                            <span className="team-name">
+                              {match.equipoB ? `${match.equipoB.curso} ${match.equipoB.paralelo}` : 'Por definir'}
+                            </span>
+                          </div>
                         </div>
-                        
-                        <div className="partido-actions">
+
+                        {/* Columna Derecha: Acciones */}
+                        <div className="match-actions-col">
                           <button
                             onClick={() => navegarADetalle(match.id)}
-                            style={{
-                              flex: 1,
-                              padding: '6px 12px',
-                              backgroundColor: '#667eea',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              transition: 'all 0.3s ease'
-                            }}
+                            className="btn-action-primary"
+                            title="Ver detalles y gestionar"
                           >
-                            Ver Detalle
+                            ⚙️ Gestionar
                           </button>
                           <button 
-                            className="btn-eliminar"
+                            className="btn-action-danger"
                             onClick={() => confirmarEliminarPartido(match)}
                             title="Eliminar partido"
                           >
                             🗑️
                           </button>
                         </div>
+
                       </div>
                     ))}
                   </div>
@@ -1684,14 +1666,25 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
       const partidosGrupo = partidosPorGrupo[grupo];
       const partidosFinalizados = partidosGrupo.filter(p => p.estado === "finalizado");
       
-      // Obtener equipos únicos del grupo
-      const equiposGrupo = new Set();
+      // Obtener equipos únicos del grupo con sus objetos originales
+      const equiposGrupoNombres = new Set();
+      const equiposGrupoObjetos = [];
+      
       partidosGrupo.forEach(partido => {
-        equiposGrupo.add(`${partido.equipoA.curso} ${partido.equipoA.paralelo}`);
-        equiposGrupo.add(`${partido.equipoB.curso} ${partido.equipoB.paralelo}`);
+        const nombreA = `${partido.equipoA.curso} ${partido.equipoA.paralelo}`;
+        const nombreB = `${partido.equipoB.curso} ${partido.equipoB.paralelo}`;
+        
+        if (!equiposGrupoNombres.has(nombreA)) {
+          equiposGrupoNombres.add(nombreA);
+          equiposGrupoObjetos.push(partido.equipoA);
+        }
+        if (!equiposGrupoNombres.has(nombreB)) {
+          equiposGrupoNombres.add(nombreB);
+          equiposGrupoObjetos.push(partido.equipoB);
+        }
       });
       
-      const numEquipos = equiposGrupo.size;
+      const numEquipos = equiposGrupoNombres.size;
       const partidosEsperados = (numEquipos * (numEquipos - 1)) / 2; // Combinaciones n(n-1)/2
       
       console.log(`📋 Grupo ${grupo}: ${partidosFinalizados.length}/${partidosEsperados} partidos finalizados (${numEquipos} equipos)`);
@@ -1701,10 +1694,10 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
         todosGruposCompletos = false;
         break;
       }
-
+      
       // Obtener clasificación del grupo
       equiposPorGrupo[grupo] = {
-        equipos: Array.from(equiposGrupo),
+        equipos: Array.from(equiposGrupoNombres),
         partidos: partidosGrupo,
         clasificacion: calcularClasificacionGrupo(partidosGrupo, Array.from(equiposGrupo))
       };
@@ -1726,13 +1719,17 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
 };
 
 // Función para calcular la clasificación de un grupo
-const calcularClasificacionGrupo = (partidos, equipos) => {
+const calcularClasificacionGrupo = (partidos, equiposNombres, equiposObjetos = []) => {
   const stats = {};
   
   // Inicializar estadísticas
-  equipos.forEach(equipo => {
-    stats[equipo] = {
-      nombre: equipo,
+  equiposNombres.forEach(nombre => {
+    // Intentar encontrar el objeto del equipo original para preservar su ID
+    const objetoEquipo = equiposObjetos.find(e => `${e.curso} ${e.paralelo}` === nombre);
+    
+    stats[nombre] = {
+      nombre: nombre,
+      objetoEquipo: objetoEquipo, // Guardamos el objeto completo si existe
       puntos: 0,
       goles_favor: 0,
       goles_contra: 0,
@@ -1819,28 +1816,13 @@ const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partid
 
       // Generar semifinales cruzadas: 1°A vs 2°B y 1°B vs 2°A
       if (clasificados1.length >= 1 && clasificados2.length >= 1) {
-        // Semifinal 1: 1�� del Grupo 1 vs 2° del Grupo 2 (si existe)
+        // Semifinal 1: 1° del Grupo 1 vs 2° del Grupo 2 (si existe)
         const equipo1_1 = clasificados1[0];
-        const equipo2_2 = clasificados2[1] || clasificados2[0]; // Si solo hay 1 clasificado del grupo 2
-
-        const [curso1_1, paralelo1_1] = equipo1_1.nombre.split(' ');
-        const [curso2_2, paralelo2_2] = equipo2_2.nombre.split(' ');
+        const equipo2_2 = clasificados2[1] || clasificados2[0]; 
 
         await addDoc(collection(db, "matches"), {
-          equipoA: {
-            curso: curso1_1,
-            paralelo: paralelo1_1,
-            genero: partidoBase.genero,
-            categoria: partidoBase.categoria,
-            nivelEducacional: partidoBase.nivelEducacional
-          },
-          equipoB: {
-            curso: curso2_2,
-            paralelo: paralelo2_2,
-            genero: partidoBase.genero,
-            categoria: partidoBase.categoria,
-            nivelEducacional: partidoBase.nivelEducacional
-          },
+          equipoA: equipo1_1.objetoEquipo,
+          equipoB: equipo2_2.objetoEquipo,
           grupo: `Semifinales - ${partidoBase.categoria}`,
           fase: "semifinal",
           estado: "programado",
@@ -1865,24 +1847,9 @@ const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partid
         const equipo2_1 = clasificados2[0];
         const equipo1_2 = clasificados1[1];
 
-        const [curso2_1, paralelo2_1] = equipo2_1.nombre.split(' ');
-        const [curso1_2, paralelo1_2] = equipo1_2.nombre.split(' ');
-
         await addDoc(collection(db, "matches"), {
-          equipoA: {
-            curso: curso2_1,
-            paralelo: paralelo2_1,
-            genero: partidoBase.genero,
-            categoria: partidoBase.categoria,
-            nivelEducacional: partidoBase.nivelEducacional
-          },
-          equipoB: {
-            curso: curso1_2,
-            paralelo: paralelo1_2,
-            genero: partidoBase.genero,
-            categoria: partidoBase.categoria,
-            nivelEducacional: partidoBase.nivelEducacional
-          },
+          equipoA: equipo2_1.objetoEquipo,
+          equipoB: equipo1_2.objetoEquipo,
           grupo: `Semifinales - ${partidoBase.categoria}`,
           fase: "semifinal",
           estado: "programado",

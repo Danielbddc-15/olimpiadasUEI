@@ -10,7 +10,7 @@ import {
 } from "../api/firestoreCompat";
 import { db, auth } from "../firebase/config";
 // auth import removed
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { query, where } from "../api/firestoreCompat";
 import * as XLSX from "xlsx";
 import { useNotification } from "../context/NotificationContext";
@@ -19,6 +19,7 @@ import "../styles/ProfesorTeams.css";
 export default function ProfesorTeams() {
   const { discipline } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addNotification } = useNotification();
   
   // Estados principales
@@ -362,17 +363,63 @@ export default function ProfesorTeams() {
 
   return (
     <div className="profesor-teams-container">
-      {/* Header */}
-      <div className="profesor-teams-header">
-        <div className="header-left">
-          <button onClick={volverAlDashboard} className="back-button">
-            ← Volver
-          </button>
-          <div className="header-info">
-            <h1>Gestión de Equipos y Jugadores</h1>
-            <p className="discipline-name">{discipline?.toUpperCase()}</p>
-          </div>
+      {/* Header moderno para profesor */}
+      <div className="profesor-header">
+        <div className="header-icon">
+          {discipline === "futbol"
+            ? "⚽"
+            : discipline === "voley"
+              ? "🏐"
+              : "🏀"}
         </div>
+        <h1 className="profesor-title">Gestión de Equipos</h1>
+        <p className="profesor-subtitle">
+          Administra los jugadores y equipos de{" "}
+          {discipline === "futbol"
+            ? "Fútbol"
+            : discipline === "voley"
+              ? "Vóley"
+              : "Básquet"}
+        </p>
+      </div>
+
+      {/* Navegación moderna entre secciones */}
+      <div className="profesor-navigation">
+        <Link
+          to="/profesor"
+          className="nav-link panel-link"
+        >
+          <span className="nav-icon">🏠</span>
+          <span className="nav-text">Panel</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/equipos`}
+          className={`nav-link ${location.pathname.includes("/equipos") ? "active" : ""}`}
+        >
+          <span className="nav-icon">👥</span>
+          <span className="nav-text">Equipos</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/partidos`}
+          className={`nav-link ${location.pathname.includes("/partidos") ? "active" : ""}`}
+        >
+          <span className="nav-icon">⚽</span>
+          <span className="nav-text">Partidos</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/tabla`}
+          className={`nav-link ${location.pathname.includes("/tabla") ? "active" : ""}`}
+        >
+          <span className="nav-icon">🏆</span>
+          <span className="nav-text">Posiciones</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/horarios`}
+          className={`nav-link ${location.pathname.includes("/horarios") ? "active" : ""}`}
+        >
+          <span className="nav-icon">📅</span>
+          <span className="nav-text">Horarios</span>
+        </Link>
       </div>
 
       {/* Filtros */}

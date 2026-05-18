@@ -1007,87 +1007,80 @@ export default function ProfesorMatches() {
               <h3 className="grupo-titulo">
                 {grupo} ({partidosPorGrupo[grupo].length} {partidosPorGrupo[grupo].length === 1 ? 'partido' : 'partidos'})
               </h3>
-              <div className="partidos-grid">
+              <div className="partidos-list">
                   {partidosPorGrupo[grupo].map((match) => (
-                    <div key={match.id} className="partido-card" onClick={() => irADetallePartido(match.id)}>
-                      <div className="partido-header">
-                        <span className={`partido-fase ${
-                          match.fase === "finales" || match.fase === "final" ? "FINAL" :
-                          match.fase === "semifinales" || match.fase === "semifinal" ? "SEMIFINAL" :
-                          match.fase === "tercer_puesto" || match.fase === "tercerPuesto" ? "TERCERPUESTO" :
-                          match.fase === "ida" ? "IDA" :
-                          match.fase === "vuelta" ? "VUELTA" :
-                          match.fase === "desempate" ? "DESEMPATE" :
-                          "GRUPOS"
-                        }`}>
-                          {match.fase === "finales" || match.fase === "final" ? "FINAL" :
-                           match.fase === "semifinales" || match.fase === "semifinal" ? "SEMIFINAL" :
-                           match.fase === "tercer_puesto" || match.fase === "tercerPuesto" ? "3ER PUESTO" :
-                           match.fase === "ida" ? "IDA" :
-                           match.fase === "vuelta" ? "VUELTA" :
-                           match.fase === "desempate" ? "⚖️ DESEMPATE" :
-                           match.fase === "grupos3" ? "FASE DE GRUPOS" :
-                           match.fase === "grupos2" ? "FASE DE GRUPOS" :
-                           "FASE DE GRUPOS"}
-                        </span>
-                        <span 
-                          className={`partido-estado ${match.estado?.toUpperCase() || 'PENDIENTE'} ${
-                            match.estado === 'pendiente' ? 
-                              (puedeProfesorIniciarPartido(match).puede ? 'puede-iniciar' : 'no-puede-iniciar') 
-                              : ''
-                          }`}
-                          data-tooltip={
-                            match.estado === 'pendiente' && !puedeProfesorIniciarPartido(match).puede 
-                              ? puedeProfesorIniciarPartido(match).mensaje 
-                              : ''
-                          }
-                        >
-                          {match.estado === "finalizado" ? "✅ FINALIZADO" :
-                           match.estado === "en curso" ? "🟢 EN CURSO" :
-                           match.estado === "pendiente" ? 
-                             (puedeProfesorIniciarPartido(match).puede ? "🟡 LISTO PARA INICIAR" : "🔵 SIN PERMISOS") :
-                           "⏳ PENDIENTE"}
-                        </span>
-                      </div>
-
-                      <div className="partido-equipos">
-                        <div className="equipo">
-                          <div className="equipo-nombre">{match.equipoA?.curso} {match.equipoA?.paralelo}</div>
-                          <div className="equipo-score">{match.marcadorA || 0}</div>
+                    <div key={match.id} className="partido-row">
+                      
+                      {/* Columna Izquierda: Información de tiempo y estado */}
+                      <div className="match-info-col">
+                        <div className="match-time-badge">
+                          {match.fecha ? (
+                            <>
+                              <span>📅 {match.fecha}</span>
+                              {match.hora && <span>🕒 {match.hora}</span>}
+                            </>
+                          ) : (
+                            <span className="no-time">🕒 Pendiente</span>
+                          )}
                         </div>
-                        <div className="vs">VS</div>
-                        <div className="equipo">
-                          <div className="equipo-nombre">{match.equipoB?.curso} {match.equipoB?.paralelo}</div>
-                          <div className="equipo-score">{match.marcadorB || 0}</div>
+                        <div className="match-status-badge">
+                          <span className={`status-dot ${match.estado === 'en curso' ? 'live' : ''}`}></span>
+                          <span className="status-text">{match.estado?.toUpperCase() || 'PROGRAMADO'}</span>
                         </div>
                       </div>
 
-                      <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>
-                        {match.fecha || "Por definir"} {match.hora || ""}
+                      {/* Columna Central: Equipos y Marcador */}
+                      <div className="match-teams-col">
+                        {/* Equipo Local */}
+                        <div className="team-item local">
+                          <span className="team-name">
+                            {match.equipoA ? `${match.equipoA.curso} ${match.equipoA.paralelo}` : 'Por definir'}
+                          </span>
+                          <div className="team-avatar-mini">
+                            {match.equipoA?.curso?.charAt(0) || 'A'}
+                          </div>
+                        </div>
+
+                        {/* Marcador */}
+                        <div className="match-score-center">
+                          <div className="score-box">
+                            <span className="score-num">{match.marcadorA ?? 0}</span>
+                            <span className="score-divider">-</span>
+                            <span className="score-num">{match.marcadorB ?? 0}</span>
+                          </div>
+                          <span className="phase-mini">
+                             {match.fase === "finales" || match.fase === "final" ? "FINAL" :
+                              match.fase === "semifinales" || match.fase === "semifinal" ? "SEMIFINAL" :
+                              match.fase === "tercer_puesto" || match.fase === "tercerPuesto" ? "3ER PUESTO" :
+                              match.fase === "ida" ? "IDA" :
+                              match.fase === "vuelta" ? "VUELTA" :
+                              match.fase === "desempate" ? "DESEMPATE" :
+                              "GRUPOS"}
+                          </span>
+                        </div>
+
+                        {/* Equipo Visitante */}
+                        <div className="team-item visitor">
+                          <div className="team-avatar-mini visitor">
+                            {match.equipoB?.curso?.charAt(0) || 'B'}
+                          </div>
+                          <span className="team-name">
+                            {match.equipoB ? `${match.equipoB.curso} ${match.equipoB.paralelo}` : 'Por definir'}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="partido-actions">
+                      {/* Columna Derecha: Acciones */}
+                      <div className="match-actions-col">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            irADetallePartido(match.id);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '6px 12px',
-                            backgroundColor: '#667eea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            transition: 'all 0.3s ease'
-                          }}
+                          onClick={() => irADetallePartido(match.id)}
+                          className="btn-action-primary"
+                          title="Ver detalles y gestionar"
                         >
-                          Ver Detalle
+                          ⚙️ Ver Detalle
                         </button>
                       </div>
+
                     </div>
                   ))}
                 </div>
@@ -1207,6 +1200,13 @@ export default function ProfesorMatches() {
         >
           <span className="nav-icon">🏠</span>
           <span className="nav-text">Panel</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/equipos`}
+          className={`nav-link ${location.pathname.includes("/equipos") ? "active" : ""}`}
+        >
+          <span className="nav-icon">👥</span>
+          <span className="nav-text">Equipos</span>
         </Link>
         <Link
           to={`/profesor/${discipline}/partidos`}

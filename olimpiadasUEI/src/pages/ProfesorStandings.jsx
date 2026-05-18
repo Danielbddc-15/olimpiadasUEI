@@ -668,6 +668,13 @@ export default function ProfesorStandings() {
           <span className="nav-text">Panel</span>
         </Link>
         <Link
+          to={`/profesor/${discipline}/equipos`}
+          className={`nav-link ${location.pathname.includes("/equipos") ? "active" : ""}`}
+        >
+          <span className="nav-icon">👥</span>
+          <span className="nav-text">Equipos</span>
+        </Link>
+        <Link
           to={`/profesor/${discipline}/partidos`}
           className={`nav-link ${location.pathname.includes("/partidos") ? "active" : ""}`}
         >

@@ -673,7 +673,7 @@ export default function AdminTeams() {
     
     // Si el grupo no existe, agrégalo relacionado con la categoría, nivel educacional y género
     if (nuevoEquipo.grupo && !grupos.find(g => 
-      g.nombre === nuevoEquipo.grupo && 
+      g.nombre.toLowerCase().trim() === nuevoEquipo.grupo.toLowerCase().trim() && 
       g.categoria === nuevoEquipo.categoria && 
       g.nivelEducacional === nuevoEquipo.nivelEducacional &&
       g.genero === nuevoEquipo.genero
@@ -731,7 +731,7 @@ export default function AdminTeams() {
       const equipo = equipos.find(eq => eq.id === id);
       if (equipo) {
         const grupoExiste = grupos.find(g => 
-          g.nombre === valor.trim() && 
+          g.nombre.toLowerCase().trim() === valor.toLowerCase().trim() && 
           g.categoria === equipo.categoria && 
           g.nivelEducacional === equipo.nivelEducacional &&
           g.genero === equipo.genero
@@ -1005,7 +1005,7 @@ export default function AdminTeams() {
     if (!nombreGrupo) return false; // Si no hay nombre de grupo, no hacer nada
     
     const grupoExiste = grupos.find(g => 
-      g.nombre === nombreGrupo && 
+      g.nombre.toLowerCase().trim() === nombreGrupo.toLowerCase().trim() && 
       g.categoria === categoria && 
       g.nivelEducacional === nivelEducacional &&
       g.genero === genero
