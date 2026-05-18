@@ -6,7 +6,7 @@ import {
   where,
   addDoc,
   onSnapshot,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/AdminStandings.css";
@@ -473,37 +473,37 @@ export default function AdminStandings() {
         </p>
       </div>
 
-      {/* Navegación */}
-      <div className="navigation-section">
+      {/* Navegación rápida */}
+      <div className="quick-navigation">
         <button onClick={goToPanel} className="nav-card panel-card">
           <div className="nav-card-icon">🏠</div>
           <div className="nav-card-content">
-            <h3 className="nav-card-title">Volver al Panel</h3>
-            <p className="nav-card-description">Ir al panel principal</p>
+            <h3>Volver al Panel</h3>
+            <p>Ir al panel principal</p>
           </div>
           <div className="nav-card-arrow">→</div>
         </button>
-        <button onClick={goToTeams} className="nav-card teams-card">
+        <button onClick={goToTeams} className="nav-card teams-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
           <div className="nav-card-icon">👥</div>
           <div className="nav-card-content">
-            <h3 className="nav-card-title">Gestionar Equipos</h3>
-            <p className="nav-card-description">Administrar equipos participantes</p>
+            <h3 style={{color: '#2d3748'}}>Equipos</h3>
+            <p>Gestionar equipos</p>
           </div>
           <div className="nav-card-arrow">→</div>
         </button>
-        <button onClick={goToMatches} className="nav-card matches-card">
+        <button onClick={goToMatches} className="nav-card matches-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
           <div className="nav-card-icon">⚽</div>
           <div className="nav-card-content">
-            <h3 className="nav-card-title">Gestionar Partidos</h3>
-            <p className="nav-card-description">Administrar encuentros</p>
+            <h3 style={{color: '#2d3748'}}>Partidos</h3>
+            <p>Gestionar encuentros</p>
           </div>
           <div className="nav-card-arrow">→</div>
         </button>
-        <button onClick={goToSchedule} className="nav-card schedule-card">
+        <button onClick={goToSchedule} className="nav-card schedule-card" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#2d3748'}}>
           <div className="nav-card-icon">📅</div>
           <div className="nav-card-content">
-            <h3 className="nav-card-title">Gestionar Horarios</h3>
-            <p className="nav-card-description">Programar partidos por días</p>
+            <h3 style={{color: '#2d3748'}}>Horarios</h3>
+            <p>Organizar encuentros</p>
           </div>
           <div className="nav-card-arrow">→</div>
         </button>

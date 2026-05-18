@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import "../styles/PublicMatches.css";
 
@@ -270,6 +270,38 @@ export default function PublicHorarios() {
     return { tipo: partido.fase, color: '#666', icon: '🏅' };
   };
 
+  // Función para obtener el rango de fechas de la semana actual
+  const getFechasDeSemana = (semanaNum) => {
+    const partidosSemana = matches.filter(m => {
+      if (!m.fecha) return false;
+      return getSemanaFromFecha(m.fecha) === semanaNum;
+    });
+
+    if (partidosSemana.length === 0) return "";
+
+    const fechas = partidosSemana
+      .map(m => convertirDiaAFecha(m.fecha))
+      .filter(f => f && f.includes('-'))
+      .sort();
+
+    if (fechas.length === 0) return "";
+
+    const formatearFecha = (fechaStr) => {
+      const parts = fechaStr.split('-');
+      if (parts.length !== 3) return "";
+      const mes = parseInt(parts[1], 10);
+      const dia = parseInt(parts[2], 10);
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      return `${dia} ${meses[mes - 1]}`;
+    };
+
+    const inicio = formatearFecha(fechas[0]);
+    const fin = formatearFecha(fechas[fechas.length - 1]);
+
+    if (!inicio || !fin) return "";
+    return inicio === fin ? `(${inicio})` : `(${inicio} - ${fin})`;
+  };
+
   // Obtener valores únicos para filtros
   const getUniqueValues = (field) => {
     const values = new Set();
@@ -403,10 +435,15 @@ export default function PublicHorarios() {
             ← Semana Anterior
           </button>
           
-          <div className="current-week-info">
-            <span className="week-label">Semana</span>
-            <span className="week-number">{currentWeek}</span>
-            <span className="week-total">de {totalWeeks}</span>
+          <div className="current-week-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="week-number-container">
+              <span className="week-label">Semana</span>
+              <span className="week-number">{currentWeek}</span>
+              <span className="week-total">de {totalWeeks}</span>
+            </div>
+            <div className="week-dates-info" style={{ fontSize: '0.85rem', color: '#047857', fontWeight: '600', marginTop: '0.2rem' }}>
+              {getFechasDeSemana(currentWeek)}
+            </div>
           </div>
           
           <button
@@ -436,7 +473,9 @@ export default function PublicHorarios() {
         </div>
       ) : (
         <div className="horarios-grid">
-          {getOrderedDays().map(dia => (
+          {getOrderedDays()
+            .filter(dia => horariosDisponibles.some(hora => horariosPorDia[dia]?.[hora]))
+            .map(dia => (
             <div key={dia} className="dia-column">
               <div className="dia-header">
                 <h3 className="dia-title">
@@ -446,95 +485,91 @@ export default function PublicHorarios() {
               </div>
 
               <div className="horarios-lista">
-                {horariosDisponibles.map(hora => {
-                  const partido = horariosPorDia[dia]?.[hora];
+                {horariosDisponibles
+                  .filter(hora => horariosPorDia[dia]?.[hora])
+                  .map(hora => {
+                  const partido = horariosPorDia[dia][hora];
                   
                   return (
-                    <div key={hora} className="horario-slot">
+                    <div key={hora} className="horario-slot has-match">
                       <div className="hora-label">{hora}</div>
-                      {partido ? (
-                        <div 
-                          className="partido-card view-only public-card"
-                          onClick={() => verDetallesPartido(partido)}
-                          style={{ 
-                            cursor: 'pointer',
-                            borderColor: disciplinasConfig[partido.disciplina]?.color || '#666'
-                          }}
-                        >
-                          <div className="partido-header">
-                            <div 
-                              className="disciplina-badge"
-                              style={{ backgroundColor: disciplinasConfig[partido.disciplina]?.color || '#666' }}
-                            >
-                              <span className="disciplina-icon">
-                                {disciplinasConfig[partido.disciplina]?.icon || '🏅'}
-                              </span>
-                              <span className="disciplina-text">
-                                {disciplinasConfig[partido.disciplina]?.nombre || partido.disciplina}
-                              </span>
+                      <div 
+                        className="partido-card view-only public-card"
+                        onClick={() => verDetallesPartido(partido)}
+                        style={{ 
+                          cursor: 'pointer',
+                          borderColor: disciplinasConfig[partido.disciplina]?.color || '#666'
+                        }}
+                      >
+                        <div className="partido-header">
+                          <div 
+                            className="disciplina-badge"
+                            style={{ backgroundColor: disciplinasConfig[partido.disciplina]?.color || '#666' }}
+                          >
+                            <span className="disciplina-icon">
+                              {disciplinasConfig[partido.disciplina]?.icon || '🏅'}
+                            </span>
+                            <span className="disciplina-text">
+                              {disciplinasConfig[partido.disciplina]?.nombre || partido.disciplina}
+                            </span>
+                          </div>
+                          <div 
+                            className="fase-badge"
+                            style={{ backgroundColor: getTipoFase(partido).color }}
+                          >
+                            <span className="fase-icon">{getTipoFase(partido).icon}</span>
+                            <span className="fase-text">{getTipoFase(partido).tipo}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="partido-equipos">
+                          <div className="equipo">
+                            <div className="equipo-header">
+                              <span className="equipo-icon">🏫</span>
+                              <span className="equipo-genero">{partido.equipoA.genero === 'masculino' ? '♂️' : '♀️'}</span>
                             </div>
-                            <div 
-                              className="fase-badge"
-                              style={{ backgroundColor: getTipoFase(partido).color }}
-                            >
-                              <span className="fase-icon">{getTipoFase(partido).icon}</span>
-                              <span className="fase-text">{getTipoFase(partido).tipo}</span>
+                            <div className="equipo-nombre">
+                              <strong>{partido.equipoA.curso}{partido.equipoA.paralelo}</strong>
+                            </div>
+                            <div className="equipo-detalles">
+                              <span className="equipo-categoria">{partido.equipoA.categoria}</span>
+                              <span className="equipo-genero-texto">{partido.equipoA.genero}</span>
                             </div>
                           </div>
                           
-                          <div className="partido-equipos">
-                            <div className="equipo">
-                              <div className="equipo-header">
-                                <span className="equipo-icon">🏫</span>
-                                <span className="equipo-genero">{partido.equipoA.genero === 'masculino' ? '♂️' : '♀️'}</span>
-                              </div>
-                              <div className="equipo-nombre">
-                                <strong>{partido.equipoA.curso}{partido.equipoA.paralelo}</strong>
-                              </div>
-                              <div className="equipo-detalles">
-                                <span className="equipo-categoria">{partido.equipoA.categoria}</span>
-                                <span className="equipo-genero-texto">{partido.equipoA.genero}</span>
-                              </div>
-                            </div>
-                            
-                            <div className="vs-divider">
-                              <span className="vs-text">VS</span>
-                              <div className="vs-line"></div>
-                            </div>
-                            
-                            <div className="equipo">
-                              <div className="equipo-header">
-                                <span className="equipo-icon">🏫</span>
-                                <span className="equipo-genero">{partido.equipoB.genero === 'masculino' ? '♂️' : '♀️'}</span>
-                              </div>
-                              <div className="equipo-nombre">
-                                <strong>{partido.equipoB.curso}{partido.equipoB.paralelo}</strong>
-                              </div>
-                              <div className="equipo-detalles">
-                                <span className="equipo-categoria">{partido.equipoB.categoria}</span>
-                                <span className="equipo-genero-texto">{partido.equipoB.genero}</span>
-                              </div>
-                            </div>
+                          <div className="vs-divider">
+                            <span className="vs-text">VS</span>
+                            <div className="vs-line"></div>
                           </div>
                           
-                          <div className="partido-info">
+                          <div className="equipo">
+                            <div className="equipo-header">
+                              <span className="equipo-icon">🏫</span>
+                              <span className="equipo-genero">{partido.equipoB.genero === 'masculino' ? '♂️' : '♀️'}</span>
+                            </div>
+                            <div className="equipo-nombre">
+                              <strong>{partido.equipoB.curso}{partido.equipoB.paralelo}</strong>
+                            </div>
+                            <div className="equipo-detalles">
+                              <span className="equipo-categoria">{partido.equipoB.categoria}</span>
+                              <span className="equipo-genero-texto">{partido.equipoB.genero}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="partido-info">
+                          <div className="info-item">
+                            <span className="info-icon">👥</span>
+                            <span>{partido.grupo}</span>
+                          </div>
+                          {partido.marcadorA !== null && partido.marcadorB !== null && (
                             <div className="info-item">
-                              <span className="info-icon">👥</span>
-                              <span>{partido.grupo}</span>
+                              <span className="info-icon">⚽</span>
+                              <span>{partido.marcadorA} - {partido.marcadorB}</span>
                             </div>
-                            {partido.marcadorA !== null && partido.marcadorB !== null && (
-                              <div className="info-item">
-                                <span className="info-icon">⚽</span>
-                                <span>{partido.marcadorA} - {partido.marcadorB}</span>
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="slot-vacio">
-                          <span className="vacio-text">Libre</span>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}

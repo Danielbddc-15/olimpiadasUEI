@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { verificarYGenerarFasesFinalesExterna } from "./AdminMatches";
 import { useToast } from "../components/Toast";
@@ -487,10 +487,10 @@ export default function ProfesorVoleyMatchDetail() {
 
   // Función para convertir fecha a nombre del día
   const obtenerNombreDia = (fecha) => {
-    if (!fecha) return "Sin fecha";
+    if (!fecha) return "";
     const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
     const fechaObj = new Date(fecha);
-    return diasSemana[fechaObj.getDay()];
+    if (isNaN(fechaObj.getTime())) return ""; const nombreDia = diasSemana[fechaObj.getDay()]; return nombreDia ? nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1) : "";
   };
 
   // Calcular ganador de set
@@ -1021,7 +1021,7 @@ export default function ProfesorVoleyMatchDetail() {
                 <div className="profesor-schedule-preview">
                   {fechaTemporal && horaTemporal ? (
                     <span className="profesor-schedule-value">
-                      {obtenerNombreDia(fechaTemporal).charAt(0).toUpperCase() + obtenerNombreDia(fechaTemporal).slice(1)} {fechaTemporal} a las {horaTemporal}
+                      {obtenerNombreDia(fechaTemporal)} {fechaTemporal} a las {horaTemporal}
                     </span>
                   ) : (
                     <span className="profesor-schedule-empty">Sin programar</span>
@@ -1036,7 +1036,7 @@ export default function ProfesorVoleyMatchDetail() {
               <div className="profesor-schedule-item">
                 <span className="profesor-schedule-label">📅 Fecha:</span>
                 <span className="profesor-schedule-value">
-                  {match.fecha ? `${obtenerNombreDia(match.fecha).charAt(0).toUpperCase() + obtenerNombreDia(match.fecha).slice(1)} ${match.fecha}` : "No programada"}
+                  {match.fecha ? `${obtenerNombreDia(match.fecha)} ${match.fecha}` : "No programada"}
                 </span>
               </div>
               <div className="profesor-schedule-item">

@@ -7,7 +7,7 @@ import {
   query,
   where,
   onSnapshot,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { useParams } from "react-router-dom";
 import "../styles/AdminMatches.css";
 import { useNavigate } from "react-router-dom";
@@ -2450,7 +2450,7 @@ export default function AdminMatches() {
       query,
       where,
       onSnapshot,
-    } from "firebase/firestore";
+    } from "../api/firestoreCompat";
     import { useParams } from "react-router-dom";
     import "../styles/AdminMatches.css";
     import { useNavigate } from "react-router-dom";

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useToast } from "../components/Toast";
 import { verificarYGenerarFasesFinalesExterna } from "./AdminMatches";
@@ -842,8 +842,7 @@ export default function AdminMatchDetail() {
         
       } else {
         // MÚLTIPLES GRUPOS: NO generar aquí - AdminMatches.jsx se encarga
-        console.log(`� Múltiples grupos detectados (${numeroDeGrupos}) - AdminMatches.jsx manejará las semifinales`);
-        console.log(`ℹ️ Esta función solo maneja grupos únicos. Las semifinales para múltiples grupos se generan desde AdminMatches.jsx`);
+        console.log(` Múltiples grupos detectados - AdminMatches.jsx manejará las semifinales`);
         
         // 🚀 NUEVA FUNCIONALIDAD: Llamar verificación externa
         console.log(`🔥 Ejecutando verificación externa para múltiples grupos...`);
@@ -889,214 +888,193 @@ export default function AdminMatchDetail() {
     );
   }
 
-  const equipoA = `${match.equipoA?.curso} ${match.equipoA?.paralelo}`;
-  const equipoB = `${match.equipoB?.curso} ${match.equipoB?.paralelo}`;
+  const equipoA = match.equipoA
+    ? `${match.equipoA.curso || ''} ${match.equipoA.paralelo || ''}`.trim()
+    : 'Equipo A';
+  const equipoB = match.equipoB
+    ? `${match.equipoB.curso || ''} ${match.equipoB.paralelo || ''}`.trim()
+    : 'Equipo B';
   const goleadoresA = contarGoleadores(match.goleadoresA);
   const goleadoresB = contarGoleadores(match.goleadoresB);
 
+  // Helpers de estado
+  const estadoLabel = {
+    pendiente: '⏳ Pendiente',
+    programado: '📅 Programado',
+    'en curso': '🟢 En Curso',
+    finalizado: '✅ Finalizado',
+  }[match.estado] || match.estado;
+
+  const fechaFormateada = match.fechaCompleta
+    ? new Date(match.fechaCompleta + 'T00:00:00').toLocaleDateString('es-ES', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      })
+    : match.fecha || null;
+
+  const esProgramado = match.estado === 'programado' || match.estado === 'pendiente';
+
   return (
     <div className="admin-match-detail-container">
+
       {/* Header */}
       <div className="admin-match-header">
-        <button onClick={() => navigate(-1)} className="admin-back-button">
-          ← Volver
-        </button>
-        <h1 className="admin-match-title">Gestión de Partido - Admin</h1>
+        <button onClick={() => navigate(-1)} className="admin-back-button">← Volver</button>
+        <h1 className="admin-match-title">Gestión de Partido</h1>
         <div className="admin-match-info">
-          <span className="admin-match-group">{match.grupo}</span>
-          <span className="admin-match-phase">{match.fase || "Grupos"}</span>
+          {match.grupo && <span className="admin-match-group">{match.grupo}</span>}
+          <span className="admin-match-phase">{match.fase || 'Grupos'}</span>
         </div>
       </div>
 
-      {/* Estado del partido */}
+      {/* Match Card principal */}
+      <div className="admin-match-card">
+        {/* Franja superior: fase + estado + fecha */}
+        <div className="match-card-top">
+          <span className="match-phase-badge">{match.fase || 'Fase de Grupos'}</span>
+
+          <span className={`match-status-badge ${(match.estado || '').replace(' ', '-')}`}>
+            {estadoLabel}
+          </span>
+
+          {esProgramado && (fechaFormateada || match.hora) && (
+            <span className="match-datetime-info">
+              📅 {fechaFormateada && <span>{fechaFormateada}</span>}
+              {match.hora && <span> · 🕐 {match.hora}</span>}
+            </span>
+          )}
+        </div>
+
+        {/* Scoreboard */}
+        <div className="match-scoreboard">
+          {/* Equipo A */}
+          <div className="match-team">
+            <p className="match-team-sub">Equipo Local</p>
+            <h2 className="match-team-name">{equipoA || 'Por definir'}</h2>
+            <div className="match-score-block">
+              <span className="match-score-number">{match.marcadorA ?? 0}</span>
+            </div>
+            <button
+              className="match-goal-btn"
+              onClick={() => setMostrarInputGoleador('A')}
+              disabled={match.estado !== 'en curso'}
+            >
+              ⚽ Marcar Gol
+            </button>
+          </div>
+
+          {/* VS */}
+          <div className="match-vs-center">
+            <span className="match-vs-text">VS</span>
+          </div>
+
+          {/* Equipo B */}
+          <div className="match-team">
+            <p className="match-team-sub">Equipo Visitante</p>
+            <h2 className="match-team-name">{equipoB || 'Por definir'}</h2>
+            <div className="match-score-block">
+              <span className="match-score-number">{match.marcadorB ?? 0}</span>
+            </div>
+            <button
+              className="match-goal-btn"
+              onClick={() => setMostrarInputGoleador('B')}
+              disabled={match.estado !== 'en curso'}
+            >
+              ⚽ Marcar Gol
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Acciones de estado */}
       <div className="admin-match-status">
         <div className="admin-status-info">
-          <span className={`admin-status-badge ${match.estado}`}>
-            {(match.estado === "pendiente" || match.estado === "programado") && "⏳ Programado"}
-            {match.estado === "en curso" && "🟢 En Curso"}
-            {match.estado === "finalizado" && "✅ Finalizado"}
-          </span>
+          <span className={`admin-status-badge ${match.estado}`}>{estadoLabel}</span>
         </div>
         <div className="admin-status-actions">
-          {(match.estado === "pendiente" || match.estado === "programado") && (
-            <>
-              {equiposDefinidos() ? (
-                <>
-                  <button 
-                    onClick={() => cambiarEstado("en curso")}
-                    className="admin-btn admin-btn-start"
-                    title="Como administrador, puedes iniciar el partido en cualquier momento"
-                  >
-                    ▶️ Iniciar Partido
-                  </button>
-                  <div className="admin-privilege-info">
-                    <span className="privilege-icon">🛡️</span>
-                    <span className="privilege-text">Como administrador, puedes iniciar partidos sin restricciones de horario</span>
-                  </div>
-                </>
-              ) : (
+          {(match.estado === 'pendiente' || match.estado === 'programado') && (
+            equiposDefinidos() ? (
+              <>
+                <button onClick={() => cambiarEstado('en curso')} className="admin-btn admin-btn-start">
+                  ▶️ Iniciar Partido
+                </button>
                 <div className="admin-privilege-info">
-                  <span className="privilege-icon">⏳</span>
-                  <span className="privilege-text">Este partido no se puede iniciar hasta que se conozcan los equipos participantes</span>
+                  <span>🛡️</span>
+                  <span className="privilege-text">Puedes iniciar sin restricción de horario</span>
                 </div>
-              )}
-            </>
+              </>
+            ) : (
+              <div className="admin-privilege-info">
+                <span>⏳</span>
+                <span className="privilege-text">Esperando que se definan los equipos participantes</span>
+              </div>
+            )
           )}
-          {match.estado === "en curso" && (
-            <button 
-              onClick={() => cambiarEstado("finalizado")}
-              className="admin-btn admin-btn-finish"
-            >
+          {match.estado === 'en curso' && (
+            <button onClick={() => cambiarEstado('finalizado')} className="admin-btn admin-btn-finish">
               🏁 Finalizar Partido
             </button>
           )}
-          {match.estado === "finalizado" && (
-            <button 
-              onClick={() => cambiarEstado("en curso")}
-              className="admin-btn admin-btn-resume"
-            >
+          {match.estado === 'finalizado' && (
+            <button onClick={() => cambiarEstado('en curso')} className="admin-btn admin-btn-resume">
               ⏯️ Reanudar Partido
             </button>
           )}
         </div>
       </div>
 
-      {/* Marcador principal */}
-      <div className="admin-scoreboard">
-        {/* Equipo A */}
-        <div className="admin-team-section">
-          <div className="admin-team-header">
-            <div className="admin-team-icon">🏆</div>
-            <h2 className="admin-team-name">{equipoA}</h2>
-          </div>
-          <div className="admin-score-display">
-            <span className="admin-score">{match.marcadorA || 0}</span>
-          </div>
-          <button
-            onClick={() => setMostrarInputGoleador('A')}
-            className="admin-goal-btn"
-            disabled={match.estado !== "en curso"}
-          >
-            ⚽ Marcar Gol
-          </button>
-        </div>
-
-        {/* Separador */}
-        <div className="admin-vs-separator">
-          <span className="admin-vs-text">VS</span>
-        </div>
-
-        {/* Equipo B */}
-        <div className="admin-team-section">
-          <div className="admin-team-header">
-            <div className="admin-team-icon">🏆</div>
-            <h2 className="admin-team-name">{equipoB}</h2>
-          </div>
-          <div className="admin-score-display">
-            <span className="admin-score">{match.marcadorB || 0}</span>
-          </div>
-          <button
-            onClick={() => setMostrarInputGoleador('B')}
-            className="admin-goal-btn"
-            disabled={match.estado !== "en curso"}
-          >
-            ⚽ Marcar Gol
-          </button>
-        </div>
-      </div>
-
-      {/* Input para goleador */}
+      {/* Modal gol */}
       {mostrarInputGoleador && (
         <div className="admin-goal-input-modal">
           <div className="admin-modal-content">
-            <h3>
-              Gol para {mostrarInputGoleador === 'A' ? equipoA : equipoB}
-            </h3>
-            
-            {/* Lista de jugadores del equipo */}
+            <h3>⚽ Gol para {mostrarInputGoleador === 'A' ? equipoA : equipoB}</h3>
+
             <div className="admin-player-selector">
               <h4>Seleccionar Jugador:</h4>
               <div className="admin-players-grid">
-                {(mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).length > 0 ? (
-                  (mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).map((jugador) => (
-                    <button
-                      key={jugador.id}
-                      onClick={() => setGoleadorInput(`#${jugador.numero || '?'} ${jugador.nombre}`)}
-                      className={`admin-player-selector-btn ${
-                        goleadorInput === `#${jugador.numero || '?'} ${jugador.nombre}` ? 'selected' : ''
-                      }`}
-                    >
-                      <span className="player-number-btn">#{jugador.numero || '?'}</span>
-                      <span className="player-name-btn">{jugador.nombre}</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="no-players-available">
-                    <span className="no-players-icon">⚠️</span>
-                    <span>No hay jugadores registrados para este equipo</span>
-                  </div>
-                )}
+                {(mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).length > 0
+                  ? (mostrarInputGoleador === 'A' ? jugadoresEquipoA : jugadoresEquipoB).map(j => (
+                      <button
+                        key={j.id}
+                        onClick={() => setGoleadorInput(`#${j.numero || '?'} ${j.nombre}`)}
+                        className={`admin-player-selector-btn ${goleadorInput === `#${j.numero || '?'} ${j.nombre}` ? 'selected' : ''}`}
+                      >
+                        <span className="player-number-btn">#{j.numero || '?'}</span>
+                        <span className="player-name-btn">{j.nombre}</span>
+                      </button>
+                    ))
+                  : <div className="no-players-available"><span>⚠️</span><span>Sin jugadores registrados</span></div>
+                }
               </div>
             </div>
-            
-            {/* Input manual como alternativa */}
+
             <div className="admin-manual-input">
-              <h4>O buscar por número de jugador:</h4>
+              <h4>O buscar por número:</h4>
               <div className="numero-jugador-busqueda">
                 <input
-                  type="number"
+                  type="number" min="1"
                   placeholder="Número del jugador..."
                   value={numeroJugadorBusqueda}
-                  onChange={(e) => setNumeroJugadorBusqueda(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      asignarGolPorNumero();
-                    }
-                  }}
+                  onChange={e => setNumeroJugadorBusqueda(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && asignarGolPorNumero()}
                   className="admin-goal-input"
-                  min="1"
                 />
-                <button
-                  onClick={asignarGolPorNumero}
-                  className="admin-btn admin-btn-search"
-                  disabled={!numeroJugadorBusqueda.trim()}
-                >
+                <button onClick={asignarGolPorNumero} className="admin-btn admin-btn-search" disabled={!numeroJugadorBusqueda.trim()}>
                   🔍 Buscar
                 </button>
               </div>
-              
               {goleadorInput && (
                 <div className="jugador-seleccionado">
-                  <span>Jugador seleccionado: <strong>{goleadorInput}</strong></span>
-                  <button
-                    onClick={() => {
-                      setGoleadorInput("");
-                      setNumeroJugadorBusqueda("");
-                    }}
-                    className="admin-btn admin-btn-clear"
-                  >
-                    ✖ Limpiar
-                  </button>
+                  <span>Seleccionado: <strong>{goleadorInput}</strong></span>
+                  <button onClick={() => { setGoleadorInput(''); setNumeroJugadorBusqueda(''); }} className="admin-btn admin-btn-clear">✖ Limpiar</button>
                 </div>
               )}
             </div>
-            
+
             <div className="admin-modal-actions">
-              <button
-                onClick={() => marcarGol(mostrarInputGoleador)}
-                className="admin-btn admin-btn-confirm"
-                disabled={!goleadorInput.trim()}
-              >
+              <button onClick={() => marcarGol(mostrarInputGoleador)} className="admin-btn admin-btn-confirm" disabled={!goleadorInput.trim()}>
                 ✅ Confirmar Gol
               </button>
-              <button
-                onClick={() => {
-                  setMostrarInputGoleador(null);
-                  setGoleadorInput("");
-                  setNumeroJugadorBusqueda("");
-                }}
-                className="admin-btn admin-btn-cancel"
-              >
+              <button onClick={() => { setMostrarInputGoleador(null); setGoleadorInput(''); setNumeroJugadorBusqueda(''); }} className="admin-btn admin-btn-cancel">
                 ❌ Cancelar
               </button>
             </div>
@@ -1104,244 +1082,141 @@ export default function AdminMatchDetail() {
         </div>
       )}
 
-      {/* Lista de goleadores */}
+      {/* Goleadores */}
       <div className="admin-goalscorers-section">
         <div className="admin-goalscorers-header">
           <h3 className="admin-section-title">⚽ Goleadores del Partido</h3>
           <div className="admin-goalscorer-controls">
             {editandoGoleadores ? (
               <div className="admin-edit-actions">
-                <button
-                  onClick={guardarGoleadores}
-                  className="admin-btn admin-btn-save"
-                >
-                  💾 Guardar Cambios
-                </button>
-                <button
-                  onClick={cancelarEdicionGoleadores}
-                  className="admin-btn admin-btn-cancel"
-                >
-                  ❌ Cancelar
-                </button>
+                <button onClick={guardarGoleadores} className="admin-btn admin-btn-save">💾 Guardar</button>
+                <button onClick={cancelarEdicionGoleadores} className="admin-btn admin-btn-cancel">❌ Cancelar</button>
               </div>
             ) : (
-              <button
-                onClick={() => setEditandoGoleadores(true)}
-                className="admin-btn admin-btn-edit"
-              >
-                ✏️ Editar Goleadores
-              </button>
+              <button onClick={() => setEditandoGoleadores(true)} className="admin-btn admin-btn-edit">✏️ Editar</button>
             )}
           </div>
         </div>
 
         <div className="admin-goalscorers-grid">
-          {/* Goleadores Equipo A */}
+          {/* Equipo A */}
           <div className="admin-team-goalscorers">
             <h4 className="admin-team-subtitle">{equipoA}</h4>
             <div className="admin-goalscorers-list">
               {editandoGoleadores ? (
                 <>
-                  {goleadoresTemporal.A.map((nombre, index) => (
-                    <div key={index} className="admin-goalscorer-edit-item">
-                      <input
-                        type="text"
-                        value={nombre}
-                        onChange={(e) => editarNombreGoleador('A', index, e.target.value)}
-                        className="admin-goalscorer-input"
-                      />
-                      <button
-                        onClick={() => eliminarGoleador('A', index)}
-                        className="admin-btn-remove"
-                      >
-                        🗑️
-                      </button>
+                  {goleadoresTemporal.A.map((nombre, i) => (
+                    <div key={i} className="admin-goalscorer-edit-item">
+                      <input type="text" value={nombre} onChange={e => editarNombreGoleador('A', i, e.target.value)} className="admin-goalscorer-input" />
+                      <button onClick={() => eliminarGoleador('A', i)} className="admin-btn-remove">🗑️</button>
                     </div>
                   ))}
                   <div className="admin-add-goalscorer">
-                    <input
-                      type="text"
-                      placeholder="Agregar goleador..."
-                      value={nuevoGoleador.A}
-                      onChange={(e) => setNuevoGoleador(prev => ({
-                        ...prev,
-                        A: e.target.value
-                      }))}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          agregarGoleador('A');
-                        }
-                      }}
-                      className="admin-goalscorer-input"
-                    />
-                    <button
-                      onClick={() => agregarGoleador('A')}
-                      className="admin-btn-add"
-                    >
-                      ➕
-                    </button>
+                    <input type="text" placeholder="Agregar goleador..." value={nuevoGoleador.A}
+                      onChange={e => setNuevoGoleador(p => ({ ...p, A: e.target.value }))}
+                      onKeyPress={e => e.key === 'Enter' && agregarGoleador('A')}
+                      className="admin-goalscorer-input" />
+                    <button onClick={() => agregarGoleador('A')} className="admin-btn-add">➕</button>
                   </div>
                 </>
               ) : (
-                <>
-                  {Object.keys(goleadoresA).length > 0 ? (
-                    Object.entries(goleadoresA).map(([nombre, goles]) => (
+                Object.keys(goleadoresA).length > 0
+                  ? Object.entries(goleadoresA).map(([nombre, goles]) => (
                       <div key={nombre} className="admin-goalscorer-item">
                         <span className="admin-player-name">{nombre}</span>
-                        <span className="admin-goal-count">({goles})</span>
+                        <span className="admin-goal-count">{goles > 1 ? `×${goles}` : '⚽'}</span>
                       </div>
                     ))
-                  ) : (
-                    <p className="admin-no-goals">Sin goles aún</p>
-                  )}
-                </>
+                  : <p className="admin-no-goals">Sin goles aún</p>
               )}
             </div>
           </div>
 
-          {/* Goleadores Equipo B */}
+          {/* Equipo B */}
           <div className="admin-team-goalscorers">
             <h4 className="admin-team-subtitle">{equipoB}</h4>
             <div className="admin-goalscorers-list">
               {editandoGoleadores ? (
                 <>
-                  {goleadoresTemporal.B.map((nombre, index) => (
-                    <div key={index} className="admin-goalscorer-edit-item">
-                      <input
-                        type="text"
-                        value={nombre}
-                        onChange={(e) => editarNombreGoleador('B', index, e.target.value)}
-                        className="admin-goalscorer-input"
-                      />
-                      <button
-                        onClick={() => eliminarGoleador('B', index)}
-                        className="admin-btn-remove"
-                      >
-                        🗑️
-                      </button>
+                  {goleadoresTemporal.B.map((nombre, i) => (
+                    <div key={i} className="admin-goalscorer-edit-item">
+                      <input type="text" value={nombre} onChange={e => editarNombreGoleador('B', i, e.target.value)} className="admin-goalscorer-input" />
+                      <button onClick={() => eliminarGoleador('B', i)} className="admin-btn-remove">🗑️</button>
                     </div>
                   ))}
                   <div className="admin-add-goalscorer">
-                    <input
-                      type="text"
-                      placeholder="Agregar goleador..."
-                      value={nuevoGoleador.B}
-                      onChange={(e) => setNuevoGoleador(prev => ({
-                        ...prev,
-                        B: e.target.value
-                      }))}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          agregarGoleador('B');
-                        }
-                      }}
-                      className="admin-goalscorer-input"
-                    />
-                    <button
-                      onClick={() => agregarGoleador('B')}
-                      className="admin-btn-add"
-                    >
-                      ➕
-                    </button>
+                    <input type="text" placeholder="Agregar goleador..." value={nuevoGoleador.B}
+                      onChange={e => setNuevoGoleador(p => ({ ...p, B: e.target.value }))}
+                      onKeyPress={e => e.key === 'Enter' && agregarGoleador('B')}
+                      className="admin-goalscorer-input" />
+                    <button onClick={() => agregarGoleador('B')} className="admin-btn-add">➕</button>
                   </div>
                 </>
               ) : (
-                <>
-                  {Object.keys(goleadoresB).length > 0 ? (
-                    Object.entries(goleadoresB).map(([nombre, goles]) => (
+                Object.keys(goleadoresB).length > 0
+                  ? Object.entries(goleadoresB).map(([nombre, goles]) => (
                       <div key={nombre} className="admin-goalscorer-item">
                         <span className="admin-player-name">{nombre}</span>
-                        <span className="admin-goal-count">({goles})</span>
+                        <span className="admin-goal-count">{goles > 1 ? `×${goles}` : '⚽'}</span>
                       </div>
                     ))
-                  ) : (
-                    <p className="admin-no-goals">Sin goles aún</p>
-                  )}
-                </>
+                  : <p className="admin-no-goals">Sin goles aún</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Información adicional */}
+      {/* Información adicional / Horario */}
       <div className="admin-match-additional-info">
+        <h3 className="admin-section-title" style={{marginBottom:'1rem'}}>📋 Información del Partido</h3>
         <div className="admin-info-grid">
           <div className="admin-info-item">
-            <span className="admin-info-label">📅 Fecha:</span>
-            {editandoHorario ? (
-              <input
-                type="date"
-                value={fechaTemporal} 
-                onChange={(e) => setFechaTemporal(e.target.value)}
-                className="admin-date-input"
-              />
-            ) : (
-              <span className="admin-info-value">
-                {match.fechaCompleta ? 
-                  new Date(match.fechaCompleta + 'T00:00:00').toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) : 
-                  (match.fecha || "No definida")
-                }
-              </span>
-            )}
+            <span className="admin-info-label">📅 Fecha</span>
+            {editandoHorario
+              ? <input type="date" value={fechaTemporal} onChange={e => setFechaTemporal(e.target.value)} className="admin-date-input" />
+              : <span className="admin-info-value">{fechaFormateada || 'No definida'}</span>
+            }
           </div>
           <div className="admin-info-item">
-            <span className="admin-info-label">🕐 Hora:</span>
-            {editandoHorario ? (
-              <select 
-                value={horaTemporal} 
-                onChange={(e) => setHoraTemporal(e.target.value)}
-                className="admin-time-select"
-              >
-                <option value="">Sin hora</option>
-                <option value="07:05">07:05</option>
-                <option value="07:50">07:50</option>
-                <option value="08:35">08:35</option>
-                <option value="09:20">09:20</option>
-                <option value="10:05">10:05</option>
-                <option value="10:50">10:50</option>
-                <option value="11:35">11:35</option>
-                <option value="12:20">12:20</option>
-                <option value="13:00">13:00</option>
-              </select>
-            ) : (
-              <span className="admin-info-value">{match.hora || "No definida"}</span>
-            )}
+            <span className="admin-info-label">🕐 Hora</span>
+            {editandoHorario
+              ? (
+                <select value={horaTemporal} onChange={e => setHoraTemporal(e.target.value)} className="admin-date-input">
+                  <option value="">Sin hora</option>
+                  {['07:05','07:50','08:35','09:20','10:05','10:50','11:35','12:20','13:00'].map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              )
+              : <span className="admin-info-value">{match.hora || 'No definida'}</span>
+            }
           </div>
           <div className="admin-info-item">
-            <span className="admin-info-label">📝 Horario:</span>
-            {editandoHorario ? (
-              <div className="admin-schedule-buttons">
-                <button className="admin-save-btn" onClick={actualizarFechaHora}>
-                  ✅ Guardar
-                </button>
-                <button className="admin-cancel-btn" onClick={cancelarEdicionHorario}>
-                  ❌ Cancelar
-                </button>
-              </div>
-            ) : (
-              <button className="admin-edit-btn" onClick={() => setEditandoHorario(true)}>
-                ✏️ Editar Horario
-              </button>
-            )}
+            <span className="admin-info-label">✏️ Horario</span>
+            {editandoHorario
+              ? <div className="admin-schedule-buttons">
+                  <button className="admin-save-btn" onClick={actualizarFechaHora}>✅ Guardar</button>
+                  <button className="admin-cancel-btn" onClick={cancelarEdicionHorario}>❌ Cancelar</button>
+                </div>
+              : <button className="admin-edit-btn" onClick={() => setEditandoHorario(true)}>✏️ Editar</button>
+            }
           </div>
           <div className="admin-info-item">
-            <span className="admin-info-label">🏟️ Grupo:</span>
-            <span className="admin-info-value">{match.grupo}</span>
+            <span className="admin-info-label">🏟️ Grupo</span>
+            <span className="admin-info-value">{match.grupo || '—'}</span>
           </div>
           <div className="admin-info-item">
-            <span className="admin-info-label">🏆 Fase:</span>
-            <span className="admin-info-value">{match.fase || "Grupos"}</span>
+            <span className="admin-info-label">🏆 Fase</span>
+            <span className="admin-info-value">{match.fase || 'Grupos'}</span>
+          </div>
+          <div className="admin-info-item">
+            <span className="admin-info-label">⚽ Disciplina</span>
+            <span className="admin-info-value">{match.disciplina || '—'}</span>
           </div>
         </div>
       </div>
-      
-      {/* Toast Container */}
+
       <ToastContainer />
     </div>
   );

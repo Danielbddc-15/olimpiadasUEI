@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where } from "../api/firestoreCompat";
 import { db } from '../firebase/config';
 import { createScheduler, DISCIPLINES_CONFIG, WORK_DAYS, AVAILABLE_TIMES } from '../utils/DisciplineScheduler.js';
 import { createAlternationLogic } from '../utils/AlternationLogic.js';
@@ -553,16 +553,25 @@ export default function AdminCronogramas() {
     <div className="admin-cronogramas-container">
       {/* Header */}
       <div className="admin-header">
-        <button onClick={() => navigate('/admin')} className="back-btn">
-          ← Volver al Panel
-        </button>
-        <div className="header-content">
-          <div className="header-icon">📅</div>
+        <div className="header-content" style={{textAlign: 'center', width: '100%'}}>
+          <div className="header-icon" style={{marginRight: 10, display: 'inline-block'}}>📅</div>
           <h1 className="admin-title">Gestión de Cronogramas</h1>
           <p className="admin-subtitle">
             Sistema integral para múltiples disciplinas deportivas
           </p>
         </div>
+      </div>
+
+      {/* Navegación rápida */}
+      <div className="quick-navigation" style={{justifyContent: 'center', marginBottom: '2rem'}}>
+        <button onClick={() => navigate('/admin')} className="nav-card panel-card">
+          <div className="nav-card-icon">🏠</div>
+          <div className="nav-card-content">
+            <h3>Volver al Panel</h3>
+            <p>Ir al panel principal</p>
+          </div>
+          <div className="nav-card-arrow">→</div>
+        </button>
       </div>
 
       {/* Navigation Tabs */}

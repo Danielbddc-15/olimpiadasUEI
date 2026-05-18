@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "../firebase/config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "../api/firestoreCompat";
 import Matches from "../components/Matches";
 import Loading from "../components/Loading"; // opcional: muestra un "Cargando..."
 

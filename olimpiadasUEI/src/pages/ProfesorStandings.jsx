@@ -6,7 +6,7 @@ import {
   where,
   addDoc,
   onSnapshot,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useParams } from "react-router-dom";
 import "../styles/ProfesorStandings.css";
@@ -666,6 +666,13 @@ export default function ProfesorStandings() {
         >
           <span className="nav-icon">🏠</span>
           <span className="nav-text">Panel</span>
+        </Link>
+        <Link
+          to={`/profesor/${discipline}/equipos`}
+          className={`nav-link ${location.pathname.includes("/equipos") ? "active" : ""}`}
+        >
+          <span className="nav-icon">👥</span>
+          <span className="nav-text">Equipos</span>
         </Link>
         <Link
           to={`/profesor/${discipline}/partidos`}

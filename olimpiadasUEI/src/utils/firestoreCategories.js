@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, addDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, addDoc } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 
 // Crear una nueva categoría

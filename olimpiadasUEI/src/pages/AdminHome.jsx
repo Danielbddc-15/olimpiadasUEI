@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
+// auth import removed
+import { useAuth } from "../context/AuthContext";
 import "../styles/AdminHome.css";
 import { Link } from "react-router-dom";
 
 export default function AdminHome() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const irA = (discipline, section) => {
     navigate(`/admin/${discipline}/${section}`);
@@ -13,12 +14,7 @@ export default function AdminHome() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      // Limpiar localStorage
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('sessionTimestamp');
-      // Redirigir al login
+      logout();
       navigate("/");
     } catch (error) {
       console.error("Error al cerrar sesión:", error);

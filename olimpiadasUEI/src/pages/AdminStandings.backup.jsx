@@ -6,7 +6,7 @@ import {
   where,
   addDoc,
   onSnapshot,
-} from "firebase/firestore";
+} from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/AdminStandings.css";

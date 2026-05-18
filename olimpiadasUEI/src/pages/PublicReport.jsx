@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, query, where } from "../api/firestoreCompat";
 import { useParams } from "react-router-dom";
 import { db } from "../firebase/config";
 import "../styles/PublicTournament.css";

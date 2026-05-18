@@ -30,14 +30,16 @@ import ProfesorTeams from "./pages/ProfesorTeams";
 import CategoriasAdmin from "./components/CategoriasAdmin";
 
 // Notification system
+import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import NotificationContainer from "./components/CustomNotification";
 
 function App() {
   return (
-    <NotificationProvider>
-      <Router>
-        <NotificationContainer />
+    <AuthProvider>
+      <NotificationProvider>
+        <Router>
+          <NotificationContainer />
       <Routes>
         {/* Login */}
         <Route path="/" element={<Login />} />
@@ -234,7 +236,8 @@ function App() {
         />
       </Routes>
       </Router>
-    </NotificationProvider>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }
 

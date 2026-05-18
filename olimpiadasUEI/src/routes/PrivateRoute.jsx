@@ -1,60 +1,11 @@
 import { Navigate } from "react-router-dom";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db } from "../firebase/config";
-import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 export default function PrivateRoute({ children, allowedRoles = ["admin"] }) {
-  const [user, loading, error] = useAuthState(auth);
-  const [role, setRole] = useState(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    const verify = async () => {
-      setChecking(true);
-      
-      if (user) {
-        try {
-          // Verificar si el token sigue siendo válido
-          await user.getIdToken(true);
-          
-          // Obtener rol desde Firestore
-          const docSnap = await getDoc(doc(db, "users", user.uid));
-          const userRole = docSnap.exists() ? docSnap.data().role : "visitor";
-          
-          // Actualizar localStorage con información de sesión
-          localStorage.setItem('userRole', userRole);
-          localStorage.setItem('userEmail', user.email);
-          localStorage.setItem('sessionTimestamp', Date.now().toString());
-          
-          setRole(userRole);
-        } catch (authError) {
-          console.error("Error verificando autenticación:", authError);
-          // Limpiar localStorage si hay error de autenticación
-          localStorage.removeItem('userRole');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('sessionTimestamp');
-          setRole(null);
-        }
-      } else {
-        // No hay usuario, limpiar localStorage
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('sessionTimestamp');
-        setRole(null);
-      }
-      
-      setChecking(false);
-    };
-
-    // Solo verificar si no está cargando
-    if (!loading) {
-      verify();
-    }
-  }, [user, loading]);
+  const { user, loading } = useAuth();
 
   // Mostrar loading mientras verifica
-  if (loading || checking) {
+  if (loading) {
     return (
       <div style={{
         display: 'flex',
@@ -80,19 +31,17 @@ export default function PrivateRoute({ children, allowedRoles = ["admin"] }) {
     );
   }
 
-  // Si hay error de autenticación, redirigir al login
-  if (error) {
-    console.error("Error de autenticación:", error);
-    return <Navigate to="/" replace />;
-  }
-
   // Si no hay usuario autenticado, redirigir al login
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
   // Si el rol no está permitido, redirigir a inicio
-  if (!allowedRoles.includes(role)) {
+  // Nota: Firebase guardaba "admin", PostgreSQL guarda "ADMIN". Comparamos en minúscula.
+  const userRoleLower = user.role.toLowerCase();
+  const isAllowed = allowedRoles.some(role => role.toLowerCase() === userRoleLower);
+
+  if (!isAllowed) {
     return <Navigate to="/" replace />;
   }
 

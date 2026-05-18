@@ -8,7 +8,7 @@ import {
   obtenerEquipos,
 } from "../utils/firestoreCategories";
 import { generarPartidosGrupo, generarSemifinales } from "../utils/GenerateGroupMatches";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
 
 function CategoriasAdmin() {

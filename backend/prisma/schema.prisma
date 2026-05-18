@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(uuid())
+  nombre   String?
+  email    String @unique
+  password String
+  role     String @default("USER") // ADMIN, PROFESOR, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Categoria {
+  id               String @id @default(uuid())
+  nombre           String
+  disciplina       String
+  genero           String?
+  nivelEducacional String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model NivelEducacional {
+  id         String @id @default(uuid())
+  nombre     String
+  disciplina String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Grupo {
+  id               String @id @default(uuid())
+  nombre           String
+  categoria        String
+  nivelEducacional String
+  genero           String
+  disciplina       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Equipo {
+  id               String @id @default(uuid())
+  curso            String
+  paralelo         String
+  grupo            String
+  categoria        String
+  nivelEducacional String
+  genero           String
+  disciplina       String
+  
+  jugadores        Jugador[]
+  partidosComoA    Match[] @relation("EquipoA")
+  partidosComoB    Match[] @relation("EquipoB")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Jugador {
+  id               String @id @default(uuid())
+  nombre           String
+  curso            String
+  paralelo         String
+  categoria        String
+  nivelEducacional String
+  genero           String
+  disciplina       String
+  grupo            String?
+  numero           Int?
+  
+  equipoId         String?
+  equipo           Equipo? @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Match {
+  id               String @id @default(uuid())
+  
+  equipoAId        String?
+  equipoA          Equipo? @relation("EquipoA", fields: [equipoAId], references: [id], onDelete: SetNull)
+  
+  equipoBId        String?
+  equipoB          Equipo? @relation("EquipoB", fields: [equipoBId], references: [id], onDelete: SetNull)
+
+  grupo            String?
+  fase             String
+  estado           String @default("programado")
+  disciplina       String
+  categoria        String
+  genero           String
+  nivelEducacional String
+  
+  marcadorA        Int? @default(0)
+  marcadorB        Int? @default(0)
+  
+  fecha            String?
+  hora             String?
+  
+  goleadoresA      Json?
+  goleadoresB      Json?
+  
+  observaciones    String?
+  fechaCompleta    String?
+  semana           Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

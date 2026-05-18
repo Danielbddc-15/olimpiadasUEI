@@ -5,8 +5,8 @@
     <link rel="icon" type="image/png" href="/olimpiadasUEI.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     
-    <!-- Políticas de seguridad estrictas -->
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; connect-src 'self' https:;">
+    <!-- Políticas de seguridad estrictas (ajustadas para desarrollo local) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: http:; connect-src 'self' https: http://localhost:* ws://localhost:*;">
     <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
