@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { collection, getDocs, onSnapshot, query } from "../api/firestoreCompat";
+import { collection, getDocs, onSnapshot, query, where } from "../api/firestoreCompat";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../firebase/config";
 import "../styles/PublicTournament.css";
@@ -88,6 +88,25 @@ export default function PublicStandings() {
   const [filtroCategoria, setFiltroCategoria] = useState(() => {
     return localStorage.getItem(`olimpiadas_public_standings_filtro_categoria_${discipline}`) || "";
   });
+  const [categorias, setCategorias] = useState([]);
+
+  // Cargar categorías
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      try {
+        const q = query(
+          collection(db, "categorias"),
+          where("disciplina", "==", discipline)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setCategorias(data);
+      } catch (error) {
+        console.error("Error al cargar categorías en standings:", error);
+      }
+    };
+    fetchCategorias();
+  }, [discipline]);
 
   // Cargar grupos
   useEffect(() => {
@@ -349,15 +368,13 @@ export default function PublicStandings() {
   }, [filtroNivelEducacional]);
 
   // Extraer opciones únicas para filtros
-  const generosDisponibles = [...new Set(equipos.map(eq => eq.genero).filter(Boolean))];
+  const generosDisponibles = [...new Set(categorias.map(cat => cat.genero).filter(Boolean))];
   const nivelesDisponibles = filtroGenero
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.nivelEducacional).filter(Boolean))]
-    : [...new Set(equipos.map(eq => eq.nivelEducacional).filter(Boolean))];
-  const categoriasDisponibles = filtroNivelEducacional
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero && eq.nivelEducacional === filtroNivelEducacional).map(eq => eq.categoria).filter(Boolean))]
-    : filtroGenero
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.categoria).filter(Boolean))]
-    : [...new Set(equipos.map(eq => eq.categoria).filter(Boolean))];
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero).map(cat => cat.nivelEducacional).filter(Boolean))]
+    : [];
+  const categoriasDisponibles = (filtroGenero && filtroNivelEducacional)
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero && cat.nivelEducacional === filtroNivelEducacional).map(cat => cat.nombre).filter(Boolean))]
+    : [];
 
   // Filtrar grupos según los filtros aplicados
   const gruposFiltrados = Object.keys(standingsPorGrupo).filter(grupo => {
@@ -486,25 +503,6 @@ export default function PublicStandings() {
           <p className="section-subtitle">
             Clasificación actual del {grupoActual}
           </p>
-        </div>
-        <div className="header-actions">
-          <button 
-            onClick={goToDisciplineSelector}
-            className="nav-btn secondary"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <span style={{ color: '#000' }}>←</span> 📋 Disciplinas
-          </button>
-          <button 
-            onClick={goToLogin}
-            className="nav-btn primary"
-          >
-            🚪 Salir
-          </button>
         </div>
       </div>
 

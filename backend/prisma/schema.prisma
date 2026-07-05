@@ -107,10 +107,15 @@ model Match {
   
   goleadoresA      Json?
   goleadoresB      Json?
+  sets             Json?
+  anotadoresA      Json?
+  anotadoresB      Json?
   
   observaciones    String?
   fechaCompleta    String?
   semana           Int?
+  fechaInicio      String?
+  fechaFinalizacion String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

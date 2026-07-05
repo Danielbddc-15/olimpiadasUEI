@@ -122,8 +122,8 @@ export default function ProfesorVoleyMatchDetail() {
 
   // Determinar reglas según fase
   const esFaseGrupos = ["grupos", "grupos1", "grupos3"].includes(match?.fase || "grupos1");
-  const esSemifinal = match?.fase === "semifinales";
-  const esFinal = match?.fase === "finales";
+  const esSemifinal = match?.fase === "semifinal" || match?.fase === "semifinales";
+  const esFinal = match?.fase === "final" || match?.fase === "finales" || match?.fase === "tercerPuesto" || match?.fase === "tercer_puesto";
 
   const reglasJuego = esFaseGrupos 
     ? { sets: 1, puntosPorSet: 20, descripcion: "1 set de 20 puntos" }
@@ -386,6 +386,55 @@ export default function ProfesorVoleyMatchDetail() {
     } catch (error) {
       console.error("Error al marcar punto:", error);
       showToast("Error al marcar punto", "error");
+    }
+  };
+
+  // Función para marcar punto por falta (sin necesidad de seleccionar jugador)
+  const marcarPuntoPorFalta = async (equipo, setActual) => {
+    try {
+      const sets = inicializarSets();
+      const nuevoSets = [...sets];
+      
+      const limitePuntos = obtenerPuntosSet(setActual, sets);
+
+      const setCompleto = ganadorSet(sets[setActual], limitePuntos) !== null;
+      if (setCompleto) {
+        showToast("Este set ya está completo", "warning");
+        return;
+      }
+
+      // Incrementar punto
+      nuevoSets[setActual] = {
+        ...nuevoSets[setActual],
+        [equipo]: (nuevoSets[setActual][equipo] || 0) + 1
+      };
+
+      // Agregar anotador genérico
+      const anotadoresKey = `anotadores${equipo}`;
+      const nuevosAnotadores = [...(match[anotadoresKey] || []), "Punto por Falta"];
+
+      const marcadorTotal = nuevoSets.reduce((total, set) => total + (set[equipo] || 0), 0);
+
+      const updateData = {
+        sets: nuevoSets,
+        [anotadoresKey]: nuevosAnotadores,
+        [`marcador${equipo}`]: marcadorTotal
+      };
+
+      await updateDoc(doc(db, "matches", matchId), updateData);
+
+      setMatch(prev => ({
+        ...prev,
+        ...updateData
+      }));
+
+      setPuntoInput("");
+      setMostrarInputPunto(null);
+      showToast("Punto por falta registrado correctamente", "success");
+
+    } catch (error) {
+      console.error("Error al marcar punto por falta:", error);
+      showToast("Error al marcar punto por falta", "error");
     }
   };
 
@@ -789,6 +838,13 @@ export default function ProfesorVoleyMatchDetail() {
                 disabled={!puntoInput.trim()}
               >
                 ✅ Confirmar
+              </button>
+              <button
+                onClick={() => marcarPuntoPorFalta(mostrarInputPunto.equipo, mostrarInputPunto.set)}
+                className="admin-btn admin-btn-foul"
+                style={{ backgroundColor: '#ed8936', color: 'white', marginRight: '10px' }}
+              >
+                ⚠️ Punto por Falta
               </button>
               <button
                 onClick={() => {

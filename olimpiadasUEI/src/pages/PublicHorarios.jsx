@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query, where } from "../api/firestoreCompat";
 import { db } from "../firebase/config";
+import "../styles/PublicTournament.css";
 import "../styles/PublicMatches.css";
 
 export default function PublicHorarios() {
@@ -19,6 +20,56 @@ export default function PublicHorarios() {
   const [filtroGenero, setFiltroGenero] = useState("");
   const [filtroNivelEducacional, setFiltroNivelEducacional] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [categorias, setCategorias] = useState([]);
+
+  // Cargar categorías en tiempo real desde Firestore
+  useEffect(() => {
+    const q = query(
+      collection(db, "categorias"),
+      where("disciplina", "==", discipline)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setCategorias(data);
+    });
+    return () => unsubscribe();
+  }, [discipline]);
+
+  // Manejar cambio de género
+  const handleFiltroGeneroChange = (value) => {
+    setFiltroGenero(value);
+    setFiltroNivelEducacional(""); // Reset dependientes
+    setFiltroCategoria("");
+  };
+
+  // Manejar cambio de nivel educacional
+  const handleFiltroNivelEducacionalChange = (value) => {
+    setFiltroNivelEducacional(value);
+    setFiltroCategoria(""); // Reset dependientes
+  };
+
+  // Obtener opciones de niveles educacionales disponibles según el género seleccionado
+  const getNivelesDisponibles = () => {
+    if (!filtroGenero) return [];
+    return [...new Set(categorias
+      .filter(c => c.genero === filtroGenero)
+      .map(c => c.nivelEducacional)
+      .filter(Boolean)
+    )];
+  };
+
+  // Obtener opciones de categorías disponibles según género y nivel seleccionados
+  const getCategoriasDisponibles = () => {
+    if (!filtroGenero || !filtroNivelEducacional) return [];
+    return [...new Set(categorias
+      .filter(c => c.genero === filtroGenero && c.nivelEducacional === filtroNivelEducacional)
+      .map(c => c.nombre)
+      .filter(Boolean)
+    )];
+  };
+
+  // Extraer géneros únicos
+  const generosDisponibles = [...new Set(categorias.map(cat => cat.genero).filter(Boolean))];
 
   const diasLaborables = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
   
@@ -346,79 +397,124 @@ export default function PublicHorarios() {
     setFiltroCategoria("");
   };
 
+  // Obtener fases disponibles desde los partidos reales
+  const getFasesDisponibles = () => {
+    const fases = new Set();
+    matches.forEach(match => {
+      const faseKey = match.fase || 'grupos1';
+      fases.add(faseKey);
+    });
+    return Array.from(fases);
+  };
+
+  const mappingFases = {
+    'grupos1': 'Fase de Grupos 1',
+    'grupos3': 'Posicionamiento',
+    'semifinal': 'Semifinales',
+    'final': 'Finales'
+  };
+
   if (loading) {
     return (
-      <div className="public-matches-container">
-        <div className="loading-section">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">Cargando horarios...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Cargando horarios...</p>
       </div>
     );
   }
 
   return (
-    <div className="public-matches-container">
+    <div className="section-container">
       {/* Header */}
-      <div className="public-header">
-        <div className="public-header-content">
-          <div className="public-title-section">
-            <h1 className="public-title">
-              <span className="public-icon">📅</span>
-              Horarios de las Olimpiadas UEI
-            </h1>
-            <p className="public-subtitle">
-              {`${disciplinasConfig[discipline]?.nombre || discipline}`}
-            </p>
-          </div>
-        </div>
+      <div className="section-header" style={{ marginBottom: "2rem" }}>
+        <h2 className="section-title">
+          <span className="title-icon">📅</span>
+          Horarios
+        </h2>
+        <p className="section-subtitle">
+          Programación de partidos por semanas y días
+        </p>
       </div>
 
       {/* Filtros */}
-      <div className="public-filters">
+      <div className="filter-controls">
         <div className="filters-row">
           <div className="filter-group">
-            <label>Fase:</label>
-            <select value={selectedPhase} onChange={(e) => setSelectedPhase(e.target.value)}>
+            <label className="filter-label">Fase:</label>
+            <select 
+              value={selectedPhase} 
+              onChange={(e) => setSelectedPhase(e.target.value)}
+              className="modern-select"
+            >
               <option value="todas">Todas las fases</option>
-              <option value="grupos1">Fase de Grupos 1</option>
-              <option value="grupos3">Posicionamiento</option>
-              <option value="semifinal">Semifinales</option>
-              <option value="final">Finales</option>
+              {getFasesDisponibles().map(faseKey => (
+                <option key={faseKey} value={faseKey}>
+                  {mappingFases[faseKey] || (faseKey.charAt(0).toUpperCase() + faseKey.slice(1))}
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="filter-group">
-            <label>Género:</label>
-            <select value={filtroGenero} onChange={(e) => setFiltroGenero(e.target.value)}>
-              <option value="">Todos</option>
-              {getUniqueValues('genero').map(genero => (
+            <label className="filter-label">🚻 Género:</label>
+            <select 
+              value={filtroGenero} 
+              onChange={(e) => handleFiltroGeneroChange(e.target.value)}
+              className="modern-select"
+            >
+              <option value="">Todos los géneros</option>
+              {generosDisponibles.map(genero => (
                 <option key={genero} value={genero}>{genero}</option>
               ))}
             </select>
           </div>
 
           <div className="filter-group">
-            <label>Nivel:</label>
-            <select value={filtroNivelEducacional} onChange={(e) => setFiltroNivelEducacional(e.target.value)}>
-              <option value="">Todos</option>
-              {getUniqueValues('nivelEducacional').map(nivel => (
+            <label className="filter-label">🎓 Nivel:</label>
+            <select 
+              value={filtroNivelEducacional} 
+              onChange={(e) => handleFiltroNivelEducacionalChange(e.target.value)}
+              disabled={!filtroGenero}
+              className="modern-select"
+            >
+              <option value="">Todos los niveles</option>
+              {getNivelesDisponibles().map(nivel => (
                 <option key={nivel} value={nivel}>{nivel}</option>
               ))}
             </select>
           </div>
 
           <div className="filter-group">
-            <label>Categoría:</label>
-            <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}>
-              <option value="">Todas</option>
-              {getUniqueValues('categoria').map(categoria => (
+            <label className="filter-label">🏷️ Categoría:</label>
+            <select 
+              value={filtroCategoria} 
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+              disabled={!filtroGenero || !filtroNivelEducacional}
+              className="modern-select"
+            >
+              <option value="">Todas las categorías</option>
+              {getCategoriasDisponibles().map(categoria => (
                 <option key={categoria} value={categoria}>{categoria}</option>
               ))}
             </select>
           </div>
 
-          <button className="clear-filters-btn" onClick={limpiarFiltros}>
+          <button 
+            className="clear-filters-btn" 
+            onClick={limpiarFiltros}
+            title="Limpiar todos los filtros"
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "500",
+              transition: "background-color 0.2s"
+            }}
+          >
             🗑️ Limpiar
           </button>
         </div>
@@ -472,99 +568,66 @@ export default function PublicHorarios() {
           <p>Con los filtros seleccionados</p>
         </div>
       ) : (
-        <div className="horarios-grid">
+        <div className="public-horarios-grid">
           {getOrderedDays()
             .filter(dia => horariosDisponibles.some(hora => horariosPorDia[dia]?.[hora]))
             .map(dia => (
-            <div key={dia} className="dia-column">
-              <div className="dia-header">
-                <h3 className="dia-title">
-                  <span className="dia-icon">📅</span>
+            <div key={dia} className="public-dia-column">
+              <div className="public-dia-header">
+                <h3 className="public-dia-title">
+                  <span className="public-dia-icon">📅</span>
                   {dia.charAt(0).toUpperCase() + dia.slice(1)}
                 </h3>
               </div>
 
-              <div className="horarios-lista">
+              <div className="public-horarios-lista">
                 {horariosDisponibles
                   .filter(hora => horariosPorDia[dia]?.[hora])
                   .map(hora => {
                   const partido = horariosPorDia[dia][hora];
                   
                   return (
-                    <div key={hora} className="horario-slot has-match">
-                      <div className="hora-label">{hora}</div>
+                    <div key={hora} className="public-horario-slot has-match">
+                      <div className="public-hora-label">{hora}</div>
                       <div 
-                        className="partido-card view-only public-card"
+                        className="public-partido-card view-only"
                         onClick={() => verDetallesPartido(partido)}
-                        style={{ 
-                          cursor: 'pointer',
-                          borderColor: disciplinasConfig[partido.disciplina]?.color || '#666'
-                        }}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <div className="partido-header">
+                        <div className="public-partido-header">
                           <div 
-                            className="disciplina-badge"
-                            style={{ backgroundColor: disciplinasConfig[partido.disciplina]?.color || '#666' }}
-                          >
-                            <span className="disciplina-icon">
-                              {disciplinasConfig[partido.disciplina]?.icon || '🏅'}
-                            </span>
-                            <span className="disciplina-text">
-                              {disciplinasConfig[partido.disciplina]?.nombre || partido.disciplina}
-                            </span>
-                          </div>
-                          <div 
-                            className="fase-badge"
+                            className="public-fase-badge"
                             style={{ backgroundColor: getTipoFase(partido).color }}
                           >
-                            <span className="fase-icon">{getTipoFase(partido).icon}</span>
-                            <span className="fase-text">{getTipoFase(partido).tipo}</span>
+                            <span className="public-fase-icon">{getTipoFase(partido).icon}</span>
+                            <span className="public-fase-text">{getTipoFase(partido).tipo}</span>
                           </div>
                         </div>
                         
-                        <div className="partido-equipos">
-                          <div className="equipo">
-                            <div className="equipo-header">
-                              <span className="equipo-icon">🏫</span>
-                              <span className="equipo-genero">{partido.equipoA.genero === 'masculino' ? '♂️' : '♀️'}</span>
-                            </div>
-                            <div className="equipo-nombre">
-                              <strong>{partido.equipoA.curso}{partido.equipoA.paralelo}</strong>
-                            </div>
-                            <div className="equipo-detalles">
-                              <span className="equipo-categoria">{partido.equipoA.categoria}</span>
-                              <span className="equipo-genero-texto">{partido.equipoA.genero}</span>
-                            </div>
+                        <div className="public-partido-equipos">
+                          <div className="public-equipo">
+                            <span className="public-equipo-nombre">
+                              {partido.equipoA.curso}{partido.equipoA.paralelo}
+                            </span>
                           </div>
                           
-                          <div className="vs-divider">
-                            <span className="vs-text">VS</span>
-                            <div className="vs-line"></div>
-                          </div>
+                          <div className="public-vs-divider">VS</div>
                           
-                          <div className="equipo">
-                            <div className="equipo-header">
-                              <span className="equipo-icon">🏫</span>
-                              <span className="equipo-genero">{partido.equipoB.genero === 'masculino' ? '♂️' : '♀️'}</span>
-                            </div>
-                            <div className="equipo-nombre">
-                              <strong>{partido.equipoB.curso}{partido.equipoB.paralelo}</strong>
-                            </div>
-                            <div className="equipo-detalles">
-                              <span className="equipo-categoria">{partido.equipoB.categoria}</span>
-                              <span className="equipo-genero-texto">{partido.equipoB.genero}</span>
-                            </div>
+                          <div className="public-equipo">
+                            <span className="public-equipo-nombre">
+                              {partido.equipoB.curso}{partido.equipoB.paralelo}
+                            </span>
                           </div>
                         </div>
                         
-                        <div className="partido-info">
-                          <div className="info-item">
-                            <span className="info-icon">👥</span>
+                        <div className="public-partido-info">
+                          <div className="public-info-item">
+                            <span className="public-info-icon">👥</span>
                             <span>{partido.grupo}</span>
                           </div>
                           {partido.marcadorA !== null && partido.marcadorB !== null && (
-                            <div className="info-item">
-                              <span className="info-icon">⚽</span>
+                            <div className="public-info-item">
+                              <span className="public-info-icon">⚽</span>
                               <span>{partido.marcadorA} - {partido.marcadorB}</span>
                             </div>
                           )}

@@ -24,6 +24,21 @@ export default function PublicReport() {
     return localStorage.getItem(`olimpiadas_public_report_filtro_categoria_${discipline}`) || "";
   });
 
+  const [categorias, setCategorias] = useState([]);
+
+  // Cargar categorías en tiempo real
+  useEffect(() => {
+    const q = query(
+      collection(db, "categorias"),
+      where("disciplina", "==", discipline)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setCategorias(data);
+    });
+    return () => unsubscribe();
+  }, [discipline]);
+
   // Cargar equipos en tiempo real
   useEffect(() => {
     const q = query(
@@ -179,15 +194,13 @@ export default function PublicReport() {
   }, [filtroNivelEducacional]);
 
   // Extraer opciones únicas para filtros
-  const generosDisponibles = [...new Set(equipos.map(eq => eq.genero).filter(Boolean))];
+  const generosDisponibles = [...new Set(categorias.map(cat => cat.genero).filter(Boolean))];
   const nivelesDisponibles = filtroGenero
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.nivelEducacional).filter(Boolean))]
-    : [...new Set(equipos.map(eq => eq.nivelEducacional).filter(Boolean))];
-  const categoriasDisponibles = filtroNivelEducacional
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero && eq.nivelEducacional === filtroNivelEducacional).map(eq => eq.categoria).filter(Boolean))]
-    : filtroGenero
-    ? [...new Set(equipos.filter(eq => eq.genero === filtroGenero).map(eq => eq.categoria).filter(Boolean))]
-    : [...new Set(equipos.map(eq => eq.categoria).filter(Boolean))];
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero).map(cat => cat.nivelEducacional).filter(Boolean))]
+    : [];
+  const categoriasDisponibles = (filtroGenero && filtroNivelEducacional)
+    ? [...new Set(categorias.filter(cat => cat.genero === filtroGenero && cat.nivelEducacional === filtroNivelEducacional).map(cat => cat.nombre).filter(Boolean))]
+    : [];
 
   // Aplicar filtros a los equipos
   const equiposFiltrados = equipos.filter(equipo => {
@@ -252,8 +265,8 @@ export default function PublicReport() {
       }
       puntos += marcadorPropio || 0;
       
-      // Para vóley usar anotadores, para fútbol usar goleadores
-      if (discipline === "voley") {
+      // Para vóley y básquet usar anotadores, para fútbol usar goleadores
+      if (discipline === "voley" || discipline === "basquet") {
         if (esA && m.anotadoresA) anotadores = anotadores.concat(m.anotadoresA);
         if (!esA && m.anotadoresB) anotadores = anotadores.concat(m.anotadoresB);
       } else {
@@ -267,7 +280,16 @@ export default function PublicReport() {
 
     const anotadoresCount = {};
     anotadores.forEach((g) => {
-      anotadoresCount[g] = (anotadoresCount[g] || 0) + 1;
+      if (g) {
+        if (typeof g === 'object' && g.jugador) {
+          // Es básquet (objeto con jugador y puntos)
+          const pts = Number(g.puntos) || 0;
+          anotadoresCount[g.jugador] = (anotadoresCount[g.jugador] || 0) + pts;
+        } else if (typeof g === 'string') {
+          // Es fútbol o vóley (string con el nombre)
+          anotadoresCount[g] = (anotadoresCount[g] || 0) + 1;
+        }
+      }
     });
     const listaAnotadores = Object.entries(anotadoresCount).sort((a, b) => b[1] - a[1]);
 
@@ -417,7 +439,7 @@ export default function PublicReport() {
               {puntos}
             </div>
             <div style={{ fontSize: "14px", color: "#6c757d", marginTop: "4px" }}>
-              {discipline === "voley" ? "Puntos anotados" : "Goles anotados"}
+              {discipline === "voley" || discipline === "basquet" ? "Puntos anotados" : "Goles anotados"}
             </div>
           </div>
         </div>
@@ -425,11 +447,11 @@ export default function PublicReport() {
         {/* Anotadores/Goleadores */}
         <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "8px", marginBottom: "32px", border: "1px solid #e9ecef" }}>
           <h3 style={{ margin: "0 0 16px 0", color: "#2c3e50", fontSize: "18px", fontWeight: "bold" }}>
-            🏆 {discipline === "voley" ? "Anotadores" : "Goleadores"}
+            🏆 {discipline === "voley" || discipline === "basquet" ? "Anotadores" : "Goleadores"}
           </h3>
           {listaAnotadores.length === 0 ? (
             <div style={{ color: "#6c757d", fontStyle: "italic", textAlign: "center", padding: "20px" }}>
-              {discipline === "voley" ? "Sin puntos registrados" : "Sin goles registrados"}
+              {discipline === "voley" || discipline === "basquet" ? "Sin puntos registrados" : "Sin goles registrados"}
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>

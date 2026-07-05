@@ -226,36 +226,69 @@ export default function AdminMatchDetail() {
     }
   };
 
+  // Obtener goleadores agrupados para la interfaz
+  const obtenerGoleadoresAgrupados = (goleadores) => {
+    const agrupados = {};
+    (goleadores || []).forEach(nombre => {
+      if (nombre && nombre.trim()) {
+        agrupados[nombre] = (agrupados[nombre] || 0) + 1;
+      }
+    });
+    return Object.entries(agrupados).map(([nombre, goles]) => ({ nombre, goles }));
+  };
+
+  // Manejar edición de nombre de un goleador único
+  const manejarEditarNombreGoleador = (equipo, nombreOriginal, nuevoNombre) => {
+    if (!nuevoNombre.trim()) return;
+    setGoleadoresTemporal(prev => ({
+      ...prev,
+      [equipo]: prev[equipo].map(n => n === nombreOriginal ? nuevoNombre.trim() : n)
+    }));
+  };
+
+  // Incrementar goles de un jugador único en edición
+  const manejarIncrementarGoles = (equipo, nombre) => {
+    setGoleadoresTemporal(prev => ({
+      ...prev,
+      [equipo]: [...prev[equipo], nombre]
+    }));
+  };
+
+  // Decrementar goles de un jugador único en edición
+  const manejarDecrementarGoles = (equipo, nombre) => {
+    setGoleadoresTemporal(prev => {
+      const arr = prev[equipo];
+      const index = arr.indexOf(nombre);
+      if (index > -1) {
+        const nuevoArr = [...arr];
+        nuevoArr.splice(index, 1);
+        return { ...prev, [equipo]: nuevoArr };
+      }
+      return prev;
+    });
+  };
+
+  // Eliminar un jugador completo de la lista de edición
+  const manejarEliminarGoleadorCompleto = (equipo, nombre) => {
+    setGoleadoresTemporal(prev => ({
+      ...prev,
+      [equipo]: prev[equipo].filter(n => n !== nombre)
+    }));
+  };
+
   // Agregar goleador en edición
   const agregarGoleador = (equipo) => {
-    if (!nuevoGoleador[equipo].trim()) return;
+    const nombre = nuevoGoleador[equipo]?.trim();
+    if (!nombre) return;
     
     setGoleadoresTemporal(prev => ({
       ...prev,
-      [equipo]: [...prev[equipo], nuevoGoleador[equipo].trim()]
+      [equipo]: [...prev[equipo], nombre]
     }));
     
     setNuevoGoleador(prev => ({
       ...prev,
       [equipo]: ""
-    }));
-  };
-
-  // Eliminar goleador en edición
-  const eliminarGoleador = (equipo, indice) => {
-    setGoleadoresTemporal(prev => ({
-      ...prev,
-      [equipo]: prev[equipo].filter((_, i) => i !== indice)
-    }));
-  };
-
-  // Editar nombre de goleador
-  const editarNombreGoleador = (equipo, indice, nuevoNombre) => {
-    setGoleadoresTemporal(prev => ({
-      ...prev,
-      [equipo]: prev[equipo].map((nombre, i) => 
-        i === indice ? nuevoNombre : nombre
-      )
     }));
   };
 
@@ -1105,10 +1138,33 @@ export default function AdminMatchDetail() {
             <div className="admin-goalscorers-list">
               {editandoGoleadores ? (
                 <>
-                  {goleadoresTemporal.A.map((nombre, i) => (
-                    <div key={i} className="admin-goalscorer-edit-item">
-                      <input type="text" value={nombre} onChange={e => editarNombreGoleador('A', i, e.target.value)} className="admin-goalscorer-input" />
-                      <button onClick={() => eliminarGoleador('A', i)} className="admin-btn-remove">🗑️</button>
+                  {obtenerGoleadoresAgrupados(goleadoresTemporal.A).map((goleador, i) => (
+                    <div key={i} className="admin-goalscorer-edit-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        value={goleador.nombre}
+                        onChange={e => manejarEditarNombreGoleador('A', goleador.nombre, e.target.value)}
+                        className="admin-goalscorer-input"
+                        style={{ flex: 1 }}
+                      />
+                      <div className="contador-goles" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <button
+                          onClick={() => manejarDecrementarGoles('A', goleador.nombre)}
+                          className="admin-btn-qty"
+                          style={{ padding: '5px 10px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', background: 'white', fontWeight: 'bold' }}
+                        >
+                          -
+                        </button>
+                        <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{goleador.goles}</span>
+                        <button
+                          onClick={() => manejarIncrementarGoles('A', goleador.nombre)}
+                          className="admin-btn-qty"
+                          style={{ padding: '5px 10px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', background: 'white', fontWeight: 'bold' }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button onClick={() => manejarEliminarGoleadorCompleto('A', goleador.nombre)} className="admin-btn-remove">🗑️</button>
                     </div>
                   ))}
                   <div className="admin-add-goalscorer">
@@ -1138,10 +1194,33 @@ export default function AdminMatchDetail() {
             <div className="admin-goalscorers-list">
               {editandoGoleadores ? (
                 <>
-                  {goleadoresTemporal.B.map((nombre, i) => (
-                    <div key={i} className="admin-goalscorer-edit-item">
-                      <input type="text" value={nombre} onChange={e => editarNombreGoleador('B', i, e.target.value)} className="admin-goalscorer-input" />
-                      <button onClick={() => eliminarGoleador('B', i)} className="admin-btn-remove">🗑️</button>
+                  {obtenerGoleadoresAgrupados(goleadoresTemporal.B).map((goleador, i) => (
+                    <div key={i} className="admin-goalscorer-edit-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        value={goleador.nombre}
+                        onChange={e => manejarEditarNombreGoleador('B', goleador.nombre, e.target.value)}
+                        className="admin-goalscorer-input"
+                        style={{ flex: 1 }}
+                      />
+                      <div className="contador-goles" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <button
+                          onClick={() => manejarDecrementarGoles('B', goleador.nombre)}
+                          className="admin-btn-qty"
+                          style={{ padding: '5px 10px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', background: 'white', fontWeight: 'bold' }}
+                        >
+                          -
+                        </button>
+                        <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{goleador.goles}</span>
+                        <button
+                          onClick={() => manejarIncrementarGoles('B', goleador.nombre)}
+                          className="admin-btn-qty"
+                          style={{ padding: '5px 10px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', background: 'white', fontWeight: 'bold' }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button onClick={() => manejarEliminarGoleadorCompleto('B', goleador.nombre)} className="admin-btn-remove">🗑️</button>
                     </div>
                   ))}
                   <div className="admin-add-goalscorer">

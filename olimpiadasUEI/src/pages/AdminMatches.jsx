@@ -24,6 +24,7 @@ export default function AdminMatches() {
   // Estados principales
   const [matches, setMatches] = useState([]);
   const [equipos, setEquipos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -50,8 +51,6 @@ export default function AdminMatches() {
   const [faseActiva, setFaseActiva] = useState("grupos");
 
   // Estados para eliminación
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [partidoAEliminar, setPartidoAEliminar] = useState(null);
   const [showConfirmDeleteGroup, setShowConfirmDeleteGroup] = useState(false);
   const [tipoEliminacion, setTipoEliminacion] = useState(""); // "categoria" o "fase"
 
@@ -87,6 +86,41 @@ export default function AdminMatches() {
 
   // ==================== FUNCIONES DE CARGA DE DATOS ====================
   
+  // Cargar categorías y opciones de filtros desde Firestore
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+        const q = query(
+          collection(db, "categorias"),
+          where("disciplina", "==", discipline)
+        );
+        const snapshot = await getDocs(q);
+        const categoriasData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCategorias(categoriasData);
+
+        // Extraer opciones únicas para filtros desde categorías
+        const generos = [...new Set(categoriasData.map(c => c.genero).filter(Boolean))];
+        const niveles = [...new Set(categoriasData.map(c => c.nivelEducacional).filter(Boolean))];
+        const cats = [...new Set(categoriasData.map(c => c.nombre).filter(Boolean))];
+
+        setOpcionesGenero(generos);
+        setOpcionesNivel(niveles);
+        setOpcionesCategorias(cats);
+
+        console.log('📊 Categorías cargadas desde DB:', {
+          total: categoriasData.length,
+          generos,
+          niveles,
+          categorias: cats
+        });
+      } catch (error) {
+        console.error("Error al cargar categorías:", error);
+      }
+    };
+
+    cargarCategorias();
+  }, [discipline]);
+
   // Cargar equipos desde Firestore
   useEffect(() => {
     const cargarEquipos = async () => {
@@ -98,23 +132,6 @@ export default function AdminMatches() {
         const snapshot = await getDocs(q);
         const equiposData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setEquipos(equiposData);
-
-        // Extraer opciones únicas para filtros
-        const generos = [...new Set(equiposData.map(e => e.genero).filter(Boolean))];
-        const niveles = [...new Set(equiposData.map(e => e.nivelEducacional).filter(Boolean))];
-        const categorias = [...new Set(equiposData.map(e => e.categoria).filter(Boolean))];
-
-        setOpcionesGenero(generos);
-        setOpcionesNivel(niveles);
-        setOpcionesCategorias(categorias);
-
-        console.log('📊 Datos cargados:', {
-          equipos: equiposData.length,
-          generos,
-          niveles,
-          categorias
-        });
-
       } catch (error) {
         console.error("Error al cargar equipos:", error);
         setError("Error al cargar equipos");
@@ -547,7 +564,7 @@ export default function AdminMatches() {
       m.genero === filtroGenero &&
       m.nivelEducacional === filtroNivelEducacional &&
       m.categoria === filtroCategoria &&
-      m.fase === "semifinales"
+      (m.fase === "semifinales" || m.fase === "semifinal")
     );
 
     if (semifinalesExistentes.length > 0) {
@@ -563,7 +580,7 @@ export default function AdminMatches() {
       categoria: filtroCategoria,
       genero: filtroGenero,
       nivelEducacional: filtroNivelEducacional,
-      fase: "semifinales",
+      fase: "semifinal",
       estado: "programado",
       marcadorA: 0,
       marcadorB: 0,
@@ -581,7 +598,7 @@ export default function AdminMatches() {
       categoria: filtroCategoria,
       genero: filtroGenero,
       nivelEducacional: filtroNivelEducacional,
-      fase: "semifinales",
+      fase: "semifinal",
       estado: "programado",
       marcadorA: 0,
       marcadorB: 0,
@@ -808,11 +825,7 @@ export default function AdminMatches() {
     }
   };
 
-  // Confirmar eliminación de partido individual
-  const confirmarEliminarPartido = (partido) => {
-    setPartidoAEliminar(partido);
-    setShowConfirmDelete(true);
-  };
+
 
   // Eliminar todos los partidos de la categoría actual
   const eliminarPartidosCategoria = async () => {
@@ -978,25 +991,20 @@ export default function AdminMatches() {
   // Obtener opciones de filtros dependientes
   const getNivelesDisponibles = () => {
     if (!filtroGenero) return opcionesNivel;
-    return opcionesNivel.filter(nivel => 
-      equipos.some(e => 
-        e.disciplina === discipline &&
-        e.genero === filtroGenero &&
-        e.nivelEducacional === nivel
-      )
-    );
+    return [...new Set(categorias
+      .filter(c => c.genero === filtroGenero)
+      .map(c => c.nivelEducacional)
+      .filter(Boolean)
+    )];
   };
 
   const getCategoriasDisponibles = () => {
     if (!filtroGenero || !filtroNivelEducacional) return opcionesCategorias;
-    return opcionesCategorias.filter(categoria => 
-      equipos.some(e => 
-        e.disciplina === discipline &&
-        e.genero === filtroGenero &&
-        e.nivelEducacional === filtroNivelEducacional &&
-        e.categoria === categoria
-      )
-    );
+    return [...new Set(categorias
+      .filter(c => c.genero === filtroGenero && c.nivelEducacional === filtroNivelEducacional)
+      .map(c => c.nombre)
+      .filter(Boolean)
+    )];
   };
 
   // ==================== RENDER ====================
@@ -1146,14 +1154,7 @@ export default function AdminMatches() {
             ⚽ Generar Partidos (Grupos o Ida/Vuelta)
           </button>
           
-          {estado.tipo === "analisis_completo" && estado.gruposCompletos && (
-            <button 
-              className="btn-generar-fases"
-              onClick={generarFasesFinalesAutomaticas}
-            >
-              🏆 Generar Fases Finales Automáticas
-            </button>
-          )}
+
         </div>
       </div>
       
@@ -1347,7 +1348,11 @@ export default function AdminMatches() {
                           </button>
                           <button 
                             className="btn-action-danger"
-                            onClick={() => confirmarEliminarPartido(match)}
+                            onClick={() => {
+                              if (window.confirm(`¿Estás seguro de que quieres eliminar este partido de ${match.equipoA?.curso} vs ${match.equipoB?.curso}?`)) {
+                                eliminarPartido(match.id);
+                              }
+                            }}
                             title="Eliminar partido"
                           >
                             🗑️
@@ -1365,42 +1370,7 @@ export default function AdminMatches() {
         </div>
       )}
 
-      {/* Modal de confirmación para eliminar partido individual */}
-      {showConfirmDelete && partidoAEliminar && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>🗑️ Confirmar Eliminación</h3>
-            <p>¿Estás seguro de que quieres eliminar este partido?</p>
-            <div style={{ margin: '15px 0', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-              <strong>{partidoAEliminar.equipoA?.curso} {partidoAEliminar.equipoA?.paralelo}</strong>
-              <span> vs </span>
-              <strong>{partidoAEliminar.equipoB?.curso} {partidoAEliminar.equipoB?.paralelo}</strong>
-            </div>
-            <p style={{ color: '#dc3545', fontSize: '14px' }}>Esta acción no se puede deshacer.</p>
-            <div className="modal-buttons">
-              <button 
-                className="btn-confirmar"
-                onClick={() => {
-                  eliminarPartido(partidoAEliminar.id);
-                  setShowConfirmDelete(false);
-                  setPartidoAEliminar(null);
-                }}
-              >
-                Sí, Eliminar
-              </button>
-              <button 
-                className="btn-cancelar"
-                onClick={() => {
-                  setShowConfirmDelete(false);
-                  setPartidoAEliminar(null);
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Modal de confirmación para eliminación masiva */}
       {showConfirmDeleteGroup && (
@@ -1633,7 +1603,7 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
     );
 
     // Verificar si ya existen semifinales
-    const semifinalesExistentes = todosLosPartidos.filter(p => p.fase === "semifinal");
+    const semifinalesExistentes = todosLosPartidos.filter(p => p.fase === "semifinal" || p.fase === "semifinales");
     if (semifinalesExistentes.length > 0) {
       console.log("🏆 Ya existen semifinales, no se generan nuevas");
       return;
@@ -1699,7 +1669,7 @@ const verificarYGenerarSemifinalesMultiplesGrupos = async (partidoFinalizado, sh
       equiposPorGrupo[grupo] = {
         equipos: Array.from(equiposGrupoNombres),
         partidos: partidosGrupo,
-        clasificacion: calcularClasificacionGrupo(partidosGrupo, Array.from(equiposGrupo))
+        clasificacion: calcularClasificacionGrupo(partidosGrupo, Array.from(equiposGrupoNombres), equiposGrupoObjetos)
       };
     }
 
@@ -1887,7 +1857,7 @@ const generarSemifinalesCruzadasMultiplesGrupos = async (equiposPorGrupo, partid
 const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToast) => {
   try {
     // Solo procesar si el partido es de semifinal
-    if (partidoFinalizado.fase !== "semifinal") {
+    if (partidoFinalizado.fase !== "semifinal" && partidoFinalizado.fase !== "semifinales") {
       console.log("🔍 Partido no es de semifinal, saltando verificación de final");
       return;
     }
@@ -1903,21 +1873,23 @@ const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToa
       return;
     }
 
-    // Obtener todas las semifinales de la misma categoría
+    // Obtener todos los partidos de la misma categoría
     const { getDocs, query, collection, where, addDoc } = await import("../api/firestoreCompat");
     const { db } = await import("../firebase/config");
 
-    const qSemifinales = query(
+    const q = query(
       collection(db, "matches"),
       where("disciplina", "==", partidoFinalizado.disciplina),
       where("genero", "==", partidoFinalizado.genero),
       where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
-      where("categoria", "==", partidoFinalizado.categoria),
-      where("fase", "==", "semifinal")
+      where("categoria", "==", partidoFinalizado.categoria)
     );
 
-    const snapshotSemifinales = await getDocs(qSemifinales);
-    const semifinales = snapshotSemifinales.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const snapshot = await getDocs(q);
+    const todosLosPartidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Filtrar semifinales en memoria
+    const semifinales = todosLosPartidos.filter(p => p.fase === "semifinal" || p.fase === "semifinales");
     
     console.log(`🔍 Semifinales encontradas: ${semifinales.length}`, semifinales.map(s => ({
       id: s.id,
@@ -1930,31 +1902,42 @@ const verificarYGenerarFinalDesdeSemifinales = async (partidoFinalizado, showToa
     // Verificar si todas las semifinales están finalizadas
     const semifinalesFinalizadas = semifinales.filter(s => s.estado === "finalizado");
     
-    if (semifinalesFinalizadas.length < 2) {
-      console.log(`⏳ Solo ${semifinalesFinalizadas.length}/2 semifinales finalizadas. Esperando...`);
+    // NOTA: Si hay duplicados debido a simulaciones previas, agrupamos las semifinales únicas por curso/paralelo
+    // de los contrincantes para asegurarnos de que estamos evaluando la fase de semifinales real de la categoría.
+    const llavesUnicas = new Set();
+    const semifinalesUnicas = [];
+    semifinalesFinalizadas.forEach(s => {
+      const cursoA = s.equipoA?.curso || "";
+      const paraleloA = s.equipoA?.paralelo || "";
+      const cursoB = s.equipoB?.curso || "";
+      const paraleloB = s.equipoB?.paralelo || "";
+      const llave = [
+        `${cursoA} ${paraleloA}`,
+        `${cursoB} ${paraleloB}`
+      ].sort().join(" vs ");
+      
+      if (!llavesUnicas.has(llave)) {
+        llavesUnicas.add(llave);
+        semifinalesUnicas.push(s);
+      }
+    });
+
+    if (semifinalesUnicas.length < 2) {
+      console.log(`⏳ Solo ${semifinalesUnicas.length}/2 semifinales únicas finalizadas. Esperando...`);
       return;
     }
 
-    console.log(`✅ Todas las semifinales (${semifinalesFinalizadas.length}) están finalizadas. Generando final y tercer puesto...`);
+    console.log(`✅ Todas las semifinales únicas (${semifinalesUnicas.length}) están finalizadas. Generando final y tercer puesto...`);
 
     // Verificar si ya existe una final para esta categoría
-    const qFinal = query(
-      collection(db, "matches"),
-      where("disciplina", "==", partidoFinalizado.disciplina),
-      where("genero", "==", partidoFinalizado.genero),
-      where("nivelEducacional", "==", partidoFinalizado.nivelEducacional),
-      where("categoria", "==", partidoFinalizado.categoria),
-      where("fase", "==", "final")
-    );
-
-    const snapshotFinal = await getDocs(qFinal);
-    if (!snapshotFinal.empty) {
+    const finalExistente = todosLosPartidos.find(p => p.fase === "final" || p.fase === "finales");
+    if (finalExistente) {
       console.log("🏆 Final ya existe para esta categoría");
       return;
     }
 
     // Obtener ganadores y perdedores de semifinales
-    const resultadosSemifinales = semifinalesFinalizadas.map(semifinal => {
+    const resultadosSemifinales = semifinalesUnicas.map(semifinal => {
       const ganador = semifinal.marcadorA > semifinal.marcadorB ? 
         { equipo: semifinal.equipoA, marcador: semifinal.marcadorA } : 
         { equipo: semifinal.equipoB, marcador: semifinal.marcadorB };

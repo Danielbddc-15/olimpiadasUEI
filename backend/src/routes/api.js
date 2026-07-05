@@ -43,6 +43,10 @@ router.put('/users/:id', async (req, res) => {
     const data = { ...req.body };
     if (data.role) data.role = data.role.toUpperCase();
     delete data.id; // Prisma no permite actualizar el ID
+    if (data.password) {
+      const bcrypt = require('bcryptjs');
+      data.password = await bcrypt.hash(data.password, 10);
+    }
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data
