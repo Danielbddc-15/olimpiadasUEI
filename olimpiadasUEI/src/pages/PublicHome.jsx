@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import PublicStandings from "./PublicStandings";
 import PublicMatches from "./PublicMatches";
 import PublicReport from "./PublicReport";
@@ -10,6 +11,7 @@ export default function PublicTournament() {
   const [vista, setVista] = useState("posiciones");
   const { discipline } = useParams();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Funciones de navegación
   const goToDisciplineSelector = () => {
@@ -17,7 +19,7 @@ export default function PublicTournament() {
   };
 
   const goToLogin = () => {
-    navigate('/');
+    logout();
   };
 
   return (

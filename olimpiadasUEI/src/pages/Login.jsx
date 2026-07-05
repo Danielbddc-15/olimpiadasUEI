@@ -6,7 +6,7 @@ import logo from "../Logo/logo192.png";
 
 function Login() {
   const navigate = useNavigate();
-  const { login, user, loading } = useAuth();
+  const { login, loginAsGuest, user, loading } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +62,7 @@ function Login() {
   };
 
   const handleGuestAccess = () => {
-    localStorage.setItem('userRole', 'guest');
+    loginAsGuest();
     navigate("/selector");
   };
 

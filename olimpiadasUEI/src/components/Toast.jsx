@@ -52,7 +52,7 @@ export const useToast = () => {
   const [toasts, setToasts] = useState([]);
 
   const showToast = (message, type = "success", duration = 4000) => {
-    const id = Date.now();
+    const id = Date.now() + '-' + Math.random();
     const newToast = { id, message, type, duration };
     
     setToasts(prev => [...prev, newToast]);

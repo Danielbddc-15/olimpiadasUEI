@@ -325,7 +325,7 @@
 .status-text {
   font-size: 10px;
   font-weight: 800;
-  color: var(--light-text);
+  color: #1e293b;
   letter-spacing: 0.05em;
 }
 

@@ -5,10 +5,13 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(() => {
+    return localStorage.getItem('userRole') === 'guest';
+  });
   const [loading, setLoading] = useState(true);
 
   // Configuración de tiempos
-  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos de inactividad
+  const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos de inactividad
   const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 horas máximo de sesión
 
   const logout = () => {
@@ -18,8 +21,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('sessionTimestamp');
     setUser(null);
+    setIsGuest(false);
     // Recargar la página forzadamente para limpiar el estado de la aplicación y prevenir "glitches"
     window.location.href = '/';
+  };
+
+  const loginAsGuest = () => {
+    localStorage.setItem('userRole', 'guest');
+    localStorage.setItem('sessionTimestamp', Date.now().toString());
+    setIsGuest(true);
+    setUser(null);
   };
 
   useEffect(() => {
@@ -27,8 +38,18 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     const sessionTimestamp = localStorage.getItem('sessionTimestamp');
+    const userRole = localStorage.getItem('userRole');
 
-    if (token && storedUser) {
+    if (userRole === 'guest') {
+      try {
+        if (sessionTimestamp && (Date.now() - parseInt(sessionTimestamp) > SESSION_MAX_AGE)) {
+          throw new Error('Sesión de invitado expirada');
+        }
+        setIsGuest(true);
+      } catch (error) {
+        logout();
+      }
+    } else if (token && storedUser) {
       try {
         // Verificar si la sesión expiró por tiempo máximo (24h)
         if (sessionTimestamp && (Date.now() - parseInt(sessionTimestamp) > SESSION_MAX_AGE)) {
@@ -44,7 +65,7 @@ export const AuthProvider = ({ children }) => {
 
   // Control de inactividad
   useEffect(() => {
-    if (!user) return;
+    if (!user && !isGuest) return;
 
     let inactivityTimer;
 
@@ -72,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         document.removeEventListener(event, resetInactivityTimer);
       });
     };
-  }, [user]);
+  }, [user, isGuest]);
 
   const login = async (email, password) => {
     try {
@@ -86,6 +107,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('sessionTimestamp', Date.now().toString());
 
       setUser(userData);
+      setIsGuest(false);
       return userData;
     } catch (error) {
       console.error('Error logging in:', error);
@@ -94,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, isGuest, login, loginAsGuest, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

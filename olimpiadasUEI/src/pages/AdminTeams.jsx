@@ -1546,189 +1546,195 @@ export default function AdminTeams() {
         </button>
       </div>
 
-      {/* Formulario unificado de creación de niveles educacionales, categorías y equipos */}
-      <div className="create-team-section" style={{background:'white', borderRadius:20, boxShadow:'0 2px 12px rgba(0,0,0,0.1)', padding:'2rem 1.5rem', marginBottom:32}}>
-        {/* Apartado para crear nivel educacional */}
-        <div style={{marginBottom:32, textAlign:'center'}}>
-          <h2 className="section-title" style={{textAlign:'center'}}>
+      {/* Grid responsiva de creación de niveles y categorías */}
+      <div className="creation-grid">
+        {/* Card para crear nivel educacional */}
+        <div className="create-card">
+          <h2 className="section-title" style={{ justifyContent: 'center', marginBottom: '1.5rem' }}>
             <span className="section-icon">🏫</span>
-            Crear Nuevo Nivel Educacional
+            Crear Nivel Educacional
           </h2>
-          <div style={{display:'flex', gap:8, alignItems:'center', justifyContent:'center', flexWrap:'wrap'}}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <input
               type="text"
               placeholder="Ej: Escuela, Colegio, etc."
               value={nuevoNivelEducacional}
               onChange={e => setNuevoNivelEducacional(e.target.value)}
               className="modern-input"
-              style={{minWidth:220, maxWidth:340}}
+              style={{ width: '100%' }}
             />
-            <button
-              onClick={async () => {
-                if (!nuevoNivelEducacional.trim()) {
-                  mostrarModalAlerta("⚠️ Datos incompletos", "Debes ingresar el nombre del nivel educacional", "error");
-                  return;
-                }
-                
-                // Verificar si ya existe
-                const nivelExiste = nivelesEducacionales.some(nivel => 
-                  nivel.nombre.toLowerCase() === nuevoNivelEducacional.trim().toLowerCase()
-                );
-                
-                if (nivelExiste) {
-                  mostrarModalAlerta("⚠️ Nivel duplicado", "Este nivel educacional ya existe", "error");
-                  return;
-                }
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={async () => {
+                  if (!nuevoNivelEducacional.trim()) {
+                    mostrarModalAlerta("⚠️ Datos incompletos", "Debes ingresar el nombre del nivel educacional", "error");
+                    return;
+                  }
+                  
+                  // Verificar si ya existe
+                  const nivelExiste = nivelesEducacionales.some(nivel => 
+                    nivel.nombre.toLowerCase() === nuevoNivelEducacional.trim().toLowerCase()
+                  );
+                  
+                  if (nivelExiste) {
+                    mostrarModalAlerta("⚠️ Nivel duplicado", "Este nivel educacional ya existe", "error");
+                    return;
+                  }
 
-                await addDoc(collection(db, "nivelesEducacionales"), {
-                  nombre: nuevoNivelEducacional.trim(),
-                  disciplina: discipline,
-                  fechaCreacion: new Date().toISOString()
-                });
-                setNuevoNivelEducacional("");
-                cargarTodosDatos();
-                mostrarModalAlerta("✅ Nivel creado", "Nivel educacional creado exitosamente", "success");
-              }}
-              className="modern-button"
-              style={{minWidth:120}}
-            >
-              ➕ Crear
-            </button>
-            <button
-              onClick={limpiarDuplicadosNivelesEducacionales}
-              className="modern-button"
-              style={{
-                minWidth: 120,
-                backgroundColor: '#e74c3c',
-                color: 'white',
-                marginLeft: '8px'
-              }}
-              title="Limpiar niveles educacionales duplicados"
-            >
-              🧹 Limpiar Duplicados
-            </button>
+                  await addDoc(collection(db, "nivelesEducacionales"), {
+                    nombre: nuevoNivelEducacional.trim(),
+                    disciplina: discipline,
+                    fechaCreacion: new Date().toISOString()
+                  });
+                  setNuevoNivelEducacional("");
+                  cargarTodosDatos();
+                  mostrarModalAlerta("✅ Nivel creado", "Nivel educacional creado exitosamente", "success");
+                }}
+                className="create-btn"
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                ➕ Crear
+              </button>
+              <button
+                onClick={limpiarDuplicadosNivelesEducacionales}
+                className="create-btn"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#ef4444',
+                  backgroundImage: 'none',
+                  color: 'white',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)'
+                }}
+                title="Limpiar niveles educacionales duplicados"
+              >
+                🧹 Limpiar
+              </button>
+            </div>
           </div>
           
           {/* Lista de niveles educacionales existentes */}
           {nivelesEducacionales.length > 0 && (
-            <div style={{marginTop:16}}>
-              <h4 style={{color:'#666', fontSize:'0.9rem', marginBottom:8}}>Niveles Educacionales Existentes:</h4>
-              <div style={{display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center'}}>
+            <div style={{ marginTop: '20px' }}>
+              <h4 style={{ color: '#4a5568', fontSize: '0.9rem', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Niveles Existentes:</h4>
+              <div className="setup-tag-list">
                 {nivelesEducacionales
                   .filter((nivel, index, self) => 
-                    index === self.findIndex(n => n.nombre === nivel.nombre)
+                    self.findIndex(n => n.nombre === nivel.nombre) === index
                   )
                   .map(nivel => (
-                  <div key={nivel.id} style={{
-                    background:'#f8f9fa', 
-                    padding:'6px 12px', 
-                    borderRadius:16, 
-                    fontSize:'0.85rem',
-                    border:'1px solid #e9ecef',
-                    display:'flex',
-                    alignItems:'center',
-                    gap:8
-                  }}>
-                    <span>🏫 {nivel.nombre}</span>
-                    
-                    {nivelEducacionalEditando === nivel.id ? (
-                      <div style={{display:'flex', gap:4, alignItems:'center'}}>
-                        <input
-                          type="text"
-                          value={nuevoNombreNivelEducacional}
-                          onChange={e => setNuevoNombreNivelEducacional(e.target.value)}
-                          style={{fontSize:'0.85rem', padding:'2px 6px', width:80, border:'1px solid #ddd', borderRadius:4}}
-                          autoFocus
-                          onKeyPress={e => {
-                            if (e.key === 'Enter') {
-                              actualizarNivelEducacional(nivel.id, nuevoNombreNivelEducacional, nivel.nombre);
-                            }
-                          }}
-                        />
-                        <button 
-                          onClick={() => actualizarNivelEducacional(nivel.id, nuevoNombreNivelEducacional, nivel.nombre)}
-                          style={{fontSize:'0.7rem', padding:'2px 6px', background:'#28a745', color:'white', border:'none', borderRadius:3, cursor:'pointer'}}
-                        >
-                          ✓
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setNivelEducacionalEditando(null);
-                            setNuevoNombreNivelEducacional("");
-                          }}
-                          style={{fontSize:'0.7rem', padding:'2px 6px', background:'#6c757d', color:'white', border:'none', borderRadius:3, cursor:'pointer'}}
-                        >
-                          ✗
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{display:'flex', gap:4}}>
-                        <button 
-                          onClick={() => {
-                            setNivelEducacionalEditando(nivel.id);
-                            setNuevoNombreNivelEducacional(nivel.nombre);
-                          }}
-                          style={{fontSize:'0.7rem', background:'none', border:'none', cursor:'pointer', padding:2}}
-                          title="Editar nivel"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          onClick={() => eliminarNivelEducacional(nivel.id, nivel.nombre)}
-                          style={{fontSize:'0.7rem', background:'none', border:'none', cursor:'pointer', padding:2}}
-                          title="Eliminar nivel"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    <div key={nivel.id} style={{
+                      background: '#f8fafc', 
+                      padding: '6px 12px', 
+                      borderRadius: '16px', 
+                      fontSize: '0.85rem',
+                      border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span>🏫 {nivel.nombre}</span>
+                      
+                      {nivelEducacionalEditando === nivel.id ? (
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={nuevoNombreNivelEducacional}
+                            onChange={e => setNuevoNombreNivelEducacional(e.target.value)}
+                            style={{ fontSize: '0.85rem', padding: '2px 6px', width: '80px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                            autoFocus
+                            onKeyPress={e => {
+                              if (e.key === 'Enter') {
+                                actualizarNivelEducacional(nivel.id, nuevoNombreNivelEducacional, nivel.nombre);
+                              }
+                            }}
+                          />
+                          <button 
+                            onClick={() => actualizarNivelEducacional(nivel.id, nuevoNombreNivelEducacional, nivel.nombre)}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px', background: '#22c55e', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                          >
+                            ✓
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setNivelEducacionalEditando(null);
+                              setNuevoNombreNivelEducacional("");
+                            }}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px', background: '#64748b', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                          >
+                            ✗
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button 
+                            onClick={() => {
+                              setNivelEducacionalEditando(nivel.id);
+                              setNuevoNombreNivelEducacional(nivel.nombre);
+                            }}
+                            style={{ fontSize: '0.7rem', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                            title="Editar nivel"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => eliminarNivelEducacional(nivel.id, nivel.nombre)}
+                            style={{ fontSize: '0.7rem', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                            title="Eliminar nivel"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* Apartado para crear categoría */}
-        <div style={{marginBottom:32, textAlign:'center'}}>
-          <h2 className="section-title" style={{textAlign:'center'}}>
+        {/* Card para crear categoría */}
+        <div className="create-card">
+          <h2 className="section-title" style={{ justifyContent: 'center', marginBottom: '1.5rem' }}>
             <span className="section-icon">🏷️</span>
-            Crear Nueva Categoría
+            Crear Categoría
           </h2>
-          <div style={{display:'flex', gap:8, alignItems:'center', justifyContent:'center', flexWrap:'wrap'}}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <input
               type="text"
               placeholder="Ej: Sub 14, Superior, etc."
               value={nuevaCategoria}
               onChange={e => setNuevaCategoria(e.target.value)}
               className="modern-input"
-              style={{minWidth:220, maxWidth:340}}
+              style={{ width: '100%' }}
             />
-            <select
-              value={filtroNivelEducacional}
-              onChange={e => handleFiltroNivelEducacionalChange(e.target.value)}
-              className="modern-input"
-              style={{minWidth:140, maxWidth:160}}
-            >
-              <option value="">Todos los niveles</option>
-              {nivelesEducacionales
-                .filter((nivel, index, array) => 
-                  array.findIndex(n => n.nombre === nivel.nombre) === index
-                )
-                .map(nivel => (
-                  <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
-                ))}
-            </select>
-            <select
-              value={filtroGenero}
-              onChange={e => handleFiltroGeneroChange(e.target.value)}
-              className="modern-input"
-              style={{minWidth:140, maxWidth:160}}
-            >
-              <option value="">Todos los géneros</option>
-              <option value="Hombre">Hombre</option>
-              <option value="Mujer">Mujer</option>
-            </select>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <select
+                value={filtroNivelEducacional}
+                onChange={e => handleFiltroNivelEducacionalChange(e.target.value)}
+                className="modern-input"
+                style={{ flex: 1, minWidth: '110px' }}
+              >
+                <option value="">Nivel...</option>
+                {nivelesEducacionales
+                  .filter((nivel, index, array) => 
+                    array.findIndex(n => n.nombre === nivel.nombre) === index
+                  )
+                  .map(nivel => (
+                    <option key={nivel.id} value={nivel.nombre}>{nivel.nombre}</option>
+                  ))}
+              </select>
+              <select
+                value={filtroGenero}
+                onChange={e => handleFiltroGeneroChange(e.target.value)}
+                className="modern-input"
+                style={{ flex: 1, minWidth: '110px' }}
+              >
+                <option value="">Género...</option>
+                <option value="Hombre">Hombre</option>
+                <option value="Mujer">Mujer</option>
+              </select>
+            </div>
             <button
               onClick={async () => {
                 if (!nuevaCategoria.trim() || !filtroNivelEducacional || !filtroGenero) {
@@ -1761,8 +1767,8 @@ export default function AdminTeams() {
               }}
               className="create-btn"
               style={{
-                padding:'0 1.2em', 
-                minWidth:120,
+                width: '100%',
+                justifyContent: 'center',
                 opacity: (!nuevaCategoria.trim() || !filtroNivelEducacional || !filtroGenero) ? 0.5 : 1,
                 cursor: (!nuevaCategoria.trim() || !filtroNivelEducacional || !filtroGenero) ? 'not-allowed' : 'pointer'
               }}
@@ -1771,122 +1777,89 @@ export default function AdminTeams() {
               <span className="btn-icon">✨</span>
               <span>Crear Categoría</span>
             </button>
-            {categorias.length > 0 && (
-              <div style={{marginTop:16, display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', width:'100%'}}>
+          </div>
+          
+          {/* Lista de categorías existentes */}
+          {categorias.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h4 style={{ color: '#4a5568', fontSize: '0.9rem', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Categorías Existentes:</h4>
+              <div className="setup-tag-list">
                 {categorias
                   .filter(cat => 
                     (filtroGenero === "" || cat.genero === filtroGenero) &&
                     (filtroNivelEducacional === "" || cat.nivelEducacional === filtroNivelEducacional)
                   )
                   .map(cat => (
-                  <div key={cat.id} style={{background:'#e7e3fa', borderRadius:8, padding:'4px 8px', fontSize:'0.85em', display:'inline-flex', alignItems:'center', gap:6}}>
-                    {categoriaEditando === cat.id ? (
-                      // Modo edición
-                      <div style={{display:'flex', alignItems:'center', gap:4}}>
-                        <input
-                          type="text"
-                          value={nuevoNombreCategoria}
-                          onChange={e => setNuevoNombreCategoria(e.target.value)}
-                          style={{
-                            fontSize:'0.85em',
-                            padding:'2px 6px',
-                            border:'1px solid #ccc',
-                            borderRadius:4,
-                            minWidth:'80px'
-                          }}
-                          onKeyPress={e => {
-                            if (e.key === 'Enter') {
-                              actualizarCategoria(cat.id, nuevoNombreCategoria.trim(), cat.nombre, cat.genero);
-                            }
-                          }}
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => actualizarCategoria(cat.id, nuevoNombreCategoria.trim(), cat.nombre, cat.genero)}
-                          style={{
-                            background:'#4CAF50',
-                            color:'white',
-                            border:'none',
-                            borderRadius:4,
-                            padding:'2px 6px',
-                            fontSize:'0.8em',
-                            cursor:'pointer'
-                          }}
-                          title="Guardar cambios"
-                        >
-                          ✅
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCategoriaEditando(null);
-                            setNuevoNombreCategoria("");
-                          }}
-                          style={{
-                            background:'#f44336',
-                            color:'white',
-                            border:'none',
-                            borderRadius:4,
-                            padding:'2px 6px',
-                            fontSize:'0.8em',
-                            cursor:'pointer'
-                          }}
-                          title="Cancelar"
-                        >
-                          ❌
-                        </button>
-                      </div>
-                    ) : (
-                      // Modo normal
-                      <>
-                        <span>{cat.nombre} ({cat.nivelEducacional} - {cat.genero})</span>
-                        <button
-                          onClick={() => {
-                            setCategoriaEditando(cat.id);
-                            setNuevoNombreCategoria(cat.nombre);
-                          }}
-                          style={{
-                            background:'#2196F3',
-                            color:'white',
-                            border:'none',
-                            borderRadius:4,
-                            padding:'2px 6px',
-                            fontSize:'0.8em',
-                            cursor:'pointer',
-                            marginLeft:4
-                          }}
-                          title="Editar categoría"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`¿Estás seguro de eliminar la categoría "${cat.nombre}" (${cat.genero})?\n\nEsto también eliminará todos los grupos relacionados.`)) {
-                              eliminarCategoria(cat.id, cat.nombre, cat.genero);
-                            }
-                          }}
-                          style={{
-                            background:'#f44336',
-                            color:'white',
-                            border:'none',
-                            borderRadius:4,
-                            padding:'2px 6px',
-                            fontSize:'0.8em',
-                            cursor:'pointer'
-                          }}
-                          title="Eliminar categoría"
-                        >
-                          🗑️
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
+                    <div key={cat.id} style={{ background: '#f5f3ff', borderRadius: '16px', padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #ddd6fe' }}>
+                      {categoriaEditando === cat.id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={nuevoNombreCategoria}
+                            onChange={e => setNuevoNombreCategoria(e.target.value)}
+                            style={{ fontSize: '0.85rem', padding: '2px 6px', border: '1px solid #cbd5e1', borderRadius: '4px', width: '80px' }}
+                            onKeyPress={e => {
+                              if (e.key === 'Enter') {
+                                actualizarCategoria(cat.id, nuevoNombreCategoria.trim(), cat.nombre, cat.genero);
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => actualizarCategoria(cat.id, nuevoNombreCategoria.trim(), cat.nombre, cat.genero)}
+                            style={{ background: '#22c55e', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            title="Guardar cambios"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCategoriaEditando(null);
+                              setNuevoNombreCategoria("");
+                            }}
+                            style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            title="Cancelar"
+                          >
+                            ❌
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span>{cat.nombre} ({cat.nivelEducacional} - {cat.genero})</span>
+                          <button
+                            onClick={() => {
+                              setCategoriaEditando(cat.id);
+                              setNuevoNombreCategoria(cat.nombre);
+                            }}
+                            style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            title="Editar categoría"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Estás seguro de eliminar la categoría "${cat.nombre}" (${cat.genero})?\n\nEsto también eliminará todos los grupos relacionados.`)) {
+                                eliminarCategoria(cat.id, cat.nombre, cat.genero);
+                              }
+                            }}
+                            style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            title="Eliminar categoría"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Apartado para crear equipo */}
+      {/* Card para crear nuevo equipo */}
+      <div className="create-team-section" style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', padding: '2rem 1.5rem', marginBottom: 32 }}>
+{/* Apartado para crear equipo */}
         <h2 className="section-title">
           <span className="section-icon">➕</span>
           Crear Nuevo Equipo
@@ -2660,40 +2633,6 @@ export default function AdminTeams() {
             >
               🚨 Eliminar TODO
             </button>
-            <button
-              onClick={() => {
-                console.log("=== DIAGNÓSTICO DE EQUIPOS ===");
-                equipos.forEach((equipo, index) => {
-                  console.log(`Equipo ${index + 1}:`, {
-                    id: equipo.id,
-                    curso: equipo.curso,
-                    paralelo: equipo.paralelo,
-                    categoria: equipo.categoria,
-                    genero: equipo.genero,
-                    nivelEducacional: equipo.nivelEducacional,
-                    nivelEducacionalTipo: typeof equipo.nivelEducacional,
-                    tieneNivelEducacional: !!equipo.nivelEducacional,
-                    objetoCompleto: equipo
-                  });
-                });
-                console.log("=== NIVELES EDUCACIONALES DISPONIBLES ===");
-                console.log(nivelesEducacionales);
-                alert("Revisa la consola del navegador (F12) para ver el diagnóstico completo");
-              }}
-              style={{
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 1rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '0.9rem',
-                marginLeft: '10px'
-              }}
-            >
-              � Diagnosticar Datos
-            </button>
             {categorias.map(cat => (
               <button
                 key={`${cat.nombre}-${cat.genero}`}
@@ -2714,15 +2653,7 @@ export default function AdminTeams() {
           </div>
           <div style={{fontSize: '0.8em', color: '#6c757d', marginTop: '0.75rem'}}>
             ⚠️ Todas las eliminaciones requieren tu contraseña de administrador y confirmación doble.
-            <br />
-            � <strong>Se verificará tu identidad</strong> con tu contraseña de Firebase antes de proceder.
           </div>
-        </div>
-
-        {/* Nota adicional sobre diagnóstico */}
-        <div style={{fontSize: '0.8em', color: '#28a745', marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px'}}>
-          � <strong>¿Los niveles educacionales no se muestran?</strong><br/>
-          Usa el botón "Diagnosticar Datos" para revisar qué información tienen los equipos en la base de datos.
         </div>
 
 

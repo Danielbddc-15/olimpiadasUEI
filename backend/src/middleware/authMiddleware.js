@@ -1,6 +1,12 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
+  // Permitir accesos GET públicos (sin token) para los datos del torneo
+  const publicGetPaths = ['/categorias', '/niveles', '/grupos', '/equipos', '/matches'];
+  if (req.method === 'GET' && publicGetPaths.some(path => req.path.startsWith(path))) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

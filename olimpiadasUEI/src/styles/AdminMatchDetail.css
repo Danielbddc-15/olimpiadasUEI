@@ -101,20 +101,20 @@
 }
 .match-status-badge.programado,
 .match-status-badge.pendiente {
-  background: rgba(251,191,36,0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(251,191,36,0.4);
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.3);
 }
 .match-status-badge.en-curso {
-  background: rgba(52,211,153,0.2);
-  color: #34d399;
-  border: 1px solid rgba(52,211,153,0.4);
+  background: rgba(4, 120, 87, 0.1);
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.3);
   animation: pulse-green 2s infinite;
 }
 .match-status-badge.finalizado {
-  background: rgba(148,163,184,0.2);
-  color: #cbd5e1;
-  border: 1px solid rgba(148,163,184,0.4);
+  background: rgba(71, 85, 105, 0.1);
+  color: #475569;
+  border: 1px solid rgba(71, 85, 105, 0.3);
 }
 
 @keyframes pulse-green {

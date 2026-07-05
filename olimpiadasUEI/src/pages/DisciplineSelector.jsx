@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../styles/Disciplinas.css";
 
 function DisciplineSelector() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const disciplines = [
     {
@@ -31,6 +33,41 @@ function DisciplineSelector() {
   return (
     <div className="disciplinas-container">
       <div className="disciplinas-content">
+        <button
+          onClick={logout}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            padding: '8px 16px',
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '30px',
+            color: '#4a5568',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+            zIndex: 10
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = '#f7fafc';
+            e.currentTarget.style.color = '#2d3748';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = '#fff';
+            e.currentTarget.style.color = '#4a5568';
+            e.currentTarget.style.transform = 'none';
+          }}
+        >
+          🚪 Salir al Login
+        </button>
+
         <div className="header-section">
           <div className="main-icon">🏆</div>
           <h1 className="disciplinas-title">Olimpiadas UEI</h1>
